@@ -5,14 +5,26 @@ const stateSaveSchema = Joi.object({
   userId: Joi.string().required(),
   grantId: Joi.string().required(),
   grantVersion: Joi.string().required(),
-  state: Joi.object().required(),
-  relevantState: Joi.object().optional()
+  state: Joi.object().unknown(true).required().messages({
+    'object.base': '"state" must be an object'
+  }),
+  relevantState: Joi.object().unknown(true).required().messages({
+    'object.base': '"relevantState" must be an object'
+  })
 })
+  .required()
+  .unknown(false) // Disallow unknown top-level fields
 
 export const stateSave = {
   method: 'POST',
-  path: '/state/save',
+  path: '/save',
   options: {
+    payload: {
+      maxBytes: 1048576, // 1MB
+      output: 'data',
+      parse: true,
+      allow: 'application/json'
+    },
     validate: {
       payload: stateSaveSchema,
       failAction: (request, h, err) => {
@@ -22,8 +34,42 @@ export const stateSave = {
     }
   },
   handler: async (request, h) => {
-    const payload = request.payload
-    request.server.logger.info('Received payload', payload)
-    return h.response({ message: 'Payload received (not saved yet)' }).code(200)
+    const payloadSize = Buffer.byteLength(JSON.stringify(request.payload || {}))
+    request.server.logger.info(`Received payload of size: ${payloadSize} bytes`)
+
+    // Optional: log a warning if too large
+    if (payloadSize > 500_000) {
+      request.server.logger.warn(
+        `Large payload detected (${payloadSize} bytes)`,
+        {
+          userId: request.payload?.userId,
+          path: request.path,
+          size: payloadSize
+        }
+      )
+    }
+
+    const { businessId, userId, grantId, grantVersion, state, relevantState } =
+      request.payload
+
+    const db = request.db
+
+    const updateDoc = {
+      $set: { state, relevantState, updatedAt: new Date() },
+      $setOnInsert: { createdAt: new Date() }
+    }
+
+    try {
+      await db
+        .collection('grant-application-state')
+        .updateOne({ businessId, userId, grantId, grantVersion }, updateDoc, {
+          upsert: true
+        })
+
+      return h.response({ success: true }).code(200)
+    } catch (err) {
+      request.server.logger.error('Failed to save state', err)
+      return h.response({ error: 'Internal Server Error' }).code(500)
+    }
   }
 }
