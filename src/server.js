@@ -54,6 +54,19 @@ async function createServer() {
     router
   ])
 
+  server.ext('onPreHandler', (request, h) => {
+    const size = Buffer.byteLength(JSON.stringify(request.payload || {}))
+
+    if (size > 1_000_000) {
+      request.server.logger.warn(`Oversized payload detected`, {
+        size,
+        route: request.route.path
+      })
+    }
+
+    return h.continue
+  })
+
   return server
 }
 
