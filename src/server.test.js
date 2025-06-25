@@ -26,7 +26,7 @@ describe('stateSave handler - payload logging', () => {
   test('logs payload size info for normal request', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/save',
+      url: '/state',
       payload: {
         businessId: 'BIZ123',
         userId: 'USER456',
@@ -56,7 +56,7 @@ describe('stateSave handler - payload logging', () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: '/save',
+      url: '/state',
       payload: {
         businessId: 'BIZ123',
         userId: 'USER456',

@@ -1,6 +1,6 @@
 import { createServer } from '../server.js' // or however your server is initialized
 
-describe('POST /save', () => {
+describe('POST /state', () => {
   let server
   let mockDb, updateOneSpy, loggerInfoSpy, loggerWarnSpy, loggerErrorSpy
 
@@ -45,7 +45,7 @@ describe('POST /save', () => {
 
     const res = await server.inject({
       method: 'POST',
-      url: '/save',
+      url: '/state',
       payload
     })
 
@@ -68,7 +68,7 @@ describe('POST /save', () => {
   test('responds 400 on missing required field', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/save',
+      url: '/state',
       payload: {
         // businessId missing
         userId: 'U1',
@@ -89,7 +89,7 @@ describe('POST /save', () => {
   test('responds 400 on extra top-level field', async () => {
     const res = await server.inject({
       method: 'POST',
-      url: '/save',
+      url: '/state',
       payload: {
         businessId: 'B1',
         userId: 'U1',
@@ -109,7 +109,7 @@ describe('POST /save', () => {
 
     await server.inject({
       method: 'POST',
-      url: '/save',
+      url: '/state',
       payload: {
         businessId: 'B1',
         userId: 'U1',
@@ -131,7 +131,7 @@ describe('POST /save', () => {
 
     const res = await server.inject({
       method: 'POST',
-      url: '/save',
+      url: '/state',
       payload: {
         businessId: 'B1',
         userId: 'U1',

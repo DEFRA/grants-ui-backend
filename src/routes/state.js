@@ -17,7 +17,7 @@ const stateSaveSchema = Joi.object({
 
 export const stateSave = {
   method: 'POST',
-  path: '/save',
+  path: '/state',
   options: {
     payload: {
       maxBytes: 1048576, // 1MB

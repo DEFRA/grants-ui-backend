@@ -22,9 +22,9 @@
           }
         },
         "url": {
-          "raw": "{{grants-ui-backend_base_url}}/save",
+          "raw": "{{grants-ui-backend_base_url}}/state",
           "host": ["{{grants-ui-backend_base_url}}"],
-          "path": ["save"]
+          "path": ["state"]
         }
       },
       "response": []
@@ -33,7 +33,12 @@
       "name": "Health",
       "request": {
         "method": "GET",
-        "header": []
+        "header": [],
+        "url": {
+          "raw": "{{grants-ui-backend_base_url}}/health",
+          "host": ["{{grants-ui-backend_base_url}}"],
+          "path": ["health"]
+        }
       },
       "response": []
     }
