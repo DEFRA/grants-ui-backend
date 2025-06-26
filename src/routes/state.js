@@ -1,6 +1,9 @@
 import Joi from 'joi'
 import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit'
 
+const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
+const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
+
 const stateSaveSchema = Joi.object({
   businessId: Joi.string().required(),
   userId: Joi.string().required(),
@@ -21,7 +24,7 @@ export const stateSave = {
   path: '/state',
   options: {
     payload: {
-      maxBytes: 1048576, // 1MB
+      maxBytes: PAYLOAD_SIZE_MAX, // 1MB
       output: 'data',
       parse: true,
       allow: 'application/json'
@@ -36,8 +39,8 @@ export const stateSave = {
   },
   handler: async (request, h) => {
     logIfApproachingPayloadLimit(request, {
-      threshold: 500_000,
-      max: 1_048_576
+      threshold: PAYLOAD_SIZE_WARNING_THRESHOLD,
+      max: PAYLOAD_SIZE_MAX
     })
 
     const { businessId, userId, grantId, grantVersion, state, relevantState } =
