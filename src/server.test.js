@@ -1,7 +1,5 @@
 import { createServer } from './server.js'
 
-jest.setTimeout(30_000) // Set a longer timeout for server tests
-
 describe('POST /state payload size logging', () => {
   let server
   let loggerInfoSpy
