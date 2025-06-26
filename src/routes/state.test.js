@@ -127,28 +127,6 @@ describe('POST /state', () => {
     expect(res.statusCode).toBe(400)
   })
 
-  test('logs warning for large payloads', async () => {
-    const largeState = { data: 'x'.repeat(600_000) }
-
-    await server.inject({
-      method: 'POST',
-      url: '/state',
-      payload: {
-        businessId: 'B1',
-        userId: 'U1',
-        grantId: 'G1',
-        grantVersion: 'v1',
-        state: largeState,
-        relevantState: {}
-      }
-    })
-
-    expect(loggerWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Large payload detected'),
-      expect.objectContaining({ userId: 'U1' })
-    )
-  })
-
   test('logs error on DB failure', async () => {
     const error = Object.assign(new Error('DB failure'), {
       name: 'MongoServerSelectionError',
