@@ -1,0 +1,46 @@
+{
+  "info": {
+    "_postman_id": "1a0e54af-9c1f-41fa-9439-a568d24e592c",
+    "name": "grants-ui-backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "45437546",
+    "_collection_link": "https://andrew-5807231.postman.co/workspace/Andrew's-Workspace~c4430974-a476-4315-8108-3b882bee7b85/collection/45437546-1a0e54af-9c1f-41fa-9439-a568d24e592c?action=share&source=collection_link&creator=45437546"
+  },
+  "item": [
+    {
+      "name": "State Save",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"businessId\": \"businessId2\",\n    \"userId\": \"userId2\",\n    \"grantId\": \"grantId2\",\n    \"grantVersion\": \"grantVersion2\",\n    \"relevantState\": {\n        \"businessNature\": \"natureOfBusiness-A1\",\n        \"businessLegalStatus\": \"legalStatus-A1\",\n        \"isInEngland\": true,\n        \"planningPermissionStatus\": \"planningPermission-A1\",\n        \"projectStartStatus\": \"projectStart-A1\",\n        \"isLandBusinessOwned\": true,\n        \"isBuildingSmallerAbattoir\": true,\n        \"isProvidingServicesToOtherFarmers\": true,\n        \"projectItemsNeeded\": true,\n        \"eligibleItems\": [\n        \"projectItems-A1\"\n        ],\n        \"needsStorageFacilities\": \"storageRadios-A1\",\n        \"estimatedCost\": 123455,\n        \"canPayRemainingCosts\": true,\n        \"processedProduceType\": \"produceProcessed-A1\",\n        \"valueAdditionMethod\": \"howAddingValue-A1\",\n        \"impactType\": [\n        \"projectImpact-A1\"\n        ],\n        \"hasMechanisationUsage\": true,\n        \"manualLabourEquivalence\": \"manualLabourAmount-A1\",\n        \"hasFutureCustomers\": true,\n        \"futureCustomerTypes\": [\n        \"futureCustomers-A1\"\n        ],\n        \"collaboration\": true,\n        \"hasEnvironmentImpact\": true,\n        \"environmentalImpactTypes\": [\n        \"environmentalImpact-A1\"\n        ],\n        \"grantApplicantType\": \"applying-A1\",\n        \"applicantFirstName\": \"fds\",\n        \"applicantLastName\": \"fds\",\n        \"applicantEmail\": \"andrew.folga@equalexperts.com\",\n        \"applicantEmailConfirmation\": \"andrew.folga@equalexperts.com\",\n        \"applicantMobile\": \"324432432\",\n        \"applicantLandline\": \"543543543\",\n        \"applicantBusinessAddress__addressLine1\": \"fdsafdsa\",\n        \"applicantBusinessAddress__addressLine2\": null,\n        \"applicantBusinessAddress__town\": \"fdsafdsa\",\n        \"applicantBusinessAddress__county\": null,\n        \"applicantBusinessAddress__postcode\": \"CR41ND\",\n        \"applicantProjectPostcode\": \"CR63KJ\"\n    },\n    \"state\": {\n        \"$$__referenceNumber\": \"AV-F54-F20\",\n        \"businessNature\": \"natureOfBusiness-A1\",\n        \"businessLegalStatus\": \"legalStatus-A1\",\n        \"isInEngland\": true,\n        \"planningPermissionStatus\": \"planningPermission-A1\",\n        \"projectStartStatus\": \"projectStart-A1\",\n        \"isLandBusinessOwned\": true,\n        \"isBuildingSmallerAbattoir\": true,\n        \"isProvidingServicesToOtherFarmers\": true,\n        \"projectItemsNeeded\": true,\n        \"eligibleItems\": \"[Circular]\",\n        \"needsStorageFacilities\": \"storageRadios-A1\",\n        \"estimatedCost\": 123455,\n        \"canPayRemainingCosts\": true,\n        \"processedProduceType\": \"produceProcessed-A1\",\n        \"valueAdditionMethod\": \"howAddingValue-A1\",\n        \"impactType\": \"[Circular]\",\n        \"hasMechanisationUsage\": true,\n        \"manualLabourEquivalence\": \"manualLabourAmount-A1\",\n        \"hasFutureCustomers\": true,\n        \"futureCustomerTypes\": \"[Circular]\",\n        \"collaboration\": true,\n        \"hasEnvironmentImpact\": true,\n        \"environmentalImpactTypes\": \"[Circular]\",\n        \"grantApplicantType\": \"applying-A1\",\n        \"applicantFirstName\": \"fds\",\n        \"applicantLastName\": \"fds\",\n        \"applicantEmail\": \"andrew.folga@equalexperts.com\",\n        \"applicantEmailConfirmation\": \"andrew.folga@equalexperts.com\",\n        \"applicantMobile\": \"324432432\",\n        \"applicantLandline\": \"543543543\",\n        \"applicantBusinessAddress__addressLine1\": \"fdsafdsa\",\n        \"applicantBusinessAddress__addressLine2\": null,\n        \"applicantBusinessAddress__town\": \"fdsafdsa\",\n        \"applicantBusinessAddress__county\": null,\n        \"applicantBusinessAddress__postcode\": \"CR41ND\",\n        \"applicantProjectPostcode\": \"CR63KJ\",\n        \"formSlug\": \"adding-value\"\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{grants-ui-backend_base_url}}/state",
+          "host": ["{{grants-ui-backend_base_url}}"],
+          "path": ["state"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{grants-ui-backend_base_url}}/health",
+          "host": ["{{grants-ui-backend_base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "response": []
+    }
+  ]
+}

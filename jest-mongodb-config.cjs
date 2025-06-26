@@ -8,6 +8,9 @@ export default {
       dbName: 'grants-ui-backend'
     }
   },
+  replSet: {
+    storageEngine: 'wiredTiger'
+  },
   mongoURLEnvName: 'MONGO_URI',
   useSharedDBForAllJestWorkers: false
 }
