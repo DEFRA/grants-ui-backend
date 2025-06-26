@@ -127,7 +127,13 @@ describe('POST /state', () => {
   })
 
   test('logs error on DB failure', async () => {
-    updateOneSpy.mockRejectedValue(new Error('DB failure'))
+    const error = Object.assign(new Error('DB failure'), {
+      name: 'MongoServerSelectionError',
+      code: 'ECONNREFUSED',
+      reason: 'Mock connection timeout',
+      isMongoError: true
+    })
+    updateOneSpy.mockRejectedValue(error)
 
     const res = await server.inject({
       method: 'POST',
@@ -144,8 +150,9 @@ describe('POST /state', () => {
 
     expect(res.statusCode).toBe(500)
     expect(loggerErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to save state'),
-      expect.any(Error)
+      expect.stringContaining(
+        'Failed to save application state | name=MongoServerSelectionError | message=DB failure | reason="Mock connection timeout" | code=ECONNREFUSED | isMongoError=true | stack=MongoServerSelectionError: DB failure'
+      )
     )
   })
 })

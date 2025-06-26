@@ -68,8 +68,22 @@ export const stateSave = {
 
       return h.response({ success: true }).code(200)
     } catch (err) {
-      request.server.logger.error('Failed to save state', err)
-      return h.response({ error: 'Internal Server Error' }).code(500)
+      const isMongoError = err.name && err.name.startsWith('Mongo')
+
+      const errorMsg = [
+        'Failed to save application state',
+        `name=${err.name}`,
+        `message=${err.message}`,
+        `reason=${JSON.stringify(err.reason)}`,
+        `code=${err.code}`,
+        `isMongoError=${isMongoError}`,
+        `stack=${err.stack?.split('\n')[0]}`
+      ]
+        .filter(Boolean)
+        .join(' | ')
+
+      request.server.logger.error(errorMsg)
+      return h.response({ error: 'Failed to save application state' }).code(500)
     }
   }
 }
