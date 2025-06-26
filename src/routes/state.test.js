@@ -33,7 +33,8 @@ describe('POST /state', () => {
     await server.stop()
   })
 
-  test('responds 200 and saves state', async () => {
+  test('responds 201 and saves state when new document is insterted', async () => {
+    updateOneSpy.mockResolvedValue({ upsertedCount: 1 }) // simulate insert
     const payload = {
       businessId: 'B1',
       userId: 'U1',
@@ -49,8 +50,8 @@ describe('POST /state', () => {
       payload
     })
 
-    expect(res.statusCode).toBe(200)
-    expect(JSON.parse(res.payload)).toEqual({ success: true })
+    expect(res.statusCode).toBe(201)
+    expect(JSON.parse(res.payload)).toEqual({ success: true, created: true })
 
     expect(updateOneSpy).toHaveBeenCalledWith(
       { businessId: 'B1', userId: 'U1', grantId: 'G1', grantVersion: 'v1' },
@@ -63,6 +64,28 @@ describe('POST /state', () => {
     expect(loggerInfoSpy).toHaveBeenCalledWith(
       expect.stringContaining('Received payload of size: 125 bytes')
     )
+  })
+
+  test('responds 200 when an existing document is updated', async () => {
+    updateOneSpy.mockResolvedValue({ upsertedCount: 0 }) // simulate update
+
+    const payload = {
+      businessId: 'B2',
+      userId: 'U2',
+      grantId: 'G2',
+      grantVersion: 'v2',
+      state: { test: 'value2' },
+      relevantState: { nested: false }
+    }
+
+    const res = await server.inject({
+      method: 'POST',
+      url: '/state',
+      payload
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(res.payload)).toEqual({ success: true, updated: true })
   })
 
   test('responds 400 on missing required field', async () => {

@@ -60,13 +60,17 @@ export const stateSave = {
     }
 
     try {
-      await db
+      const result = await db
         .collection('grant-application-state')
         .updateOne({ businessId, userId, grantId, grantVersion }, updateDoc, {
           upsert: true
         })
 
-      return h.response({ success: true }).code(200)
+      if (result.upsertedCount > 0) {
+        return h.response({ success: true, created: true }).code(201)
+      }
+
+      return h.response({ success: true, updated: true }).code(200)
     } catch (err) {
       const isMongoError = err.name && err.name.startsWith('Mongo')
 
