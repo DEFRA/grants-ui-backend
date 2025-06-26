@@ -1,4 +1,5 @@
 import Joi from 'joi'
+import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit'
 
 const stateSaveSchema = Joi.object({
   businessId: Joi.string().required(),
@@ -34,20 +35,10 @@ export const stateSave = {
     }
   },
   handler: async (request, h) => {
-    const payloadSize = Buffer.byteLength(JSON.stringify(request.payload || {}))
-    request.server.logger.info(`Received payload of size: ${payloadSize} bytes`)
-
-    // Optional: log a warning if too large
-    if (payloadSize > 500_000) {
-      request.server.logger.warn(
-        `Large payload detected (${payloadSize} bytes)`,
-        {
-          userId: request.payload?.userId,
-          path: request.path,
-          size: payloadSize
-        }
-      )
-    }
+    logIfApproachingPayloadLimit(request, {
+      threshold: 500_000,
+      max: 1_048_576
+    })
 
     const { businessId, userId, grantId, grantVersion, state, relevantState } =
       request.payload

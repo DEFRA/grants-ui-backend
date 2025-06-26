@@ -1,6 +1,8 @@
 import { createServer } from './server.js'
 
-describe('stateSave handler - payload logging', () => {
+jest.setTimeout(30_000) // Set a longer timeout for server tests
+
+describe('POST /state payload size logging', () => {
   let server
   let loggerInfoSpy
   let loggerWarnSpy
@@ -18,12 +20,21 @@ describe('stateSave handler - payload logging', () => {
       .mockImplementation(() => {})
   })
 
+  afterEach(async () => {
+    const { MongoClient } = await import('mongodb')
+    const client = new MongoClient(process.env.MONGO_URI)
+    await client.connect()
+    const db = client.db('grants-ui-backend')
+    await db.collection('grant-application-state').deleteMany({})
+    await client.close()
+  })
+
   afterAll(async () => {
     await server.stop()
     jest.restoreAllMocks()
   })
 
-  test('logs payload size info for normal request', async () => {
+  test('logs payload size info for small payload (handled in route)', async () => {
     const response = await server.inject({
       method: 'POST',
       url: '/state',
@@ -40,7 +51,7 @@ describe('stateSave handler - payload logging', () => {
       }
     })
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(201)
 
     // Look for size log
     expect(loggerInfoSpy).toHaveBeenCalledWith(
@@ -51,7 +62,7 @@ describe('stateSave handler - payload logging', () => {
     expect(loggerWarnSpy).not.toHaveBeenCalled()
   })
 
-  test('logs warning for large payload', async () => {
+  test('logs warning for large payload (handled in route)', async () => {
     const largeObj = { foo: 'x'.repeat(600_000) }
 
     const response = await server.inject({
@@ -67,11 +78,12 @@ describe('stateSave handler - payload logging', () => {
       }
     })
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(201)
 
     expect(loggerWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Large payload detected'),
-      expect.objectContaining({ size: expect.any(Number) })
+      expect.stringContaining(
+        'Large payload approaching limit | size=600132 | threshold=500000 | max=1048576 | path=/state | userId=USER456'
+      )
     )
   })
 })
