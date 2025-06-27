@@ -218,11 +218,8 @@ docker run -e PORT=3001 -p 3001:3001 grants-ui-backend
 
 A local environment with:
 
-- Localstack for AWS services (S3, SQS)
-- Redis
 - MongoDB
 - This service.
-- A commented out frontend example.
 
 ```bash
 docker compose up --build -d
