@@ -16,6 +16,13 @@ const stateSaveSchema = Joi.object({
   .required()
   .unknown(false) // Disallow unknown top-level fields
 
+const stateRetrieveSchema = Joi.object({
+  businessId: Joi.string().required(),
+  userId: Joi.string().required(),
+  grantId: Joi.string().required(),
+  grantVersion: Joi.string()
+})
+
 export const stateSave = {
   method: 'POST',
   path: '/state',
@@ -78,6 +85,60 @@ export const stateSave = {
 
       request.server.logger.error(errorMsg)
       return h.response({ error: 'Failed to save application state' }).code(500)
+    }
+  }
+}
+
+export const stateRetrieve = {
+  method: 'GET',
+  path: '/state',
+  options: {
+    validate: {
+      query: stateRetrieveSchema,
+      failAction: (request, h, err) => {
+        request.server.logger.warn('Validation failed:', err)
+        throw err
+      }
+    }
+  },
+  handler: async (request, h) => {
+    const { businessId, userId, grantId } = request.query
+
+    const db = request.db
+
+    try {
+      const document = await db
+        .collection('grant-application-state')
+        .findOne({ businessId, userId, grantId })
+
+      if (!document) {
+        return h.response({ error: 'State not found' }).code(404)
+      }
+
+      return h
+        .response({
+          state: document.state
+        })
+        .code(200)
+    } catch (err) {
+      const isMongoError = err?.name?.startsWith('Mongo')
+
+      const errorMsg = [
+        'Failed to retrieve application state',
+        `name=${err.name}`,
+        `message=${err.message}`,
+        `reason=${JSON.stringify(err.reason)}`,
+        `code=${err.code}`,
+        `isMongoError=${isMongoError}`,
+        `stack=${err.stack?.split('\n')[0]}`
+      ]
+        .filter(Boolean)
+        .join(' | ')
+
+      request.server.logger.error(errorMsg)
+      return h
+        .response({ error: 'Failed to retrieve application state' })
+        .code(500)
     }
   }
 }
