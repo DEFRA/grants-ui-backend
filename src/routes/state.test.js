@@ -40,8 +40,7 @@ describe('POST /state', () => {
       userId: 'U1',
       grantId: 'G1',
       grantVersion: 'v1',
-      state: { test: 'value' },
-      relevantState: { nested: true }
+      state: { test: 'value' }
     }
 
     const res = await server.inject({
@@ -62,7 +61,7 @@ describe('POST /state', () => {
       { upsert: true }
     )
     expect(loggerInfoSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Received payload of size: 125 bytes')
+      expect.stringContaining('Received payload of size: 93 bytes')
     )
   })
 
@@ -74,8 +73,7 @@ describe('POST /state', () => {
       userId: 'U2',
       grantId: 'G2',
       grantVersion: 'v2',
-      state: { test: 'value2' },
-      relevantState: { nested: false }
+      state: { test: 'value2' }
     }
 
     const res = await server.inject({
@@ -97,8 +95,7 @@ describe('POST /state', () => {
         userId: 'U1',
         grantId: 'G1',
         grantVersion: 'v1',
-        state: {},
-        relevantState: {}
+        state: {}
       }
     })
 
@@ -119,7 +116,6 @@ describe('POST /state', () => {
         grantId: 'G1',
         grantVersion: 'v1',
         state: {},
-        relevantState: {},
         extra: 'not allowed'
       }
     })
@@ -144,8 +140,7 @@ describe('POST /state', () => {
         userId: 'U1',
         grantId: 'G1',
         grantVersion: 'v1',
-        state: {},
-        relevantState: {}
+        state: {}
       }
     })
 

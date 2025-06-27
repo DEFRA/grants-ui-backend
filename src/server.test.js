@@ -41,8 +41,7 @@ describe('POST /state payload size logging', () => {
         userId: 'USER456',
         grantId: 'GRANT789',
         grantVersion: 'v1',
-        state: { a: 'small' },
-        relevantState: { b: 'small' }
+        state: { a: 'small' }
       },
       headers: {
         'Content-Type': 'application/json'
@@ -71,8 +70,7 @@ describe('POST /state payload size logging', () => {
         userId: 'USER456',
         grantId: 'GRANT789',
         grantVersion: 'v1',
-        state: largeObj,
-        relevantState: { b: 'small' }
+        state: largeObj
       }
     })
 
@@ -80,7 +78,7 @@ describe('POST /state payload size logging', () => {
 
     expect(loggerWarnSpy).toHaveBeenCalledWith(
       expect.stringContaining(
-        'Large payload approaching limit | size=600132 | threshold=500000 | max=1048576 | path=/state | userId=USER456'
+        'Large payload approaching limit | size=600102 | threshold=500000 | max=1048576 | path=/state | userId=USER456'
       )
     )
   })

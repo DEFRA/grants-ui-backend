@@ -11,9 +11,6 @@ const stateSaveSchema = Joi.object({
   grantVersion: Joi.string().required(),
   state: Joi.object().unknown(true).required().messages({
     'object.base': '"state" must be an object'
-  }),
-  relevantState: Joi.object().unknown(true).required().messages({
-    'object.base': '"relevantState" must be an object'
   })
 })
   .required()
@@ -43,13 +40,12 @@ export const stateSave = {
       max: PAYLOAD_SIZE_MAX
     })
 
-    const { businessId, userId, grantId, grantVersion, state, relevantState } =
-      request.payload
+    const { businessId, userId, grantId, grantVersion, state } = request.payload
 
     const db = request.db
 
     const updateDoc = {
-      $set: { state, relevantState, updatedAt: new Date() },
+      $set: { state, updatedAt: new Date() },
       $setOnInsert: { createdAt: new Date() }
     }
 
