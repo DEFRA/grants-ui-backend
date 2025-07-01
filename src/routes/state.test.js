@@ -163,7 +163,7 @@ describe('/state endpoint', () => {
 
       expect(res.statusCode).toBe(200)
       expect(JSON.parse(res.payload)).toEqual({
-        state: { test: 'value' }
+        test: 'value'
       })
 
       expect(findOneSpy).toHaveBeenCalledWith({

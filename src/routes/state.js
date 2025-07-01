@@ -115,11 +115,7 @@ export const stateRetrieve = {
         return h.response({ error: 'State not found' }).code(404)
       }
 
-      return h
-        .response({
-          state: document.state
-        })
-        .code(200)
+      return h.response(document.state).code(200)
     } catch (err) {
       const isMongoError = err?.name?.startsWith('Mongo')
 
