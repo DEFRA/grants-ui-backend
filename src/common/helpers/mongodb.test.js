@@ -1,7 +1,8 @@
 import { Db, MongoClient } from 'mongodb'
 import { LockManager } from 'mongo-locks'
-
 import { createServer } from '../../server.js'
+import { Server } from '@hapi/hapi'
+import { mongoDb } from './mongodb.js'
 
 describe('#mongoDb', () => {
   let server
@@ -28,6 +29,24 @@ describe('#mongoDb', () => {
 
     test('MongoDb should have expected namespace', () => {
       expect(server.db.namespace).toBe('grants-ui-backend')
+    })
+
+    test('MongoDb plugin uses secureContext if present', async () => {
+      const server = new Server()
+      server.logger = { info: jest.fn() }
+      server.secureContext = { secure: true }
+
+      await mongoDb.plugin.register(server, {
+        mongoUri: global.__MONGO_URI__,
+        databaseName: 'test-db',
+        retryWrites: false,
+        readPreference: 'secondary'
+      })
+
+      expect(server.mongoClient).toBeDefined()
+      expect(server.db).toBeDefined()
+
+      await server.mongoClient.close()
     })
   })
 
