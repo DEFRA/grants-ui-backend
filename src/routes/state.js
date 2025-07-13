@@ -36,7 +36,7 @@ export const stateSave = {
     validate: {
       payload: stateSaveSchema,
       failAction: (request, h, err) => {
-        request.server.logger.warn('Validation failed:', err)
+        request.server.logger.error('Validation failed:', err)
         throw err
       }
     }
@@ -96,7 +96,7 @@ export const stateRetrieve = {
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
-        request.server.logger.warn('Validation failed:', err)
+        request.server.logger.error('Validation failed:', err)
         throw err
       }
     }
