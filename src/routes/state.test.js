@@ -6,7 +6,6 @@ describe('/state endpoint', () => {
     updateOneSpy,
     findOneSpy,
     loggerInfoSpy,
-    loggerWarnSpy,
     loggerErrorSpy
 
   const testPayload = {
@@ -38,9 +37,6 @@ describe('/state endpoint', () => {
 
     loggerInfoSpy = jest
       .spyOn(server.logger, 'info')
-      .mockImplementation(() => {})
-    loggerWarnSpy = jest
-      .spyOn(server.logger, 'warn')
       .mockImplementation(() => {})
     loggerErrorSpy = jest
       .spyOn(server.logger, 'error')
@@ -101,7 +97,7 @@ describe('/state endpoint', () => {
       })
 
       expect(res.statusCode).toBe(400)
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Validation failed:'),
         expect.anything()
       )
@@ -197,7 +193,7 @@ describe('/state endpoint', () => {
       })
 
       expect(res.statusCode).toBe(400)
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Validation failed:'),
         expect.anything()
       )
