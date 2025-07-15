@@ -94,7 +94,7 @@ describe('/state endpoint', () => {
 
       expect(res.statusCode).toBe(400)
       expect(loggerErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Validation failed:'),
+        expect.stringContaining('validation failed:'),
         expect.anything()
       )
     })
@@ -190,7 +190,7 @@ describe('/state endpoint', () => {
 
       expect(res.statusCode).toBe(400)
       expect(loggerErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Validation failed:'),
+        expect.stringContaining('validation failed:'),
         expect.anything()
       )
     })
