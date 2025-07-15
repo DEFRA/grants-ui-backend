@@ -2,11 +2,7 @@ import { createServer } from '../server.js'
 
 describe('/state endpoint', () => {
   let server
-  let mockDb,
-    updateOneSpy,
-    findOneSpy,
-    loggerInfoSpy,
-    loggerErrorSpy
+  let mockDb, updateOneSpy, findOneSpy, loggerInfoSpy, loggerErrorSpy
 
   const testPayload = {
     businessId: 'B1',
