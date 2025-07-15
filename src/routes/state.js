@@ -36,7 +36,10 @@ export const stateSave = {
     validate: {
       payload: stateSaveSchema,
       failAction: (request, h, err) => {
-        request.server.logger.error(`Validation failed: ${err.message}`, err)
+        request.server.logger.error(
+          `POST /state, validation failed: ${err.message}`,
+          err
+        )
         throw err
       }
     }
@@ -96,7 +99,10 @@ export const stateRetrieve = {
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
-        request.server.logger.error(`Validation failed: ${err.message}`, err)
+        request.server.logger.error(
+          `GET /state, validation failed: ${err.message}`,
+          err
+        )
         throw err
       }
     }
