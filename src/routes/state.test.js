@@ -2,12 +2,7 @@ import { createServer } from '../server.js'
 
 describe('/state endpoint', () => {
   let server
-  let mockDb,
-    updateOneSpy,
-    findOneSpy,
-    loggerInfoSpy,
-    loggerWarnSpy,
-    loggerErrorSpy
+  let mockDb, updateOneSpy, findOneSpy, loggerInfoSpy, loggerErrorSpy
 
   const testPayload = {
     businessId: 'B1',
@@ -38,9 +33,6 @@ describe('/state endpoint', () => {
 
     loggerInfoSpy = jest
       .spyOn(server.logger, 'info')
-      .mockImplementation(() => {})
-    loggerWarnSpy = jest
-      .spyOn(server.logger, 'warn')
       .mockImplementation(() => {})
     loggerErrorSpy = jest
       .spyOn(server.logger, 'error')
@@ -101,8 +93,8 @@ describe('/state endpoint', () => {
       })
 
       expect(res.statusCode).toBe(400)
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Validation failed:'),
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('validation failed:'),
         expect.anything()
       )
     })
@@ -197,8 +189,8 @@ describe('/state endpoint', () => {
       })
 
       expect(res.statusCode).toBe(400)
-      expect(loggerWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Validation failed:'),
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('validation failed:'),
         expect.anything()
       )
     })
