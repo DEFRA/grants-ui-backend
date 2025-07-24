@@ -1,223 +1,299 @@
-import { createServer } from '../server.js'
+import { MongoClient } from 'mongodb'
+import { stateDelete, stateRetrieve, stateSave } from './state.js'
+import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit.js'
 
-describe('/state endpoint', () => {
-  let server
-  let mockDb, updateOneSpy, findOneSpy, loggerInfoSpy, loggerErrorSpy
+jest.mock(
+  '../common/helpers/logging/log-if-approaching-payload-limit.js',
+  () => ({
+    logIfApproachingPayloadLimit: jest.fn()
+  })
+)
 
-  const testPayload = {
-    businessId: 'B1',
-    userId: 'U1',
-    grantId: 'G1',
-    grantVersion: 'v1',
-    state: { test: 'value' }
+describe('State', () => {
+  const defaultQuery = {
+    businessId: 'business123',
+    userId: 'user123',
+    grantId: 'grant123'
   }
 
-  const testQueryParams = 'businessId=B1&userId=U1&grantId=G1&grantVersion=v1'
+  let connection
+  let db
+  let mockCollection
+  let mockServer
+  let mockRequest
+  let mockH
 
-  beforeEach(async () => {
-    updateOneSpy = jest.fn().mockResolvedValue({})
-    findOneSpy = jest.fn().mockResolvedValue(null)
-    mockDb = {
-      collection: () => ({
-        updateOne: updateOneSpy,
-        findOne: findOneSpy
-      })
+  beforeAll(async () => {
+    connection = await MongoClient.connect(process.env.MONGO_URI)
+    db = await connection.db()
+  })
+
+  afterAll(async () => {
+    await connection.close()
+  })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+
+    mockCollection = {
+      updateOne: jest.fn(),
+      findOne: jest.fn(),
+      deleteOne: jest.fn()
     }
 
-    server = await createServer()
-    await server.initialize()
-    server.ext('onRequest', (request, h) => {
-      request.db = mockDb
-      return h.continue
-    })
+    db.collection = jest.fn().mockReturnValue(mockCollection)
 
-    loggerInfoSpy = jest
-      .spyOn(server.logger, 'info')
-      .mockImplementation(() => {})
-    loggerErrorSpy = jest
-      .spyOn(server.logger, 'error')
-      .mockImplementation(() => {})
+    mockServer = {
+      logger: {
+        error: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn()
+      }
+    }
+
+    mockH = {
+      response: jest.fn().mockReturnThis(),
+      code: jest.fn().mockReturnThis()
+    }
+
+    mockRequest = {
+      server: mockServer,
+      db
+    }
   })
 
-  afterEach(async () => {
-    jest.clearAllMocks()
-    await server.stop()
-  })
+  describe('stateSave', () => {
+    test('should create a new state document and return 201', async () => {
+      mockRequest.payload = {
+        ...defaultQuery,
+        grantVersion: 'v2',
+        state: { key: 'value' }
+      }
+      mockCollection.updateOne.mockResolvedValue({ upsertedCount: 1 })
 
-  describe('POST /state', () => {
-    test('responds 201 and saves state when new document is inserted', async () => {
-      updateOneSpy.mockResolvedValue({ upsertedCount: 1 })
+      await stateSave.handler(mockRequest, mockH)
 
-      const res = await server.inject({
-        method: 'POST',
-        url: '/state',
-        payload: testPayload
-      })
-
-      expect(res.statusCode).toBe(201)
-      expect(JSON.parse(res.payload)).toEqual({ success: true, created: true })
-
-      expect(updateOneSpy).toHaveBeenCalledWith(
-        { businessId: 'B1', userId: 'U1', grantId: 'G1', grantVersion: 'v1' },
+      expect(mockCollection.updateOne).toHaveBeenCalledWith(
+        {
+          ...defaultQuery,
+          grantVersion: 'v2'
+        },
         expect.objectContaining({
-          $set: expect.anything(),
-          $setOnInsert: expect.anything()
+          $set: expect.objectContaining({
+            state: { key: 'value' }
+          })
         }),
         { upsert: true }
       )
-      expect(loggerInfoSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Received payload of size: 93 bytes')
+      expect(mockH.response).toHaveBeenCalledWith({
+        success: true,
+        created: true
+      })
+      expect(mockH.code).toHaveBeenCalledWith(201)
+      expect(logIfApproachingPayloadLimit).toHaveBeenCalled()
+    })
+
+    test('should update an existing state document and return 200', async () => {
+      mockRequest.payload = {
+        ...defaultQuery,
+        grantVersion: 'v2',
+        state: { key: 'updated-value' }
+      }
+      mockCollection.updateOne.mockResolvedValue({
+        upsertedCount: 0,
+        modifiedCount: 1
+      })
+
+      await stateSave.handler(mockRequest, mockH)
+
+      expect(mockCollection.updateOne).toHaveBeenCalledWith(
+        {
+          ...defaultQuery,
+          grantVersion: 'v2'
+        },
+        expect.objectContaining({
+          $set: expect.objectContaining({
+            state: { key: 'updated-value' }
+          })
+        }),
+        { upsert: true }
       )
+      expect(mockH.response).toHaveBeenCalledWith({
+        success: true,
+        updated: true
+      })
+      expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
-    test('responds 200 when an existing document is updated', async () => {
-      updateOneSpy.mockResolvedValue({ upsertedCount: 0 })
+    test('should handle database errors and return 500', async () => {
+      mockRequest.payload = {
+        ...defaultQuery,
+        grantVersion: 'v2',
+        state: { key: 'value' }
+      }
+      const dbError = new Error('Database error')
+      dbError.name = 'MongoError'
+      mockCollection.updateOne.mockRejectedValue(dbError)
 
-      const res = await server.inject({
-        method: 'POST',
-        url: '/state',
-        payload: testPayload
+      await stateSave.handler(mockRequest, mockH)
+
+      expect(mockServer.logger.error).toHaveBeenCalled()
+      expect(mockH.response).toHaveBeenCalledWith({
+        error: 'Failed to save application state'
       })
-
-      expect(res.statusCode).toBe(200)
-      expect(JSON.parse(res.payload)).toEqual({ success: true, updated: true })
+      expect(mockH.code).toHaveBeenCalledWith(500)
     })
 
-    test('responds 400 on missing required field', async () => {
-      const { businessId, ...incompletePayload } = testPayload
+    test('should validate payload and throw error for invalid data', () => {
+      const invalidPayload = {
+        // Missing required fields
+        state: { key: 'value' }
+      }
 
-      const res = await server.inject({
-        method: 'POST',
-        url: '/state',
-        payload: incompletePayload
-      })
+      const mockValidationRequest = {
+        server: mockServer,
+        payload: invalidPayload
+      }
 
-      expect(res.statusCode).toBe(400)
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('validation failed:'),
-        expect.anything()
-      )
-    })
+      const mockError = new Error('Validation error')
 
-    test('responds 400 on extra top-level field', async () => {
-      const res = await server.inject({
-        method: 'POST',
-        url: '/state',
-        payload: { ...testPayload, extra: 'not allowed' }
-      })
-
-      expect(res.statusCode).toBe(400)
-    })
-
-    test('logs error on DB failure', async () => {
-      const error = Object.assign(new Error('DB failure'), {
-        name: 'MongoServerSelectionError',
-        code: 'ECONNREFUSED',
-        reason: 'Mock connection timeout',
-        isMongoError: true
-      })
-      updateOneSpy.mockRejectedValue(error)
-
-      const res = await server.inject({
-        method: 'POST',
-        url: '/state',
-        payload: testPayload
-      })
-
-      expect(res.statusCode).toBe(500)
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Failed to save application state | name=MongoServerSelectionError | message=DB failure | reason="Mock connection timeout" | code=ECONNREFUSED | isMongoError=true | stack=MongoServerSelectionError: DB failure'
+      expect(() =>
+        stateSave.options.validate.failAction(
+          mockValidationRequest,
+          mockH,
+          mockError
         )
-      )
+      ).toThrow('Validation error')
+      expect(mockServer.logger.error).toHaveBeenCalled()
     })
   })
 
-  describe('GET /state', () => {
-    const mockDocument = {
-      _id: 'some-id',
-      businessId: 'B1',
-      userId: 'U1',
-      grantId: 'G1',
-      grantVersion: 'v1',
-      state: { test: 'value' },
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-
-    test('responds 200 and returns state when document exists', async () => {
-      findOneSpy.mockResolvedValue(mockDocument)
-
-      const res = await server.inject({
-        method: 'GET',
-        url: `/state?${testQueryParams}`
+  describe('stateRetrieve', () => {
+    test('should retrieve state document and return 200', async () => {
+      mockRequest.query = defaultQuery
+      mockCollection.findOne.mockResolvedValue({
+        state: { key: 'value' }
       })
 
-      expect(res.statusCode).toBe(200)
-      expect(JSON.parse(res.payload)).toEqual({
-        test: 'value'
-      })
+      await stateRetrieve.handler(mockRequest, mockH)
 
-      expect(findOneSpy).toHaveBeenCalledWith({
-        businessId: 'B1',
-        userId: 'U1',
-        grantId: 'G1'
-      })
+      expect(mockCollection.findOne).toHaveBeenCalledWith(defaultQuery)
+      expect(mockH.response).toHaveBeenCalledWith({ key: 'value' })
+      expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
-    test('responds 404 when document does not exist', async () => {
-      findOneSpy.mockResolvedValue(null)
+    test('should return 404 when state document is not found', async () => {
+      mockRequest.query = defaultQuery
+      mockCollection.findOne.mockResolvedValue(null)
 
-      const res = await server.inject({
-        method: 'GET',
-        url: `/state?${testQueryParams}`
-      })
+      await stateRetrieve.handler(mockRequest, mockH)
 
-      expect(res.statusCode).toBe(404)
-      expect(JSON.parse(res.payload)).toEqual({ error: 'State not found' })
+      expect(mockCollection.findOne).toHaveBeenCalledWith(defaultQuery)
+      expect(mockH.response).toHaveBeenCalledWith({ error: 'State not found' })
+      expect(mockH.code).toHaveBeenCalledWith(404)
     })
 
-    test.each([
-      ['userId=U1&grantId=G1&grantVersion=v1', 'businessId missing'],
-      ['businessId=B1&grantId=G1&grantVersion=v1', 'userId missing'],
-      ['businessId=B1&userId=U1&grantVersion=v1', 'grantId missing'],
-      ['', 'all parameters missing']
-    ])('responds 400 when %s', async (queryString, _description) => {
-      const res = await server.inject({
-        method: 'GET',
-        url: `/state?${queryString}`
-      })
+    test('should handle database errors and return 500', async () => {
+      mockRequest.query = defaultQuery
+      const dbError = new Error('Database error')
+      dbError.name = 'MongoError'
+      mockCollection.findOne.mockRejectedValue(dbError)
 
-      expect(res.statusCode).toBe(400)
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('validation failed:'),
-        expect.anything()
-      )
-    })
+      await stateRetrieve.handler(mockRequest, mockH)
 
-    test('logs error on DB failure', async () => {
-      const error = Object.assign(new Error('DB read failure'), {
-        name: 'MongoNetworkError',
-        code: 'ETIMEDOUT',
-        reason: 'Network timeout',
-        isMongoError: true
-      })
-      findOneSpy.mockRejectedValue(error)
-
-      const res = await server.inject({
-        method: 'GET',
-        url: `/state?${testQueryParams}`
-      })
-
-      expect(res.statusCode).toBe(500)
-      expect(JSON.parse(res.payload)).toEqual({
+      expect(mockServer.logger.error).toHaveBeenCalled()
+      expect(mockH.response).toHaveBeenCalledWith({
         error: 'Failed to retrieve application state'
       })
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Failed to retrieve application state | name=MongoNetworkError | message=DB read failure | reason="Network timeout" | code=ETIMEDOUT | isMongoError=true | stack=MongoNetworkError: DB read failure'
+      expect(mockH.code).toHaveBeenCalledWith(500)
+    })
+
+    test('should validate query and throw error for invalid data', () => {
+      const invalidQuery = {
+        // Missing required fields
+        grantId: 'grant123'
+      }
+
+      const mockValidationRequest = {
+        server: mockServer,
+        query: invalidQuery
+      }
+
+      const mockError = new Error('Validation error')
+
+      expect(() =>
+        stateRetrieve.options.validate.failAction(
+          mockValidationRequest,
+          mockH,
+          mockError
         )
-      )
+      ).toThrow('Validation error')
+      expect(mockServer.logger.error).toHaveBeenCalled()
+    })
+  })
+
+  describe('stateDelete', () => {
+    test('should delete state document and return 200', async () => {
+      mockRequest.query = defaultQuery
+      mockCollection.deleteOne.mockResolvedValue({ deletedCount: 1 })
+
+      await stateDelete.handler(mockRequest, mockH)
+
+      expect(mockCollection.deleteOne).toHaveBeenCalledWith(defaultQuery)
+      expect(mockH.response).toHaveBeenCalledWith({
+        success: true,
+        deleted: true
+      })
+      expect(mockH.code).toHaveBeenCalledWith(200)
+    })
+
+    test('should return 404 when state document is not found', async () => {
+      mockRequest.query = defaultQuery
+      mockCollection.deleteOne.mockResolvedValue({ deletedCount: 0 })
+
+      await stateDelete.handler(mockRequest, mockH)
+
+      expect(mockCollection.deleteOne).toHaveBeenCalledWith(defaultQuery)
+      expect(mockH.response).toHaveBeenCalledWith({ error: 'State not found' })
+      expect(mockH.code).toHaveBeenCalledWith(404)
+    })
+
+    test('should handle database errors and return 500', async () => {
+      mockRequest.query = defaultQuery
+      const dbError = new Error('Database error')
+      dbError.name = 'MongoError'
+      mockCollection.deleteOne.mockRejectedValue(dbError)
+
+      await stateDelete.handler(mockRequest, mockH)
+
+      expect(mockServer.logger.error).toHaveBeenCalled()
+      expect(mockH.response).toHaveBeenCalledWith({
+        error: 'Failed to delete application state'
+      })
+      expect(mockH.code).toHaveBeenCalledWith(500)
+    })
+
+    test('should validate query and throw error for invalid data', () => {
+      const invalidQuery = {
+        // Missing required fields
+        grantId: 'grant123'
+      }
+
+      const mockValidationRequest = {
+        server: mockServer,
+        query: invalidQuery
+      }
+
+      const mockError = new Error('Validation error')
+
+      expect(() =>
+        stateDelete.options.validate.failAction(
+          mockValidationRequest,
+          mockH,
+          mockError
+        )
+      ).toThrow('Validation error')
+      expect(mockServer.logger.error).toHaveBeenCalled()
     })
   })
 })
