@@ -144,3 +144,56 @@ export const stateRetrieve = {
     }
   }
 }
+
+export const stateDelete = {
+  method: 'DELETE',
+  path: '/state',
+  options: {
+    validate: {
+      query: stateRetrieveSchema,
+      failAction: (request, h, err) => {
+        request.server.logger.error(
+          `DELETE /state, validation failed: ${err.message}`,
+          err
+        )
+        throw err
+      }
+    }
+  },
+  handler: async (request, h) => {
+    const { businessId, userId, grantId } = request.query
+
+    const db = request.db
+
+    try {
+      const result = await db
+        .collection('grant-application-state')
+        .deleteOne({ businessId, userId, grantId })
+
+      if (result.deletedCount === 0) {
+        return h.response({ error: 'State not found' }).code(404)
+      }
+
+      return h.response({ success: true, deleted: true }).code(200)
+    } catch (err) {
+      const isMongoError = err?.name?.startsWith('Mongo')
+
+      const errorMsg = [
+        'Failed to delete application state',
+        `name=${err.name}`,
+        `message=${err.message}`,
+        `reason=${JSON.stringify(err.reason)}`,
+        `code=${err.code}`,
+        `isMongoError=${isMongoError}`,
+        `stack=${err.stack?.split('\n')[0]}`
+      ]
+        .filter(Boolean)
+        .join(' | ')
+
+      request.server.logger.error(errorMsg)
+      return h
+        .response({ error: 'Failed to delete application state' })
+        .code(500)
+    }
+  }
+}
