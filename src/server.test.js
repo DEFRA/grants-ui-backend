@@ -40,7 +40,7 @@ describe('POST /state payload size logging', () => {
         businessId: 'BIZ123',
         userId: 'USER456',
         grantId: 'GRANT789',
-        grantVersion: '1',
+        grantVersion: 1,
         state: { a: 'small' }
       },
       headers: {
@@ -69,7 +69,7 @@ describe('POST /state payload size logging', () => {
         businessId: 'BIZ123',
         userId: 'USER456',
         grantId: 'GRANT789',
-        grantVersion: '1',
+        grantVersion: 1,
         state: largeObj
       }
     })
