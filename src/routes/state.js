@@ -8,7 +8,7 @@ const stateSaveSchema = Joi.object({
   businessId: Joi.string().required(),
   userId: Joi.string().required(),
   grantId: Joi.string().required(),
-  grantVersion: Joi.string().required(),
+  grantVersion: Joi.number().required(),
   state: Joi.object().unknown(true).required().messages({
     'object.base': '"state" must be an object'
   })
@@ -20,7 +20,7 @@ const stateRetrieveSchema = Joi.object({
   businessId: Joi.string().required(),
   userId: Joi.string().required(),
   grantId: Joi.string().required(),
-  grantVersion: Joi.string()
+  grantVersion: Joi.number()
 })
 
 export const stateSave = {
@@ -115,7 +115,10 @@ export const stateRetrieve = {
     try {
       const document = await db
         .collection('grant-application-state')
-        .findOne({ businessId, userId, grantId })
+        .find({ businessId, userId, grantId })
+        .sort({ grantVersion: -1 }) // numeric descending
+        .limit(1)
+        .next()
 
       if (!document) {
         return h.response({ error: 'State not found' }).code(404)
@@ -140,6 +143,64 @@ export const stateRetrieve = {
       request.server.logger.error(errorMsg)
       return h
         .response({ error: 'Failed to retrieve application state' })
+        .code(500)
+    }
+  }
+}
+
+export const stateDelete = {
+  method: 'DELETE',
+  path: '/state',
+  options: {
+    validate: {
+      query: stateRetrieveSchema,
+      failAction: (request, h, err) => {
+        request.server.logger.error(
+          `DELETE /state, validation failed: ${err.message}`,
+          err
+        )
+        throw err
+      }
+    }
+  },
+  handler: async (request, h) => {
+    const { businessId, userId, grantId } = request.query
+
+    const db = request.db
+
+    try {
+      const doc = await db
+        .collection('grant-application-state')
+        .find({ businessId, userId, grantId })
+        .sort({ grantVersion: -1 })
+        .limit(1)
+        .next()
+
+      if (!doc) {
+        return h.response({ error: 'State not found' }).code(404)
+      }
+
+      await db.collection('grant-application-state').deleteOne({ _id: doc._id })
+
+      return h.response({ success: true, deleted: true }).code(200)
+    } catch (err) {
+      const isMongoError = err?.name?.startsWith('Mongo')
+
+      const errorMsg = [
+        'Failed to delete application state',
+        `name=${err.name}`,
+        `message=${err.message}`,
+        `reason=${JSON.stringify(err.reason)}`,
+        `code=${err.code}`,
+        `isMongoError=${isMongoError}`,
+        `stack=${err.stack?.split('\n')[0]}`
+      ]
+        .filter(Boolean)
+        .join(' | ')
+
+      request.server.logger.error(errorMsg)
+      return h
+        .response({ error: 'Failed to delete application state' })
         .code(500)
     }
   }
