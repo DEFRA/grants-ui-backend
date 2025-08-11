@@ -8,7 +8,7 @@ const stateSaveSchema = Joi.object({
   businessId: Joi.string().required(),
   userId: Joi.string().required(),
   grantId: Joi.string().required(),
-  grantVersion: Joi.string().required(),
+  grantVersion: Joi.number().required(),
   state: Joi.object().unknown(true).required().messages({
     'object.base': '"state" must be an object'
   })
@@ -20,7 +20,7 @@ const stateRetrieveSchema = Joi.object({
   businessId: Joi.string().required(),
   userId: Joi.string().required(),
   grantId: Joi.string().required(),
-  grantVersion: Joi.string()
+  grantVersion: Joi.number()
 })
 
 export const stateSave = {
@@ -115,7 +115,10 @@ export const stateRetrieve = {
     try {
       const document = await db
         .collection('grant-application-state')
-        .findOne({ businessId, userId, grantId })
+        .find({ businessId, userId, grantId })
+        .sort({ grantVersion: -1 }) // numeric descending
+        .limit(1)
+        .next()
 
       if (!document) {
         return h.response({ error: 'State not found' }).code(404)
@@ -166,13 +169,18 @@ export const stateDelete = {
     const db = request.db
 
     try {
-      const result = await db
+      const doc = await db
         .collection('grant-application-state')
-        .deleteOne({ businessId, userId, grantId })
+        .find({ businessId, userId, grantId })
+        .sort({ grantVersion: -1 })
+        .limit(1)
+        .next()
 
-      if (result.deletedCount === 0) {
+      if (!doc) {
         return h.response({ error: 'State not found' }).code(404)
       }
+
+      await db.collection('grant-application-state').deleteOne({ _id: doc._id })
 
       return h.response({ success: true, deleted: true }).code(200)
     } catch (err) {

@@ -38,6 +38,7 @@ describe('State', () => {
     mockCollection = {
       updateOne: jest.fn(),
       findOne: jest.fn(),
+      find: jest.fn(),
       deleteOne: jest.fn()
     }
 
@@ -66,7 +67,7 @@ describe('State', () => {
     test('should create a new state document and return 201', async () => {
       mockRequest.payload = {
         ...defaultQuery,
-        grantVersion: 'v2',
+        grantVersion: '2',
         state: { key: 'value' }
       }
       mockCollection.updateOne.mockResolvedValue({ upsertedCount: 1 })
@@ -76,7 +77,7 @@ describe('State', () => {
       expect(mockCollection.updateOne).toHaveBeenCalledWith(
         {
           ...defaultQuery,
-          grantVersion: 'v2'
+          grantVersion: '2'
         },
         expect.objectContaining({
           $set: expect.objectContaining({
@@ -96,7 +97,7 @@ describe('State', () => {
     test('should update an existing state document and return 200', async () => {
       mockRequest.payload = {
         ...defaultQuery,
-        grantVersion: 'v2',
+        grantVersion: '2',
         state: { key: 'updated-value' }
       }
       mockCollection.updateOne.mockResolvedValue({
@@ -109,7 +110,7 @@ describe('State', () => {
       expect(mockCollection.updateOne).toHaveBeenCalledWith(
         {
           ...defaultQuery,
-          grantVersion: 'v2'
+          grantVersion: '2'
         },
         expect.objectContaining({
           $set: expect.objectContaining({
@@ -128,7 +129,7 @@ describe('State', () => {
     test('should handle database errors and return 500', async () => {
       mockRequest.payload = {
         ...defaultQuery,
-        grantVersion: 'v2',
+        grantVersion: '2',
         state: { key: 'value' }
       }
       const dbError = new Error('Database error')
@@ -170,25 +171,44 @@ describe('State', () => {
 
   describe('stateRetrieve', () => {
     test('should retrieve state document and return 200', async () => {
+      const mockCursor = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        next: jest.fn().mockResolvedValue({ state: { key: 'value' } })
+      }
+      mockCollection.find.mockReturnValue(mockCursor)
       mockRequest.query = defaultQuery
-      mockCollection.findOne.mockResolvedValue({
-        state: { key: 'value' }
-      })
+
+      const cursor = mockCollection.find()
+      cursor.next.mockResolvedValue({ state: { key: 'value' } })
 
       await stateRetrieve.handler(mockRequest, mockH)
 
-      expect(mockCollection.findOne).toHaveBeenCalledWith(defaultQuery)
+      expect(mockCollection.find).toHaveBeenCalledWith(defaultQuery)
+      expect(mockCursor.sort).toHaveBeenCalledWith({ grantVersion: -1 })
+      expect(mockCursor.limit).toHaveBeenCalledWith(1)
+      expect(mockCursor.next).toHaveBeenCalled()
+
       expect(mockH.response).toHaveBeenCalledWith({ key: 'value' })
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
     test('should return 404 when state document is not found', async () => {
       mockRequest.query = defaultQuery
-      mockCollection.findOne.mockResolvedValue(null)
+      const mockCursor = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        next: jest.fn().mockResolvedValue(null) // no doc found
+      }
+      mockCollection.find.mockReturnValue(mockCursor)
 
       await stateRetrieve.handler(mockRequest, mockH)
 
-      expect(mockCollection.findOne).toHaveBeenCalledWith(defaultQuery)
+      expect(mockCollection.find).toHaveBeenCalledWith(defaultQuery)
+      expect(mockCursor.sort).toHaveBeenCalledWith({ grantVersion: -1 })
+      expect(mockCursor.limit).toHaveBeenCalledWith(1)
+      expect(mockCursor.next).toHaveBeenCalled()
+
       expect(mockH.response).toHaveBeenCalledWith({ error: 'State not found' })
       expect(mockH.code).toHaveBeenCalledWith(404)
     })
@@ -235,11 +255,24 @@ describe('State', () => {
   describe('stateDelete', () => {
     test('should delete state document and return 200', async () => {
       mockRequest.query = defaultQuery
+
+      const mockCursor = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        next: jest.fn().mockResolvedValue({ _id: 'some-id', grantVersion: 2 })
+      }
+      mockCollection.find.mockReturnValue(mockCursor)
       mockCollection.deleteOne.mockResolvedValue({ deletedCount: 1 })
 
       await stateDelete.handler(mockRequest, mockH)
 
-      expect(mockCollection.deleteOne).toHaveBeenCalledWith(defaultQuery)
+      expect(mockCollection.find).toHaveBeenCalledWith(defaultQuery)
+      expect(mockCursor.sort).toHaveBeenCalledWith({ grantVersion: -1 })
+      expect(mockCursor.limit).toHaveBeenCalledWith(1)
+      expect(mockCursor.next).toHaveBeenCalled()
+
+      expect(mockCollection.deleteOne).toHaveBeenCalledWith({ _id: 'some-id' })
+
       expect(mockH.response).toHaveBeenCalledWith({
         success: true,
         deleted: true
@@ -247,13 +280,25 @@ describe('State', () => {
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
-    test('should return 404 when state document is not found', async () => {
+    test('should return 404 when no document is found to delete', async () => {
       mockRequest.query = defaultQuery
-      mockCollection.deleteOne.mockResolvedValue({ deletedCount: 0 })
+
+      const mockCursor = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        next: jest.fn().mockResolvedValue(null)
+      }
+      mockCollection.find.mockReturnValue(mockCursor)
 
       await stateDelete.handler(mockRequest, mockH)
 
-      expect(mockCollection.deleteOne).toHaveBeenCalledWith(defaultQuery)
+      expect(mockCollection.find).toHaveBeenCalledWith(defaultQuery)
+      expect(mockCursor.sort).toHaveBeenCalledWith({ grantVersion: -1 })
+      expect(mockCursor.limit).toHaveBeenCalledWith(1)
+      expect(mockCursor.next).toHaveBeenCalled()
+
+      expect(mockCollection.deleteOne).not.toHaveBeenCalled()
+
       expect(mockH.response).toHaveBeenCalledWith({ error: 'State not found' })
       expect(mockH.code).toHaveBeenCalledWith(404)
     })
