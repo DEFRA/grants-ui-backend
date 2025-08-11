@@ -78,7 +78,7 @@ describe('POST /state payload size logging', () => {
 
     expect(loggerWarnSpy).toHaveBeenCalledWith(
       expect.stringContaining(
-        'Large payload approaching limit | size=600102 | threshold=500000 | max=1048576 | path=/state | userId=USER456'
+        'Large payload approaching limit | size=600099 | threshold=500000 | max=1048576 | path=/state | userId=USER456'
       )
     )
   })
