@@ -1,19 +1,20 @@
 {
   "info": {
-    "_postman_id": "7e59be10-8715-4316-b094-5cc6a5d0fa75",
+    "_postman_id": "6b4a6ee0-6813-4f4b-aa7e-a897624934b5",
     "name": "grants-ui-backend",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "13184991"
+    "_exporter_id": "45437546",
+    "_collection_link": "https://andrew-5807231.postman.co/workspace/Andrew's-Workspace~c4430974-a476-4315-8108-3b882bee7b85/collection/45437546-6b4a6ee0-6813-4f4b-aa7e-a897624934b5?action=share&source=collection_link&creator=45437546"
   },
   "item": [
     {
-      "name": "State",
+      "name": "state",
       "request": {
         "method": "POST",
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"businessId\": \"businessId\",\n    \"userId\": \"userId\",\n    \"grantId\": \"grantId\",\n    \"grantVersion\": \"grantVersion\",\n    \"state\": {\n        \"$$__referenceNumber\": \"AV-F54-F20\",\n        \"businessNature\": \"natureOfBusiness-A1\",\n        \"businessLegalStatus\": \"legalStatus-A1\",\n        \"isInEngland\": true,\n        \"planningPermissionStatus\": \"planningPermission-A1\",\n        \"projectStartStatus\": \"projectStart-A1\",\n        \"isLandBusinessOwned\": true,\n        \"isBuildingSmallerAbattoir\": true,\n        \"isProvidingServicesToOtherFarmers\": true,\n        \"projectItemsNeeded\": true,\n        \"eligibleItems\": \"[Circular]\",\n        \"needsStorageFacilities\": \"storageRadios-A1\",\n        \"estimatedCost\": 123455,\n        \"canPayRemainingCosts\": true,\n        \"processedProduceType\": \"produceProcessed-A1\",\n        \"valueAdditionMethod\": \"howAddingValue-A1\",\n        \"impactType\": \"[Circular]\",\n        \"hasMechanisationUsage\": true,\n        \"manualLabourEquivalence\": \"manualLabourAmount-A1\",\n        \"hasFutureCustomers\": true,\n        \"futureCustomerTypes\": \"[Circular]\",\n        \"collaboration\": true,\n        \"hasEnvironmentImpact\": true,\n        \"environmentalImpactTypes\": \"[Circular]\",\n        \"grantApplicantType\": \"applying-A1\",\n        \"applicantFirstName\": \"fds\",\n        \"applicantLastName\": \"fds\",\n        \"applicantEmail\": \"andrew.folga@equalexperts.com\",\n        \"applicantEmailConfirmation\": \"andrew.folga@equalexperts.com\",\n        \"applicantMobile\": \"324432432\",\n        \"applicantLandline\": \"543543543\",\n        \"applicantBusinessAddress__addressLine1\": \"fdsafdsa\",\n        \"applicantBusinessAddress__addressLine2\": null,\n        \"applicantBusinessAddress__town\": \"fdsafdsa\",\n        \"applicantBusinessAddress__county\": null,\n        \"applicantBusinessAddress__postcode\": \"CR41ND\",\n        \"applicantProjectPostcode\": \"CR63KJ\",\n        \"formSlug\": \"adding-value\"\n    }\n}",
+          "raw": "{\n    \"businessId\": \"exampleGrantBusinessId\",\n    \"userId\": \"exampleGrantUserId\",\n    \"grantId\": \"exampleGrantGrantId\",\n    \"grantVersion\": 2,\n    \"state\": {\n        \"$$__referenceNumber\": \"F99-ECB-999\",\n        \"TKsWbP\": true,\n        \"sdFYHf\": \"business4\"\n    }\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -29,49 +30,6 @@
       "response": []
     },
     {
-      "name": "State",
-      "protocolProfileBehavior": {
-        "disableBodyPruning": true
-      },
-      "request": {
-        "method": "GET",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n    \"businessId\": \"businessId\",\n    \"userId\": \"userId\",\n    \"grantId\": \"grantId\",\n    \"grantVersion\": \"grantVersion\",\n    \"state\": {\n        \"$$__referenceNumber\": \"AV-F54-F20\",\n        \"businessNature\": \"natureOfBusiness-A1\",\n        \"businessLegalStatus\": \"legalStatus-A1\",\n        \"isInEngland\": true,\n        \"planningPermissionStatus\": \"planningPermission-A1\",\n        \"projectStartStatus\": \"projectStart-A1\",\n        \"isLandBusinessOwned\": true,\n        \"isBuildingSmallerAbattoir\": true,\n        \"isProvidingServicesToOtherFarmers\": true,\n        \"projectItemsNeeded\": true,\n        \"eligibleItems\": \"[Circular]\",\n        \"needsStorageFacilities\": \"storageRadios-A1\",\n        \"estimatedCost\": 123455,\n        \"canPayRemainingCosts\": true,\n        \"processedProduceType\": \"produceProcessed-A1\",\n        \"valueAdditionMethod\": \"howAddingValue-A1\",\n        \"impactType\": \"[Circular]\",\n        \"hasMechanisationUsage\": true,\n        \"manualLabourEquivalence\": \"manualLabourAmount-A1\",\n        \"hasFutureCustomers\": true,\n        \"futureCustomerTypes\": \"[Circular]\",\n        \"collaboration\": true,\n        \"hasEnvironmentImpact\": true,\n        \"environmentalImpactTypes\": \"[Circular]\",\n        \"grantApplicantType\": \"applying-A1\",\n        \"applicantFirstName\": \"fds\",\n        \"applicantLastName\": \"fds\",\n        \"applicantEmail\": \"andrew.folga@equalexperts.com\",\n        \"applicantEmailConfirmation\": \"andrew.folga@equalexperts.com\",\n        \"applicantMobile\": \"324432432\",\n        \"applicantLandline\": \"543543543\",\n        \"applicantBusinessAddress__addressLine1\": \"fdsafdsa\",\n        \"applicantBusinessAddress__addressLine2\": null,\n        \"applicantBusinessAddress__town\": \"fdsafdsa\",\n        \"applicantBusinessAddress__county\": null,\n        \"applicantBusinessAddress__postcode\": \"CR41ND\",\n        \"applicantProjectPostcode\": \"CR63KJ\",\n        \"formSlug\": \"adding-value\"\n    }\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{grants-ui-backend_base_url}}/state?businessId=businessId&userId=userId&grantId=grantId&grantVersion=grantVersion",
-          "host": ["{{grants-ui-backend_base_url}}"],
-          "path": ["state"],
-          "query": [
-            {
-              "key": "businessId",
-              "value": "businessId"
-            },
-            {
-              "key": "userId",
-              "value": "userId"
-            },
-            {
-              "key": "grantId",
-              "value": "grantId"
-            },
-            {
-              "key": "grantVersion",
-              "value": "grantVersion"
-            }
-          ]
-        }
-      },
-      "response": []
-    },
-    {
       "name": "Health",
       "request": {
         "method": "GET",
@@ -80,6 +38,72 @@
           "raw": "{{grants-ui-backend_base_url}}/health",
           "host": ["{{grants-ui-backend_base_url}}"],
           "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "state",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{grants-ui-backend_base_url}}/state?userId=exampleGrantUserId&businessId=exampleGrantBusinessId&grantId=exampleGrantGrantId",
+          "host": ["{{grants-ui-backend_base_url}}"],
+          "path": ["state"],
+          "query": [
+            {
+              "key": "userId",
+              "value": "exampleGrantUserId"
+            },
+            {
+              "key": "businessId",
+              "value": "exampleGrantBusinessId"
+            },
+            {
+              "key": "grantId",
+              "value": "exampleGrantGrantId"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "state",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{grants-ui-backend_base_url}}/state?userId=exampleGrantUserId&businessId=exampleGrantBusinessId&grantId=exampleGrantGrantId",
+          "host": ["{{grants-ui-backend_base_url}}"],
+          "path": ["state"],
+          "query": [
+            {
+              "key": "userId",
+              "value": "exampleGrantUserId"
+            },
+            {
+              "key": "businessId",
+              "value": "exampleGrantBusinessId"
+            },
+            {
+              "key": "grantId",
+              "value": "exampleGrantGrantId"
+            }
+          ]
         }
       },
       "response": []
