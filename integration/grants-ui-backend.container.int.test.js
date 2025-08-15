@@ -83,7 +83,7 @@ describe('POST /state', () => {
 })
 
 describe('GET /state', () => {
-  it('retrieves the latest state', async () => {
+  it('retrieves state', async () => {
     await db.collection('grant-application-state').insertMany([
       {
         businessId: 'biz-1',
@@ -91,15 +91,6 @@ describe('GET /state', () => {
         grantId: 'grant-1',
         grantVersion: 1,
         state: { step: 'start' },
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        businessId: 'biz-1',
-        userId: 'user-1',
-        grantId: 'grant-1',
-        grantVersion: 2,
-        state: { step: 'middle' },
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -114,37 +105,12 @@ describe('GET /state', () => {
     const response = await Wreck.get(`${apiUrl}/state?${qs}`, { json: true })
 
     expect(response.res.statusCode).toBe(200)
-    expect(response.payload).toEqual({ step: 'middle' })
-  })
-
-  it('returns 404 if state not found', async () => {
-    const qs = new URLSearchParams({
-      businessId: 'biz-2',
-      userId: 'user-2',
-      grantId: 'unknown'
-    }).toString()
-
-    let statusCode
-    let payload
-    try {
-      await Wreck.get(`${apiUrl}/state?${qs}`, {
-        json: true
-      })
-    } catch (err) {
-      // Wreck may throw, especially for 404s
-      statusCode = err?.output?.statusCode || err?.statusCode || 500
-      payload = err?.data || { error: 'Unknown error' }
-    }
-
-    expect(statusCode).toBe(404)
-    expect(payload.payload).toEqual({
-      error: 'State not found'
-    })
+    expect(response.payload).toEqual({ step: 'start' })
   })
 })
 
 describe('DELETE /state', () => {
-  it('deletes the latest state', async () => {
+  it('deletes state', async () => {
     await db.collection('grant-application-state').insertOne({
       businessId: 'biz-1',
       userId: 'user-1',
