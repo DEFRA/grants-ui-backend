@@ -1,14 +1,16 @@
 import {
+  TEST_AUTH_TOKEN,
+  TEST_ENCRYPTION_KEY
+} from '../test-helpers/auth-constants.js'
+import {
   HTTP_POST,
   HTTP_GET,
   STATE_URL,
   CONTENT_TYPE_HEADER,
   CONTENT_TYPE_JSON,
   AUTH_HEADER,
-  HTTP_401_UNAUTHORIZED,
-  TEST_AUTH_TOKEN,
-  TEST_ENCRYPTION_KEY
-} from '../test-helpers/auth-constants.js'
+  HTTP_401_UNAUTHORIZED
+} from '../test-helpers/http-header-constants.js'
 import crypto from 'crypto'
 
 describe('Auth Plugin Integration Tests', () => {

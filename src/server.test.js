@@ -1,13 +1,15 @@
 import {
   TEST_AUTH_TOKEN,
-  TEST_ENCRYPTION_KEY,
+  TEST_ENCRYPTION_KEY
+} from './test-helpers/auth-constants.js'
+import {
   HTTP_POST,
-  STATE_URL,
+  HTTP_DELETE,
   CONTENT_TYPE_HEADER,
   CONTENT_TYPE_JSON,
   AUTH_HEADER,
   HTTP_201_CREATED
-} from './test-helpers/auth-constants.js'
+} from './test-helpers/http-header-constants.js'
 import crypto from 'crypto'
 
 const encryptToken = (token, encryptionKey) => {
@@ -66,7 +68,7 @@ describe('POST /state payload size logging', () => {
   test('logs payload size info for small payload (handled in route)', async () => {
     const response = await server.inject({
       method: HTTP_POST,
-      url: STATE_URL,
+      url: '/state',
       payload: {
         businessId: 'BIZ123',
         userId: 'USER456',
@@ -91,12 +93,25 @@ describe('POST /state payload size logging', () => {
     expect(loggerWarnSpy).not.toHaveBeenCalled()
   })
 
+  test('DELETE endpoint requires authentication', async () => {
+    const response = await server.inject({
+      method: HTTP_DELETE,
+      url: '/state?businessId=BIZ123&userId=USER456&grantId=GRANT789',
+      headers: {
+        [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON
+      }
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.result.message).toBe('Invalid authentication credentials')
+  })
+
   test('logs warning for large payload (handled in route)', async () => {
     const largeObj = { foo: 'x'.repeat(600_000) }
 
     const response = await server.inject({
       method: HTTP_POST,
-      url: STATE_URL,
+      url: '/state',
       payload: {
         businessId: 'BIZ123',
         userId: 'USER456',
