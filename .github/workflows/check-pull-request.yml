@@ -30,6 +30,9 @@ jobs:
           npm run lint
           npm test
 
+      - name: Run integration tests
+        run: DEBUG=testcontainers:containers npm run test:integration
+
       - name: Test Docker Image Build
         run: |
           set +e
@@ -57,7 +60,6 @@ jobs:
         uses: snyk/actions/node@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
 #      - name: SonarCloud Scan
 #        if: github.actor != 'dependabot[bot]'
 #        uses: SonarSource/sonarcloud-github-action@master
