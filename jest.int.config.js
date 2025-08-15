@@ -5,7 +5,7 @@ export default {
   clearMocks: true,
   silent: false,
   testEnvironment: 'node',
-  testMatch: ['**/integration/**/*.test.js'], // only integration tests
+  testMatch: ['**/integration/**/*.int.test.js'], // only integration tests
   reporters: ['default', ['github-actions', { silent: false }], 'summary'],
   transform: { '^.+\\.js$': 'babel-jest' },
   transformIgnorePatterns: [
