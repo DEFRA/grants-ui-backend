@@ -116,6 +116,22 @@ const config = convict({
       default: 'x-cdp-request-id',
       env: 'TRACING_HEADER'
     }
+  },
+  auth: {
+    token: {
+      doc: 'Bearer token for service-to-service authentication',
+      format: String,
+      default: '',
+      env: 'GRANTS_UI_BACKEND_AUTH_TOKEN',
+      sensitive: true
+    },
+    encryptionKey: {
+      doc: 'Encryption key for decrypting bearer token',
+      format: String,
+      default: '',
+      env: 'GRANTS_UI_BACKEND_ENCRYPTION_KEY',
+      sensitive: true
+    }
   }
 })
 

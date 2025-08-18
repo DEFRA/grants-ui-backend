@@ -1,1 +1,3 @@
-// Add jest global setup items here
+import { config as loadDotenv } from 'dotenv'
+
+loadDotenv()

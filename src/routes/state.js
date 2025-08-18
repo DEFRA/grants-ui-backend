@@ -27,6 +27,7 @@ export const stateSave = {
   method: 'POST',
   path: '/state',
   options: {
+    auth: 'bearer-basic-auth',
     payload: {
       maxBytes: PAYLOAD_SIZE_MAX, // 1MB
       output: 'data',
@@ -96,6 +97,7 @@ export const stateRetrieve = {
   method: 'GET',
   path: '/state',
   options: {
+    auth: 'bearer-basic-auth',
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
@@ -152,6 +154,7 @@ export const stateDelete = {
   method: 'DELETE',
   path: '/state',
   options: {
+    auth: 'bearer-basic-auth',
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {

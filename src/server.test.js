@@ -1,15 +1,48 @@
-import { createServer } from './server.js'
+import {
+  TEST_AUTH_TOKEN,
+  TEST_ENCRYPTION_KEY
+} from './test-helpers/auth-constants.js'
+import {
+  HTTP_POST,
+  HTTP_DELETE,
+  CONTENT_TYPE_HEADER,
+  CONTENT_TYPE_JSON,
+  AUTH_HEADER,
+  HTTP_201_CREATED
+} from './test-helpers/http-header-constants.js'
+import crypto from 'crypto'
+
+const encryptToken = (token, encryptionKey) => {
+  const iv = crypto.randomBytes(12)
+  const key = crypto.scryptSync(encryptionKey, 'salt', 32)
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
+
+  let encrypted = cipher.update(token, 'utf8', 'base64')
+  encrypted += cipher.final('base64')
+
+  const authTag = cipher.getAuthTag()
+
+  return `${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted}`
+}
 
 describe('POST /state payload size logging', () => {
   let server
   let loggerInfoSpy
   let loggerWarnSpy
+  let authHeader
 
   beforeAll(async () => {
+    process.env.GRANTS_UI_BACKEND_AUTH_TOKEN = TEST_AUTH_TOKEN
+    process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
+
+    const { createServer } = await import('./server.js')
     server = await createServer()
     await server.initialize()
 
-    // Spy on server logger
+    const encryptedToken = encryptToken(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
+    const credentials = ':' + encryptedToken
+    authHeader = `Basic ${Buffer.from(credentials).toString('base64')}`
+
     loggerInfoSpy = jest
       .spyOn(server.logger, 'info')
       .mockImplementation(() => {})
@@ -34,7 +67,7 @@ describe('POST /state payload size logging', () => {
 
   test('logs payload size info for small payload (handled in route)', async () => {
     const response = await server.inject({
-      method: 'POST',
+      method: HTTP_POST,
       url: '/state',
       payload: {
         businessId: 'BIZ123',
@@ -44,11 +77,12 @@ describe('POST /state payload size logging', () => {
         state: { a: 'small' }
       },
       headers: {
-        'Content-Type': 'application/json'
+        [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
+        [AUTH_HEADER]: authHeader
       }
     })
 
-    expect(response.statusCode).toBe(201)
+    expect(response.statusCode).toBe(HTTP_201_CREATED)
 
     // Look for size log
     expect(loggerInfoSpy).toHaveBeenCalledWith(
@@ -59,11 +93,24 @@ describe('POST /state payload size logging', () => {
     expect(loggerWarnSpy).not.toHaveBeenCalled()
   })
 
+  test('DELETE endpoint requires authentication', async () => {
+    const response = await server.inject({
+      method: HTTP_DELETE,
+      url: '/state?businessId=BIZ123&userId=USER456&grantId=GRANT789',
+      headers: {
+        [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON
+      }
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.result.message).toBe('Invalid authentication credentials')
+  })
+
   test('logs warning for large payload (handled in route)', async () => {
     const largeObj = { foo: 'x'.repeat(600_000) }
 
     const response = await server.inject({
-      method: 'POST',
+      method: HTTP_POST,
       url: '/state',
       payload: {
         businessId: 'BIZ123',
@@ -71,10 +118,14 @@ describe('POST /state payload size logging', () => {
         grantId: 'GRANT789',
         grantVersion: 1,
         state: largeObj
+      },
+      headers: {
+        [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
+        [AUTH_HEADER]: authHeader
       }
     })
 
-    expect(response.statusCode).toBe(201)
+    expect(response.statusCode).toBe(HTTP_201_CREATED)
 
     expect(loggerWarnSpy).toHaveBeenCalledWith(
       expect.stringContaining(
