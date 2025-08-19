@@ -1,5 +1,6 @@
 import Joi from 'joi'
 import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit.js'
+import { log, LogCodes } from '../common/helpers/logging/log.js'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
@@ -37,7 +38,19 @@ export const stateSave = {
     validate: {
       payload: stateSaveSchema,
       failAction: (request, h, err) => {
-        request.server.logger.error(`POST /state, validation failed: ${err.message}`, err)
+        const { businessId, userId, grantId, grantVersion } = request.payload
+        log(LogCodes.STATE.STATE_SAVE_FAILED, {
+          userId,
+          businessId,
+          grantId,
+          grantVersion,
+          errorName: err.name,
+          errorMessage: `POST /state, validation failed: ${err.message}`,
+          errorReason: err.reason,
+          errorCode: err.code,
+          isMongoError: false,
+          stack: err.stack?.split('\n')[0]
+        })
         throw err
       }
     }
@@ -72,19 +85,18 @@ export const stateSave = {
     } catch (err) {
       const isMongoError = err.name && err.name.startsWith('Mongo')
 
-      const errorMsg = [
-        'Failed to save application state',
-        `name=${err.name}`,
-        `message=${err.message}`,
-        `reason=${JSON.stringify(err.reason)}`,
-        `code=${err.code}`,
-        `isMongoError=${isMongoError}`,
-        `stack=${err.stack?.split('\n')[0]}`
-      ]
-        .filter(Boolean)
-        .join(' | ')
+      log(LogCodes.STATE.STATE_SAVE_FAILED, {
+        userId,
+        businessId,
+        grantId,
+        errorName: err.name,
+        errorMessage: err.message,
+        errorReason: err.reason,
+        errorCode: err.code,
+        isMongoError,
+        stack: err.stack?.split('\n')[0]
+      })
 
-      request.server.logger.error(errorMsg)
       return h.response({ error: 'Failed to save application state' }).code(500)
     }
   }
@@ -98,7 +110,18 @@ export const stateRetrieve = {
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
-        request.server.logger.error(`GET /state, validation failed: ${err.message}`, err)
+        const { businessId, userId, grantId } = request.query
+        log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
+          userId,
+          businessId,
+          grantId,
+          errorName: err.name,
+          errorMessage: `GET /state, validation failed: ${err.message}`,
+          errorReason: err.reason,
+          errorCode: err.code,
+          isMongoError: false,
+          stack: err.stack?.split('\n')[0]
+        })
         throw err
       }
     }
@@ -124,19 +147,18 @@ export const stateRetrieve = {
     } catch (err) {
       const isMongoError = err?.name?.startsWith('Mongo')
 
-      const errorMsg = [
-        'Failed to retrieve application state',
-        `name=${err.name}`,
-        `message=${err.message}`,
-        `reason=${JSON.stringify(err.reason)}`,
-        `code=${err.code}`,
-        `isMongoError=${isMongoError}`,
-        `stack=${err.stack?.split('\n')[0]}`
-      ]
-        .filter(Boolean)
-        .join(' | ')
+      log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
+        userId,
+        businessId,
+        grantId,
+        errorName: err.name,
+        errorMessage: err.message,
+        errorReason: err.reason,
+        errorCode: err.code,
+        isMongoError,
+        stack: err.stack?.split('\n')[0]
+      })
 
-      request.server.logger.error(errorMsg)
       return h.response({ error: 'Failed to retrieve application state' }).code(500)
     }
   }
@@ -150,7 +172,18 @@ export const stateDelete = {
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
-        request.server.logger.error(`DELETE /state, validation failed: ${err.message}`, err)
+        const { businessId, userId, grantId } = request.query
+        log(LogCodes.STATE.STATE_DELETE_FAILED, {
+          userId,
+          businessId,
+          grantId,
+          errorName: err.name,
+          errorMessage: `DELETE /state, validation failed: ${err.message}`,
+          errorReason: err.reason,
+          errorCode: err.code,
+          isMongoError: false,
+          stack: err.stack?.split('\n')[0]
+        })
         throw err
       }
     }
@@ -178,19 +211,17 @@ export const stateDelete = {
     } catch (err) {
       const isMongoError = err?.name?.startsWith('Mongo')
 
-      const errorMsg = [
-        'Failed to delete application state',
-        `name=${err.name}`,
-        `message=${err.message}`,
-        `reason=${JSON.stringify(err.reason)}`,
-        `code=${err.code}`,
-        `isMongoError=${isMongoError}`,
-        `stack=${err.stack?.split('\n')[0]}`
-      ]
-        .filter(Boolean)
-        .join(' | ')
-
-      request.server.logger.error(errorMsg)
+      log(LogCodes.STATE.STATE_DELETE_FAILED, {
+        userId,
+        businessId,
+        grantId,
+        errorName: err.name,
+        errorMessage: err.message,
+        errorReason: err.reason,
+        errorCode: err.code,
+        isMongoError,
+        stack: err.stack?.split('\n')[0]
+      })
       return h.response({ error: 'Failed to delete application state' }).code(500)
     }
   }

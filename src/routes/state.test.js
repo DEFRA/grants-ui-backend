@@ -1,9 +1,20 @@
 import { MongoClient } from 'mongodb'
 import { stateDelete, stateRetrieve, stateSave } from './state.js'
-import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit.js'
+import { logIfApproachingPayloadLimit } from '~/src/common/helpers/logging/log-if-approaching-payload-limit.js'
+import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 
 jest.mock('../common/helpers/logging/log-if-approaching-payload-limit.js', () => ({
   logIfApproachingPayloadLimit: jest.fn()
+}))
+jest.mock('~/src/common/helpers/logging/log.js', () => ({
+  log: jest.fn(),
+  LogCodes: {
+    STATE: {
+      STATE_SAVE_FAILED: { level: 'error', messageFunc: jest.fn() },
+      STATE_RETRIEVE_FAILED: { level: 'error', messageFunc: jest.fn() },
+      STATE_DELETE_FAILED: { level: 'error', messageFunc: jest.fn() }
+    }
+  }
 }))
 
 describe('State', () => {
@@ -131,11 +142,27 @@ describe('State', () => {
       }
       const dbError = new Error('Database error')
       dbError.name = 'MongoError'
+      dbError.code = 500
+      dbError.reason = 'Some reason'
+      dbError.name = 'MongoError'
       mockCollection.updateOne.mockRejectedValue(dbError)
 
       await stateSave.handler(mockRequest, mockH)
 
-      expect(mockServer.logger.error).toHaveBeenCalled()
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.STATE.STATE_SAVE_FAILED,
+        expect.objectContaining({
+          userId: defaultQuery.userId,
+          businessId: defaultQuery.businessId,
+          grantId: defaultQuery.grantId,
+          errorName: dbError.name,
+          errorMessage: dbError.message,
+          errorReason: dbError.reason,
+          errorCode: dbError.code,
+          isMongoError: true,
+          stack: expect.stringContaining('MongoError: Database error')
+        })
+      )
       expect(mockH.response).toHaveBeenCalledWith({
         error: 'Failed to save application state'
       })
@@ -154,11 +181,28 @@ describe('State', () => {
       }
 
       const mockError = new Error('Validation error')
+      mockError.name = 'ValidationError'
+      mockError.code = 404
+      mockError.reason = 'Some reason'
 
       expect(() => stateSave.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
         'Validation error'
       )
-      expect(mockServer.logger.error).toHaveBeenCalled()
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.STATE.STATE_SAVE_FAILED,
+        expect.objectContaining({
+          userId: invalidPayload.userId,
+          businessId: invalidPayload.businessId,
+          grantId: invalidPayload.grantId,
+          grantVersion: invalidPayload.grantVersion,
+          errorName: mockError.name,
+          errorMessage: `POST /state, validation failed: ${mockError.message}`,
+          errorReason: mockError.reason,
+          errorCode: mockError.code,
+          isMongoError: false,
+          stack: expect.stringContaining('ValidationError: Validation error')
+        })
+      )
     })
   })
 
@@ -210,11 +254,32 @@ describe('State', () => {
       mockRequest.query = defaultQuery
       const dbError = new Error('Database error')
       dbError.name = 'MongoError'
-      mockCollection.findOne.mockRejectedValue(dbError)
+      dbError.code = 500
+      dbError.reason = 'Some reason'
+      const mockCursor = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        next: jest.fn().mockRejectedValue(dbError)
+      }
+      mockCollection.find.mockReturnValue(mockCursor)
 
       await stateRetrieve.handler(mockRequest, mockH)
 
-      expect(mockServer.logger.error).toHaveBeenCalled()
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.STATE.STATE_RETRIEVE_FAILED,
+        expect.objectContaining({
+          userId: defaultQuery.userId,
+          businessId: defaultQuery.businessId,
+          grantId: defaultQuery.grantId,
+          errorName: dbError.name,
+          errorMessage: dbError.message,
+          errorReason: dbError.reason,
+          errorCode: dbError.code,
+          isMongoError: true,
+          stack: expect.stringContaining('MongoError: Database error')
+        })
+      )
+
       expect(mockH.response).toHaveBeenCalledWith({
         error: 'Failed to retrieve application state'
       })
@@ -233,11 +298,27 @@ describe('State', () => {
       }
 
       const mockError = new Error('Validation error')
+      mockError.name = 'ValidationError'
+      mockError.code = 404
+      mockError.reason = 'Some reason'
 
       expect(() => stateRetrieve.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
         'Validation error'
       )
-      expect(mockServer.logger.error).toHaveBeenCalled()
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.STATE.STATE_RETRIEVE_FAILED,
+        expect.objectContaining({
+          userId: invalidQuery.userId,
+          businessId: invalidQuery.businessId,
+          grantId: invalidQuery.grantId,
+          errorName: mockError.name,
+          errorMessage: `GET /state, validation failed: ${mockError.message}`,
+          errorReason: mockError.reason,
+          errorCode: mockError.code,
+          isMongoError: false,
+          stack: expect.stringContaining('ValidationError: Validation error')
+        })
+      )
     })
   })
 
@@ -294,13 +375,35 @@ describe('State', () => {
 
     test('should handle database errors and return 500', async () => {
       mockRequest.query = defaultQuery
+
       const dbError = new Error('Database error')
       dbError.name = 'MongoError'
-      mockCollection.deleteOne.mockRejectedValue(dbError)
+      dbError.code = 500
+      dbError.reason = 'Some reason'
+
+      const mockCursor = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        next: jest.fn().mockRejectedValue(dbError)
+      }
+      mockCollection.find.mockReturnValue(mockCursor)
 
       await stateDelete.handler(mockRequest, mockH)
 
-      expect(mockServer.logger.error).toHaveBeenCalled()
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.STATE.STATE_DELETE_FAILED,
+        expect.objectContaining({
+          userId: defaultQuery.userId,
+          businessId: defaultQuery.businessId,
+          grantId: defaultQuery.grantId,
+          errorName: dbError.name,
+          errorMessage: dbError.message,
+          errorReason: dbError.reason,
+          errorCode: dbError.code,
+          isMongoError: true,
+          stack: expect.stringContaining('MongoError: Database error')
+        })
+      )
       expect(mockH.response).toHaveBeenCalledWith({
         error: 'Failed to delete application state'
       })
@@ -319,11 +422,27 @@ describe('State', () => {
       }
 
       const mockError = new Error('Validation error')
+      mockError.name = 'ValidationError'
+      mockError.code = 404
+      mockError.reason = 'Some reason'
 
       expect(() => stateDelete.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
         'Validation error'
       )
-      expect(mockServer.logger.error).toHaveBeenCalled()
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.STATE.STATE_DELETE_FAILED,
+        expect.objectContaining({
+          userId: invalidQuery.userId,
+          businessId: invalidQuery.businessId,
+          grantId: invalidQuery.grantId,
+          errorName: mockError.name,
+          errorMessage: `DELETE /state, validation failed: ${mockError.message}`,
+          errorReason: mockError.reason,
+          errorCode: mockError.code,
+          isMongoError: false,
+          stack: expect.stringContaining('ValidationError: Validation error')
+        })
+      )
     })
   })
 })
