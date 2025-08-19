@@ -1,7 +1,4 @@
-import {
-  TEST_AUTH_TOKEN,
-  TEST_ENCRYPTION_KEY
-} from '../test-helpers/auth-constants.js'
+import { TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY } from '../test-helpers/auth-constants.js'
 import {
   HTTP_POST,
   HTTP_GET,
@@ -23,13 +20,10 @@ describe('Auth Plugin Integration Tests', () => {
     state: { step: 1, data: 'test' }
   }
 
-  const createBasicAuthCredentials = (token) =>
-    Buffer.from(`:${token}`).toString('base64')
-  const createBasicAuthHeader = (token) =>
-    `Basic ${createBasicAuthCredentials(token)}`
+  const createBasicAuthCredentials = (token) => Buffer.from(`:${token}`).toString('base64')
+  const createBasicAuthHeader = (token) => `Basic ${createBasicAuthCredentials(token)}`
   const createBearerAuthHeader = (token) => `Bearer ${token}`
-  const createUserCredentials = (username, token) =>
-    Buffer.from(`${username}:${token}`).toString('base64')
+  const createUserCredentials = (username, token) => Buffer.from(`${username}:${token}`).toString('base64')
 
   const encryptToken = (token, encryptionKey) => {
     const iv = crypto.randomBytes(12)
@@ -72,10 +66,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: createEncryptedAuthHeader(
-            TEST_AUTH_TOKEN,
-            TEST_ENCRYPTION_KEY
-          )
+          [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
         },
         payload: BASIC_PAYLOAD
       })
@@ -84,19 +75,14 @@ describe('Auth Plugin Integration Tests', () => {
     })
 
     it('should log successful authentication at info level', async () => {
-      const loggerInfoSpy = jest
-        .spyOn(server.logger, 'info')
-        .mockImplementation(() => {})
+      const loggerInfoSpy = jest.spyOn(server.logger, 'info').mockImplementation(() => {})
 
       const response = await server.inject({
         method: HTTP_POST,
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: createEncryptedAuthHeader(
-            TEST_AUTH_TOKEN,
-            TEST_ENCRYPTION_KEY
-          )
+          [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
         },
         payload: BASIC_PAYLOAD
       })
@@ -275,8 +261,7 @@ describe('Auth Plugin Integration Tests', () => {
   })
 
   describe('Edge Cases', () => {
-    const STATE_GET_URL =
-      '/state?businessId=test&userId=test-user&grantId=test-grant'
+    const STATE_GET_URL = '/state?businessId=test&userId=test-user&grantId=test-grant'
     const USER_AGENT_HEADER = 'user-agent'
     const TEST_USER_AGENT = 'Test User Agent'
     it('should handle GET requests with authentication', async () => {
@@ -284,10 +269,7 @@ describe('Auth Plugin Integration Tests', () => {
         method: HTTP_GET,
         url: STATE_GET_URL,
         headers: {
-          [AUTH_HEADER]: createEncryptedAuthHeader(
-            TEST_AUTH_TOKEN,
-            TEST_ENCRYPTION_KEY
-          )
+          [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
         }
       })
 
@@ -434,10 +416,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: createEncryptedAuthHeader(
-              TEST_AUTH_TOKEN,
-              TEST_ENCRYPTION_KEY
-            )
+            [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
           },
           payload: BASIC_PAYLOAD
         })
@@ -469,10 +448,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: createEncryptedAuthHeader(
-              'wrong-token',
-              TEST_ENCRYPTION_KEY
-            )
+            [AUTH_HEADER]: createEncryptedAuthHeader('wrong-token', TEST_ENCRYPTION_KEY)
           },
           payload: BASIC_PAYLOAD
         })
@@ -499,9 +475,7 @@ describe('Auth Plugin Integration Tests', () => {
         await testServer.initialize()
 
         const malformedEncryptedToken = 'invalid:encrypted:token:format'
-        const credentials = Buffer.from(`:${malformedEncryptedToken}`).toString(
-          'base64'
-        )
+        const credentials = Buffer.from(`:${malformedEncryptedToken}`).toString('base64')
 
         const response = await testServer.inject({
           method: HTTP_POST,
@@ -571,9 +545,7 @@ describe('Auth Plugin Integration Tests', () => {
         await testServer.initialize()
 
         const invalidFormatToken = 'missing:parts'
-        const credentials = Buffer.from(`:${invalidFormatToken}`).toString(
-          'base64'
-        )
+        const credentials = Buffer.from(`:${invalidFormatToken}`).toString('base64')
 
         const response = await testServer.inject({
           method: HTTP_POST,

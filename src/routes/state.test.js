@@ -2,12 +2,9 @@ import { MongoClient } from 'mongodb'
 import { stateDelete, stateRetrieve, stateSave } from './state.js'
 import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit.js'
 
-jest.mock(
-  '../common/helpers/logging/log-if-approaching-payload-limit.js',
-  () => ({
-    logIfApproachingPayloadLimit: jest.fn()
-  })
-)
+jest.mock('../common/helpers/logging/log-if-approaching-payload-limit.js', () => ({
+  logIfApproachingPayloadLimit: jest.fn()
+}))
 
 describe('State', () => {
   const defaultQuery = {
@@ -158,13 +155,9 @@ describe('State', () => {
 
       const mockError = new Error('Validation error')
 
-      expect(() =>
-        stateSave.options.validate.failAction(
-          mockValidationRequest,
-          mockH,
-          mockError
-        )
-      ).toThrow('Validation error')
+      expect(() => stateSave.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
+        'Validation error'
+      )
       expect(mockServer.logger.error).toHaveBeenCalled()
     })
   })
@@ -241,13 +234,9 @@ describe('State', () => {
 
       const mockError = new Error('Validation error')
 
-      expect(() =>
-        stateRetrieve.options.validate.failAction(
-          mockValidationRequest,
-          mockH,
-          mockError
-        )
-      ).toThrow('Validation error')
+      expect(() => stateRetrieve.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
+        'Validation error'
+      )
       expect(mockServer.logger.error).toHaveBeenCalled()
     })
   })
@@ -331,13 +320,9 @@ describe('State', () => {
 
       const mockError = new Error('Validation error')
 
-      expect(() =>
-        stateDelete.options.validate.failAction(
-          mockValidationRequest,
-          mockH,
-          mockError
-        )
-      ).toThrow('Validation error')
+      expect(() => stateDelete.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
+        'Validation error'
+      )
       expect(mockServer.logger.error).toHaveBeenCalled()
     })
   })

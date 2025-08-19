@@ -1,7 +1,4 @@
-import {
-  TEST_AUTH_TOKEN,
-  TEST_ENCRYPTION_KEY
-} from './test-helpers/auth-constants.js'
+import { TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY } from './test-helpers/auth-constants.js'
 import {
   HTTP_POST,
   HTTP_DELETE,
@@ -43,12 +40,8 @@ describe('POST /state payload size logging', () => {
     const credentials = ':' + encryptedToken
     authHeader = `Basic ${Buffer.from(credentials).toString('base64')}`
 
-    loggerInfoSpy = jest
-      .spyOn(server.logger, 'info')
-      .mockImplementation(() => {})
-    loggerWarnSpy = jest
-      .spyOn(server.logger, 'warn')
-      .mockImplementation(() => {})
+    loggerInfoSpy = jest.spyOn(server.logger, 'info').mockImplementation(() => {})
+    loggerWarnSpy = jest.spyOn(server.logger, 'warn').mockImplementation(() => {})
   })
 
   afterEach(async () => {
@@ -85,9 +78,7 @@ describe('POST /state payload size logging', () => {
     expect(response.statusCode).toBe(HTTP_201_CREATED)
 
     // Look for size log
-    expect(loggerInfoSpy).toHaveBeenCalledWith(
-      expect.stringContaining('payload of size')
-    )
+    expect(loggerInfoSpy).toHaveBeenCalledWith(expect.stringContaining('payload of size'))
 
     // Should not warn for small payloads
     expect(loggerWarnSpy).not.toHaveBeenCalled()

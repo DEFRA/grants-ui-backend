@@ -9,10 +9,7 @@ export default async function globalSetup() {
   console.log(`Compose path: ${composeFilePath}`)
 
   console.log('Creating DockerComposeEnvironment...')
-  const dockerEnv = new DockerComposeEnvironment(
-    composeFilePath,
-    'compose.yml'
-  ).withWaitStrategy(
+  const dockerEnv = new DockerComposeEnvironment(composeFilePath, 'compose.yml').withWaitStrategy(
     'grants-ui-backend',
     Wait.forLogMessage('Server started successfully').withStartupTimeout(30000)
   )

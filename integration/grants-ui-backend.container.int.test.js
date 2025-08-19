@@ -7,10 +7,8 @@ let db
 let apiUrl
 let client
 
-const TEST_AUTH_TOKEN =
-  'test-token-test-token-test-token-test-token-test-t-64-chars-long'
-const TEST_ENCRYPTION_KEY =
-  'test-encryption-key-test-encryption-key-test-encry-64-chars-long'
+const TEST_AUTH_TOKEN = 'test-token-test-token-test-token-test-token-test-t-64-chars-long'
+const TEST_ENCRYPTION_KEY = 'test-encryption-key-test-encryption-key-test-encry-64-chars-long'
 
 const encryptToken = (token, encryptionKey) => {
   const iv = crypto.randomBytes(12)
@@ -39,9 +37,7 @@ beforeAll(async () => {
   console.log('Integration Test Setup:')
   console.log(`API URL: ${apiUrl}`)
   console.log(`Auth token set: ${!!process.env.GRANTS_UI_BACKEND_AUTH_TOKEN}`)
-  console.log(
-    `Encryption key set: ${!!process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY}`
-  )
+  console.log(`Encryption key set: ${!!process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY}`)
 
   client = await MongoClient.connect(process.env.MONGO_URI)
   db = client.db()
@@ -183,9 +179,7 @@ describe('DELETE /state', () => {
     expect(response.res.statusCode).toBe(200)
     expect(response.payload).toEqual({ success: true, deleted: true })
 
-    const doc = await db
-      .collection('grant-application-state')
-      .findOne({ businessId: 'biz-1' })
+    const doc = await db.collection('grant-application-state').findOne({ businessId: 'biz-1' })
     expect(doc).toBeNull()
   })
 })

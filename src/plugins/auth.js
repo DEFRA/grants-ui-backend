@@ -61,10 +61,8 @@ function validateBasicAuth(authHeader) {
   }
 
   const colonIndex = decodedAuth.indexOf(':')
-  const username =
-    colonIndex === -1 ? decodedAuth : decodedAuth.substring(0, colonIndex)
-  const password =
-    colonIndex === -1 ? '' : decodedAuth.substring(colonIndex + 1)
+  const username = colonIndex === -1 ? decodedAuth : decodedAuth.substring(0, colonIndex)
+  const password = colonIndex === -1 ? '' : decodedAuth.substring(colonIndex + 1)
 
   if (username !== '') {
     return {
@@ -88,9 +86,7 @@ function validateBasicAuth(authHeader) {
 
   const encryptionKey = config.get('auth.encryptionKey')
   if (!encryptionKey) {
-    logger.error(
-      'Encryption key not configured - encrypted tokens are required'
-    )
+    logger.error('Encryption key not configured - encrypted tokens are required')
     return { isValid: false, error: 'Server encryption not configured' }
   }
 

@@ -37,10 +37,7 @@ export const stateSave = {
     validate: {
       payload: stateSaveSchema,
       failAction: (request, h, err) => {
-        request.server.logger.error(
-          `POST /state, validation failed: ${err.message}`,
-          err
-        )
+        request.server.logger.error(`POST /state, validation failed: ${err.message}`, err)
         throw err
       }
     }
@@ -101,10 +98,7 @@ export const stateRetrieve = {
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
-        request.server.logger.error(
-          `GET /state, validation failed: ${err.message}`,
-          err
-        )
+        request.server.logger.error(`GET /state, validation failed: ${err.message}`, err)
         throw err
       }
     }
@@ -143,9 +137,7 @@ export const stateRetrieve = {
         .join(' | ')
 
       request.server.logger.error(errorMsg)
-      return h
-        .response({ error: 'Failed to retrieve application state' })
-        .code(500)
+      return h.response({ error: 'Failed to retrieve application state' }).code(500)
     }
   }
 }
@@ -158,10 +150,7 @@ export const stateDelete = {
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
-        request.server.logger.error(
-          `DELETE /state, validation failed: ${err.message}`,
-          err
-        )
+        request.server.logger.error(`DELETE /state, validation failed: ${err.message}`, err)
         throw err
       }
     }
@@ -202,9 +191,7 @@ export const stateDelete = {
         .join(' | ')
 
       request.server.logger.error(errorMsg)
-      return h
-        .response({ error: 'Failed to delete application state' })
-        .code(500)
+      return h.response({ error: 'Failed to delete application state' }).code(500)
     }
   }
 }
