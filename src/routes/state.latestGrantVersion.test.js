@@ -85,17 +85,13 @@ describe('State integration tests for latest grantVersion', () => {
     ])
 
     // Confirm 3 docs inserted
-    let count = await db
-      .collection('grant-application-state')
-      .countDocuments(baseQuery)
+    let count = await db.collection('grant-application-state').countDocuments(baseQuery)
     expect(count).toBe(3)
 
     await stateDelete.handler(mockRequest, mockH)
 
     // After deletion, highest version doc (grantVersion 3) should be gone
-    count = await db
-      .collection('grant-application-state')
-      .countDocuments(baseQuery)
+    count = await db.collection('grant-application-state').countDocuments(baseQuery)
     expect(count).toBe(2)
 
     const remainingDocs = await db
