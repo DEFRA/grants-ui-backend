@@ -6,8 +6,8 @@ export const LogCodes = {
       level: 'info',
       messageFunc: (messageOptions) => `Received payload | size=${messageOptions.payloadSize}`
     },
-    STATE_PAYLOAD_SIZE_WARNING: {
-      level: 'warn',
+    STATE_PAYLOAD_SIZE_FAILED: {
+      level: 'error',
       messageFunc: (messageOptions) =>
         `Large payload approaching limit | size=${messageOptions.payloadSize} | threshold=${messageOptions.threshold} | max=${messageOptions.max} | path=${messageOptions.path} | userId=${messageOptions.userId}`
     },

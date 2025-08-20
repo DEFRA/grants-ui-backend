@@ -6,7 +6,7 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
   LogCodes: {
     STATE: {
       STATE_PAYLOAD_SIZE: { level: 'info', messageFunc: jest.fn() },
-      STATE_PAYLOAD_SIZE_WARNING: { level: 'warn', messageFunc: jest.fn() }
+      STATE_PAYLOAD_SIZE_FAILED: { level: 'error', messageFunc: jest.fn() }
     }
   }
 }))
@@ -42,7 +42,7 @@ describe('#logIfApproachingPayloadLimit', () => {
     logIfApproachingPayloadLimit(mockRequest, options)
 
     expect(log).toHaveBeenCalledWith(
-      LogCodes.STATE.STATE_PAYLOAD_SIZE_WARNING,
+      LogCodes.STATE.STATE_PAYLOAD_SIZE_FAILED,
       expect.objectContaining({
         payloadSize: 1532,
         threshold: 1000,
@@ -60,7 +60,7 @@ describe('#logIfApproachingPayloadLimit', () => {
 
     logIfApproachingPayloadLimit(mockRequest, options)
 
-    expect(log).not.toHaveBeenCalledWith(LogCodes.STATE.STATE_PAYLOAD_SIZE_WARNING, expect.any(Object))
+    expect(log).not.toHaveBeenCalledWith(LogCodes.STATE.STATE_PAYLOAD_SIZE_FAILED, expect.any(Object))
   })
 
   test('should handle empty payload', () => {

@@ -17,7 +17,7 @@ export function logIfApproachingPayloadLimit(request, { threshold, max }) {
   })
 
   if (payloadSize > threshold && payloadSize <= max) {
-    log(LogCodes.STATE.STATE_PAYLOAD_SIZE_WARNING, {
+    log(LogCodes.STATE.STATE_PAYLOAD_SIZE_FAILED, {
       payloadSize,
       threshold,
       max,

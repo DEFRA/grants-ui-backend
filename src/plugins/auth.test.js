@@ -15,6 +15,9 @@ import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 jest.mock('~/src/common/helpers/logging/log.js', () => ({
   log: jest.fn(),
   LogCodes: {
+    STATE: {
+      STATE_PAYLOAD_SIZE: { level: 'info', messageFunc: jest.fn() }
+    },
     AUTH: {
       TOKEN_VERIFICATION_SUCCESS: { level: 'info', messageFunc: jest.fn() },
       TOKEN_VERIFICATION_FAILURE: { level: 'error', messageFunc: jest.fn() }

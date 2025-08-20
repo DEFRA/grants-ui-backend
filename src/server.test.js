@@ -8,6 +8,22 @@ import {
   HTTP_201_CREATED
 } from './test-helpers/http-header-constants.js'
 import crypto from 'crypto'
+import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+
+// Mock log
+jest.mock('~/src/common/helpers/logging/log.js', () => ({
+  log: jest.fn(),
+  LogCodes: {
+    STATE: {
+      STATE_PAYLOAD_SIZE: { level: 'info', messageFunc: jest.fn() },
+      STATE_PAYLOAD_SIZE_FAILED: { level: 'error', messageFunc: jest.fn() }
+    },
+    AUTH: {
+      TOKEN_VERIFICATION_SUCCESS: { level: 'info', messageFunc: jest.fn() },
+      TOKEN_VERIFICATION_FAILURE: { level: 'error', messageFunc: jest.fn() }
+    }
+  }
+}))
 
 const encryptToken = (token, encryptionKey) => {
   const iv = crypto.randomBytes(12)
@@ -24,8 +40,6 @@ const encryptToken = (token, encryptionKey) => {
 
 describe('POST /state payload size logging', () => {
   let server
-  let loggerInfoSpy
-  let loggerWarnSpy
   let authHeader
 
   beforeAll(async () => {
@@ -39,9 +53,6 @@ describe('POST /state payload size logging', () => {
     const encryptedToken = encryptToken(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
     const credentials = ':' + encryptedToken
     authHeader = `Basic ${Buffer.from(credentials).toString('base64')}`
-
-    loggerInfoSpy = jest.spyOn(server.logger, 'info').mockImplementation(() => {})
-    loggerWarnSpy = jest.spyOn(server.logger, 'warn').mockImplementation(() => {})
   })
 
   afterEach(async () => {
@@ -78,10 +89,13 @@ describe('POST /state payload size logging', () => {
     expect(response.statusCode).toBe(HTTP_201_CREATED)
 
     // Look for size log
-    expect(loggerInfoSpy).toHaveBeenCalledWith(expect.stringContaining('payload of size'))
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.STATE.STATE_PAYLOAD_SIZE,
+      expect.objectContaining({ payloadSize: expect.any(Number) })
+    )
 
     // Should not warn for small payloads
-    expect(loggerWarnSpy).not.toHaveBeenCalled()
+    expect(log).not.toHaveBeenCalledWith(LogCodes.STATE.STATE_PAYLOAD_SIZE_WARNING, expect.any(Object))
   })
 
   test('DELETE endpoint requires authentication', async () => {
@@ -118,10 +132,16 @@ describe('POST /state payload size logging', () => {
 
     expect(response.statusCode).toBe(HTTP_201_CREATED)
 
-    expect(loggerWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'Large payload approaching limit | size=600099 | threshold=500000 | max=1048576 | path=/state | userId=USER456'
-      )
+    expect(log).toHaveBeenNthCalledWith(
+      3,
+      LogCodes.STATE.STATE_PAYLOAD_SIZE_FAILED,
+      expect.objectContaining({
+        payloadSize: expect.any(Number),
+        threshold: 500_000,
+        max: 1_048_576,
+        path: '/state',
+        userId: 'USER456'
+      })
     )
   })
 })
