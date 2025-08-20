@@ -18,9 +18,6 @@ export default {
     '^.+\\.js$': 'babel-jest'
   },
   // Create module name mapper for your mocks
-  moduleNameMapper: {
-    '^~/(.*)$': '<rootDir>/src/$1'
-  },
   transformIgnorePatterns: [
     `node_modules/(?!${[
       '@defra/hapi-tracing', // Supports ESM only

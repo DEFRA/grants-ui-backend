@@ -1,4 +1,4 @@
-import { isStrictObject } from '~/src/common/utils/isStrictObject.js'
+import { isStrictObject } from '../../utils/isStrictObject.js'
 
 const LogLevel = {
   INFO: 'info',

@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import crypto from 'crypto'
-import { config } from '~/src/config.js'
-import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+import { config } from '../config.js'
+import { log, LogCodes } from '../common/helpers/logging/log.js'
 
 /**
  * Decrypts an encrypted bearer token using AES-256-GCM

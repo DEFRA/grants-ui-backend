@@ -1,5 +1,5 @@
-import { createLogger } from '~/src/common/helpers/logging/logger.js'
-import { LogCodes } from '~/src/common/helpers/logging/log-codes.js'
+import { createLogger } from './logger.js'
+import { LogCodes } from './log-codes.js'
 
 const logger = createLogger()
 

@@ -1,4 +1,4 @@
-import { validateLogCode } from '~/src/common/helpers/logging/log-code-validator.js'
+import { validateLogCode } from './log-code-validator.js'
 
 export const LogCodes = {
   STATE: {

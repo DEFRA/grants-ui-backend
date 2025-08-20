@@ -1,7 +1,7 @@
 import { logIfApproachingPayloadLimit } from './log-if-approaching-payload-limit.js'
-import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+import { log, LogCodes } from './log.js'
 
-jest.mock('~/src/common/helpers/logging/log.js', () => ({
+jest.mock('./log.js', () => ({
   log: jest.fn(),
   LogCodes: {
     STATE: {
@@ -34,7 +34,7 @@ describe('#logIfApproachingPayloadLimit', () => {
     )
   })
 
-  test('should log warning when payload exceeds threshold but within max', () => {
+  test('should log error when payload exceeds threshold but within max', () => {
     const largePayload = 'x'.repeat(1500)
     mockRequest.payload = { userId: 'test-user', data: largePayload }
     const options = { threshold: 1000, max: 2000 }
@@ -53,7 +53,7 @@ describe('#logIfApproachingPayloadLimit', () => {
     )
   })
 
-  test('should not log warning when payload is below threshold', () => {
+  test('should not log error when payload is below threshold', () => {
     const smallPayload = 'x'.repeat(100)
     mockRequest.payload = { userId: 'test-user', data: smallPayload }
     const options = { threshold: 1000, max: 2000 }

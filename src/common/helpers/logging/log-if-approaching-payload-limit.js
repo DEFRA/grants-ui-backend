@@ -1,4 +1,4 @@
-import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+import { log, LogCodes } from './log.js'
 
 /**
  * Logs a warning if the request payload size exceeds a warning threshold.
