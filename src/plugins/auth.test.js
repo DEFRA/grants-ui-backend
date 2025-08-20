@@ -10,6 +10,18 @@ import {
 } from '../test-helpers/http-header-constants.js'
 import crypto from 'crypto'
 
+import { log, LogCodes } from '../common/helpers/logging/log.js'
+
+jest.mock('../common/helpers/logging/log.js', () => ({
+  log: jest.fn(),
+  LogCodes: {
+    AUTH: {
+      TOKEN_VERIFICATION_SUCCESS: { level: 'info', messageFunc: jest.fn() },
+      TOKEN_VERIFICATION_FAILURE: { level: 'error', messageFunc: jest.fn() }
+    }
+  }
+}))
+
 describe('Auth Plugin Integration Tests', () => {
   const INVALID_AUTH_MESSAGE = 'Invalid authentication credentials'
   const BASIC_PAYLOAD = {
@@ -75,8 +87,6 @@ describe('Auth Plugin Integration Tests', () => {
     })
 
     it('should log successful authentication at info level', async () => {
-      const loggerInfoSpy = jest.spyOn(server.logger, 'info').mockImplementation(() => {})
-
       const response = await server.inject({
         method: HTTP_POST,
         url: STATE_URL,
@@ -89,12 +99,13 @@ describe('Auth Plugin Integration Tests', () => {
 
       expect(response.statusCode).not.toBe(HTTP_401_UNAUTHORIZED)
 
-      expect(loggerInfoSpy).toHaveBeenCalledWith('Authentication successful', {
-        path: STATE_URL,
-        method: 'post'
-      })
-
-      loggerInfoSpy.mockRestore()
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.AUTH.TOKEN_VERIFICATION_SUCCESS,
+        expect.objectContaining({
+          path: STATE_URL,
+          method: 'post'
+        })
+      )
     })
   })
 
@@ -406,9 +417,10 @@ describe('Auth Plugin Integration Tests', () => {
 
       process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
 
+      let testServer
       try {
         const { createServer } = await import('../server.js')
-        const testServer = await createServer()
+        testServer = await createServer()
         await testServer.initialize()
 
         const response = await testServer.inject({
@@ -422,8 +434,8 @@ describe('Auth Plugin Integration Tests', () => {
         })
 
         expect(response.statusCode).not.toBe(HTTP_401_UNAUTHORIZED)
-        await testServer.stop()
       } finally {
+        if (testServer) await testServer.stop()
         process.env.GRANTS_UI_BACKEND_AUTH_TOKEN = originalToken
         if (originalKey) {
           process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = originalKey
@@ -438,9 +450,10 @@ describe('Auth Plugin Integration Tests', () => {
 
       process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
 
+      let testServer
       try {
         const { createServer } = await import('../server.js')
-        const testServer = await createServer()
+        testServer = await createServer()
         await testServer.initialize()
 
         const response = await testServer.inject({
@@ -454,8 +467,8 @@ describe('Auth Plugin Integration Tests', () => {
         })
 
         expect(response.statusCode).toBe(HTTP_401_UNAUTHORIZED)
-        await testServer.stop()
       } finally {
+        if (testServer) await testServer.stop()
         if (originalKey) {
           process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = originalKey
         } else {
@@ -469,9 +482,10 @@ describe('Auth Plugin Integration Tests', () => {
 
       process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
 
+      let testServer
       try {
         const { createServer } = await import('../server.js')
-        const testServer = await createServer()
+        testServer = await createServer()
         await testServer.initialize()
 
         const malformedEncryptedToken = 'invalid:encrypted:token:format'
@@ -489,8 +503,8 @@ describe('Auth Plugin Integration Tests', () => {
 
         expect(response.statusCode).toBe(HTTP_401_UNAUTHORIZED)
         expect(response.result.message).toBe(INVALID_AUTH_MESSAGE)
-        await testServer.stop()
       } finally {
+        if (testServer) await testServer.stop()
         if (originalKey) {
           process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = originalKey
         } else {
@@ -504,9 +518,10 @@ describe('Auth Plugin Integration Tests', () => {
 
       delete process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY
 
+      let testServer
       try {
         const { createServer } = await import('../server.js')
-        const testServer = await createServer()
+        testServer = await createServer()
         await testServer.initialize()
 
         const encryptedToken = 'iv:authTag:encryptedData'
@@ -524,8 +539,8 @@ describe('Auth Plugin Integration Tests', () => {
 
         expect(response.statusCode).toBe(HTTP_401_UNAUTHORIZED)
         expect(response.result.message).toBe(INVALID_AUTH_MESSAGE)
-        await testServer.stop()
       } finally {
+        if (testServer) await testServer.stop()
         if (originalKey) {
           process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = originalKey
         } else {
@@ -539,9 +554,10 @@ describe('Auth Plugin Integration Tests', () => {
 
       process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
 
+      let testServer
       try {
         const { createServer } = await import('../server.js')
-        const testServer = await createServer()
+        testServer = await createServer()
         await testServer.initialize()
 
         const invalidFormatToken = 'missing:parts'
@@ -559,8 +575,8 @@ describe('Auth Plugin Integration Tests', () => {
 
         expect(response.statusCode).toBe(HTTP_401_UNAUTHORIZED)
         expect(response.result.message).toBe(INVALID_AUTH_MESSAGE)
-        await testServer.stop()
       } finally {
+        if (testServer) await testServer.stop()
         if (originalKey) {
           process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = originalKey
         } else {
@@ -574,6 +590,7 @@ describe('Auth Plugin Integration Tests', () => {
 
       process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
 
+      let testServer
       try {
         const { config } = await import('../config.js')
         const originalConfigGet = config.get
@@ -592,7 +609,7 @@ describe('Auth Plugin Integration Tests', () => {
         })
 
         const { createServer } = await import('../server.js')
-        const testServer = await createServer()
+        testServer = await createServer()
         await testServer.initialize()
 
         const encryptedToken = 'iv:authTag:encryptedData'
@@ -612,8 +629,8 @@ describe('Auth Plugin Integration Tests', () => {
         expect(response.result.message).toBe(INVALID_AUTH_MESSAGE)
 
         config.get = originalConfigGet
-        await testServer.stop()
       } finally {
+        if (testServer) await testServer.stop()
         if (originalKey) {
           process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = originalKey
         } else {

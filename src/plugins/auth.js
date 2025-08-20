@@ -1,9 +1,7 @@
 import Boom from '@hapi/boom'
 import crypto from 'crypto'
 import { config } from '../config.js'
-import { createLogger } from '../common/helpers/logging/logger.js'
-
-const logger = createLogger()
+import { log, LogCodes } from '../common/helpers/logging/log.js'
 
 /**
  * Decrypts an encrypted bearer token using AES-256-GCM
@@ -13,10 +11,16 @@ const logger = createLogger()
 function decryptToken(encryptedToken) {
   const encryptionKey = config.get('auth.encryptionKey')
   if (!encryptionKey) {
-    throw new Error('Encryption key not configured')
+    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
+      errorName: 'Encryption key not configured'
+    })
+    return null
   }
 
   try {
+    const parts = encryptedToken.split(':')
+    if (parts.length !== 3) throw new Error('Malformed encrypted token')
+
     const [ivB64, authTagB64, encryptedData] = encryptedToken.split(':')
     if (!ivB64 || !authTagB64 || !encryptedData) {
       throw new Error('Invalid encrypted token format')
@@ -34,8 +38,12 @@ function decryptToken(encryptedToken) {
 
     return decrypted
   } catch (error) {
-    logger.error(error, 'Token decryption failed')
-    throw new Error('Failed to decrypt token')
+    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
+      errorName: 'Token decryption failed',
+      errorMessage: error.message,
+      stack: error.stack
+    })
+    return null
   }
 }
 
@@ -53,7 +61,9 @@ function validateBasicAuth(authHeader) {
   try {
     decodedAuth = Buffer.from(token, 'base64').toString('utf-8')
   } catch (error) {
-    logger.error(error, 'Base64 decoding failed during authentication')
+    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
+      errorName: `Base64 decoding failed during authentication`
+    })
     return {
       isValid: false,
       error: 'Invalid base64 encoding in Authorization header'
@@ -77,7 +87,9 @@ function validateBasicAuth(authHeader) {
 
   const expectedToken = config.get('auth.token')
   if (!expectedToken) {
-    logger.error('Server auth token not configured')
+    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
+      errorName: `Server auth token not configured`
+    })
     return {
       isValid: false,
       error: 'Server authentication token not configured'
@@ -86,15 +98,14 @@ function validateBasicAuth(authHeader) {
 
   const encryptionKey = config.get('auth.encryptionKey')
   if (!encryptionKey) {
-    logger.error('Encryption key not configured - encrypted tokens are required')
+    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
+      errorName: `Encryption key not configured - encrypted tokens are required`
+    })
     return { isValid: false, error: 'Server encryption not configured' }
   }
 
-  let actualToken
-  try {
-    actualToken = decryptToken(password)
-  } catch (error) {
-    logger.error(error, 'Token decryption failed during authentication')
+  const actualToken = decryptToken(password)
+  if (!actualToken) {
     return { isValid: false, error: 'Invalid encrypted token' }
   }
 
@@ -122,7 +133,7 @@ const auth = {
               throw Boom.unauthorized('Invalid authentication credentials')
             }
 
-            request.server.logger.info('Authentication successful', {
+            log(LogCodes.AUTH.TOKEN_VERIFICATION_SUCCESS, {
               path: request.path,
               method: request.method
             })

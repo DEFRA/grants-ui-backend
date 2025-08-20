@@ -17,6 +17,51 @@ export const LogCodes = {
       messageFunc: (messageOptions) =>
         `Failed to retrieve application state | userId=${messageOptions.userId} | businessId=${messageOptions.businessId} | grantId=${messageOptions.grantId} | grantVersion=${messageOptions.grantVersion} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     }
+  },
+  AUTH: {
+    TOKEN_VERIFICATION_SUCCESS: {
+      level: 'info',
+      messageFunc: (messageOptions) =>
+        `Server auth token verified successfully | path=${messageOptions.path} | method=${messageOptions.method}`
+    },
+    TOKEN_VERIFICATION_FAILURE: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Server auth token invalid | errorName: ${messageOptions.errorName} | errorMessage: ${messageOptions.errorMessage} | stack: ${messageOptions.stack || 'N/A'} "`
+    },
+    AUTH_DEBUG: {
+      level: 'debug',
+      messageFunc: (messageOptions) =>
+        `Auth debug for path=${messageOptions.path}: isAuthenticated=${messageOptions.isAuthenticated}, strategy=${messageOptions.strategy}, mode=${messageOptions.mode}, hasCredentials=${messageOptions.hasCredentials}, hasToken=${messageOptions.hasToken}, hasProfile=${messageOptions.hasProfile}, userAgent=${messageOptions.userAgent}, referer=${messageOptions.referer}, queryParams=${JSON.stringify(messageOptions.queryParams)}, authError=${messageOptions.authError}`
+    }
+  },
+
+  SYSTEM: {
+    ENV_CONFIG_DEBUG: {
+      level: 'debug',
+      messageFunc: (messageOptions) =>
+        `Environment configuration: ${messageOptions.configType} - ${JSON.stringify(messageOptions.configValues)}`
+    },
+    SERVER_ERROR: {
+      level: 'error',
+      messageFunc: (messageOptions) => `Server error occurred: ${messageOptions.error}`
+    },
+    STARTUP_PHASE: {
+      level: 'info',
+      messageFunc: (messageOptions) => `Startup phase: ${messageOptions.phase} - ${messageOptions.status}`
+    },
+    PLUGIN_REGISTRATION: {
+      level: 'debug',
+      messageFunc: (messageOptions) => `Plugin registration: ${messageOptions.pluginName} - ${messageOptions.status}`
+    },
+    SYSTEM_STARTUP: {
+      level: 'info',
+      messageFunc: (messageOptions) => `System startup completed on port=${messageOptions.port}`
+    },
+    SYSTEM_SHUTDOWN: {
+      level: 'info',
+      messageFunc: () => `System shutdown initiated`
+    }
   }
 }
 
