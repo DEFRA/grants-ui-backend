@@ -3,7 +3,7 @@ import { stateDelete, stateRetrieve, stateSave } from './state.js'
 import { logIfApproachingPayloadLimit } from '~/src/common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 
-jest.mock('../common/helpers/logging/log-if-approaching-payload-limit.js', () => ({
+jest.mock('~/src/common/helpers/logging/log-if-approaching-payload-limit.js', () => ({
   logIfApproachingPayloadLimit: jest.fn()
 }))
 jest.mock('~/src/common/helpers/logging/log.js', () => ({

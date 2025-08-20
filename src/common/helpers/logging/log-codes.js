@@ -1,7 +1,16 @@
-import { validateLogCode } from './log-code-validator.js'
+import { validateLogCode } from '~/src/common/helpers/logging/log-code-validator.js'
 
 export const LogCodes = {
   STATE: {
+    STATE_PAYLOAD_SIZE: {
+      level: 'info',
+      messageFunc: (messageOptions) => `Received payload | size=${messageOptions.payloadSize}`
+    },
+    STATE_PAYLOAD_SIZE_WARNING: {
+      level: 'warn',
+      messageFunc: (messageOptions) =>
+        `Large payload approaching limit | size=${messageOptions.payloadSize} | threshold=${messageOptions.threshold} | max=${messageOptions.max} | path=${messageOptions.path} | userId=${messageOptions.userId}`
+    },
     STATE_DELETE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>

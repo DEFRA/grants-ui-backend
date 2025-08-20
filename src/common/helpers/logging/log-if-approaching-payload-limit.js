@@ -1,3 +1,5 @@
+import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+
 /**
  * Logs a warning if the request payload size exceeds a warning threshold.
  * Assumes the route will reject payloads larger than `maxBytes`.
@@ -10,20 +12,17 @@
 export function logIfApproachingPayloadLimit(request, { threshold, max }) {
   const payloadSize = Buffer.byteLength(JSON.stringify(request.payload || {}))
 
-  request.server.logger.info(`Received payload of size: ${payloadSize} bytes`)
+  log(LogCodes.STATE.STATE_PAYLOAD_SIZE, {
+    payloadSize
+  })
 
   if (payloadSize > threshold && payloadSize <= max) {
-    const warnMsg = [
-      'Large payload approaching limit',
-      `size=${payloadSize}`,
-      `threshold=${threshold}`,
-      `max=${max}`,
-      `path=${request.path}`,
-      `userId=${request.payload?.userId}`
-    ]
-      .filter(Boolean)
-      .join(' | ')
-
-    request.server.logger.warn(warnMsg)
+    log(LogCodes.STATE.STATE_PAYLOAD_SIZE_WARNING, {
+      payloadSize,
+      threshold,
+      max,
+      path: request.path,
+      userId: request.payload?.userId || 'unknown'
+    })
   }
 }

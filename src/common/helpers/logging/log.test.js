@@ -1,4 +1,4 @@
-import { log, logger, LogCodes } from './log.js'
+import { log, logger, LogCodes } from '~/src/common/helpers/logging/log.js'
 
 // Mock the logger
 jest.mock('./logger.js', () => ({

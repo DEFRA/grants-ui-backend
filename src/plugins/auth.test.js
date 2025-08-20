@@ -1,4 +1,4 @@
-import { TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY } from '../test-helpers/auth-constants.js'
+import { TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY } from '~/src/test-helpers/auth-constants.js'
 import {
   HTTP_POST,
   HTTP_GET,
@@ -7,12 +7,12 @@ import {
   CONTENT_TYPE_JSON,
   AUTH_HEADER,
   HTTP_401_UNAUTHORIZED
-} from '../test-helpers/http-header-constants.js'
+} from '~/src/test-helpers/http-header-constants.js'
 import crypto from 'crypto'
 
-import { log, LogCodes } from '../common/helpers/logging/log.js'
+import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 
-jest.mock('../common/helpers/logging/log.js', () => ({
+jest.mock('~/src/common/helpers/logging/log.js', () => ({
   log: jest.fn(),
   LogCodes: {
     AUTH: {

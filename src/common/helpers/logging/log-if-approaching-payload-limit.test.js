@@ -1,21 +1,23 @@
 import { logIfApproachingPayloadLimit } from './log-if-approaching-payload-limit.js'
+import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+
+jest.mock('~/src/common/helpers/logging/log.js', () => ({
+  log: jest.fn(),
+  LogCodes: {
+    STATE: {
+      STATE_PAYLOAD_SIZE: { level: 'info', messageFunc: jest.fn() },
+      STATE_PAYLOAD_SIZE_WARNING: { level: 'warn', messageFunc: jest.fn() }
+    }
+  }
+}))
 
 describe('#logIfApproachingPayloadLimit', () => {
   let mockRequest
-  let mockLogger
 
   beforeEach(() => {
-    mockLogger = {
-      info: jest.fn(),
-      warn: jest.fn()
-    }
-
     mockRequest = {
       payload: { userId: 'test-user', data: 'test-data' },
-      path: '/test-path',
-      server: {
-        logger: mockLogger
-      }
+      path: '/test-path'
     }
   })
 
@@ -24,7 +26,12 @@ describe('#logIfApproachingPayloadLimit', () => {
 
     logIfApproachingPayloadLimit(mockRequest, options)
 
-    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringMatching(/^Received payload of size: \d+ bytes$/))
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.STATE.STATE_PAYLOAD_SIZE,
+      expect.objectContaining({
+        payloadSize: 41
+      })
+    )
   })
 
   test('should log warning when payload exceeds threshold but within max', () => {
@@ -34,8 +41,16 @@ describe('#logIfApproachingPayloadLimit', () => {
 
     logIfApproachingPayloadLimit(mockRequest, options)
 
-    expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Large payload approaching limit'))
-    expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('userId=test-user'))
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.STATE.STATE_PAYLOAD_SIZE_WARNING,
+      expect.objectContaining({
+        payloadSize: 1532,
+        threshold: 1000,
+        max: 2000,
+        path: '/test-path',
+        userId: 'test-user'
+      })
+    )
   })
 
   test('should not log warning when payload is below threshold', () => {
@@ -45,7 +60,7 @@ describe('#logIfApproachingPayloadLimit', () => {
 
     logIfApproachingPayloadLimit(mockRequest, options)
 
-    expect(mockLogger.warn).not.toHaveBeenCalled()
+    expect(log).not.toHaveBeenCalledWith(LogCodes.STATE.STATE_PAYLOAD_SIZE_WARNING, expect.any(Object))
   })
 
   test('should handle empty payload', () => {
@@ -54,8 +69,13 @@ describe('#logIfApproachingPayloadLimit', () => {
 
     logIfApproachingPayloadLimit(mockRequest, options)
 
-    expect(mockLogger.info).toHaveBeenCalledWith('Received payload of size: 2 bytes')
-    expect(mockLogger.warn).not.toHaveBeenCalled()
+    expect(log).toHaveBeenCalledTimes(1)
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.STATE.STATE_PAYLOAD_SIZE,
+      expect.objectContaining({
+        payloadSize: 2
+      })
+    )
   })
 
   test('should handle undefined payload', () => {
@@ -64,7 +84,12 @@ describe('#logIfApproachingPayloadLimit', () => {
 
     logIfApproachingPayloadLimit(mockRequest, options)
 
-    expect(mockLogger.info).toHaveBeenCalledWith('Received payload of size: 2 bytes')
-    expect(mockLogger.warn).not.toHaveBeenCalled()
+    expect(log).toHaveBeenCalledTimes(1)
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.STATE.STATE_PAYLOAD_SIZE,
+      expect.objectContaining({
+        payloadSize: 2
+      })
+    )
   })
 })

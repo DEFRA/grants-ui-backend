@@ -1,4 +1,4 @@
-import { isStrictObject } from './isStrictObject.js'
+import { isStrictObject } from '~/src/common/utils/isStrictObject.js'
 
 describe('isStrictObject', () => {
   it('returns true for plain objects', () => {
