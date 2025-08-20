@@ -60,13 +60,13 @@ describe('Logger Functionality', () => {
 
   it('should work with real LogCodes', () => {
     const testOptions = {
-      userId: 'test-user',
-      organisationId: 'test-org'
+      path: '/example',
+      method: 'GET'
     }
 
-    log(LogCodes.AUTH.SIGN_IN_SUCCESS, testOptions)
+    log(LogCodes.AUTH.TOKEN_VERIFICATION_SUCCESS, testOptions)
 
-    expect(logger.info).toHaveBeenCalledWith('User sign-in successful for user=test-user, organisation=test-org')
+    expect(logger.info).toHaveBeenCalledWith('Server auth token verified successfully | path=/example | method=GET')
   })
 
   it('should work with error log codes', () => {
@@ -86,32 +86,8 @@ describe('Logger Functionality', () => {
     expect(logger.error).toBeDefined()
   })
 
-  it('should export LogCodes', () => {
+  it('should export top-level LogCodes', () => {
     expect(LogCodes).toBeDefined()
-    expect(LogCodes.AUTH).toBeDefined()
-    expect(LogCodes.FORMS).toBeDefined()
-    expect(LogCodes.SYSTEM).toBeDefined()
-  })
-
-  it('should work with FORMS log codes', () => {
-    const formOptions = {
-      formName: 'declaration',
-      userId: 'test-user'
-    }
-
-    log(LogCodes.FORMS.FORM_LOAD, formOptions)
-
-    expect(logger.info).toHaveBeenCalledWith('Form loaded: declaration for user=test-user')
-  })
-
-  it('should work with SUBMISSION log codes', () => {
-    const submissionOptions = {
-      grantType: 'adding-value',
-      userId: 'test-user'
-    }
-
-    log(LogCodes.SUBMISSION.SUBMISSION_STARTED, submissionOptions)
-
-    expect(logger.info).toHaveBeenCalledWith('Grant submission started for grantType=adding-value, user=test-user')
+    expect(Object.keys(LogCodes)).toEqual(expect.arrayContaining(['STATE', 'AUTH', 'SYSTEM']))
   })
 })
