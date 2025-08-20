@@ -17,7 +17,6 @@ export default {
   transform: {
     '^.+\\.js$': 'babel-jest'
   },
-  // Create module name mapper for your mocks
   transformIgnorePatterns: [
     `node_modules/(?!${[
       '@defra/hapi-tracing', // Supports ESM only
