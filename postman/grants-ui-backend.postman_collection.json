@@ -2,16 +2,20 @@
   "info": {
     "_postman_id": "6b4a6ee0-6813-4f4b-aa7e-a897624934b5",
     "name": "grants-ui-backend",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "45437546",
-    "_collection_link": "https://andrew-5807231.postman.co/workspace/Andrew's-Workspace~c4430974-a476-4315-8108-3b882bee7b85/collection/45437546-6b4a6ee0-6813-4f4b-aa7e-a897624934b5?action=share&source=collection_link&creator=45437546"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "state",
       "request": {
         "method": "POST",
-        "header": [],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{grants-ui-backend-bearer_token}}",
+            "type": "text"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n    \"businessId\": \"exampleGrantBusinessId\",\n    \"userId\": \"exampleGrantUserId\",\n    \"grantId\": \"exampleGrantGrantId\",\n    \"grantVersion\": 2,\n    \"state\": {\n        \"$$__referenceNumber\": \"F99-ECB-999\",\n        \"TKsWbP\": true,\n        \"sdFYHf\": \"business4\"\n    }\n}",
@@ -49,7 +53,13 @@
       },
       "request": {
         "method": "GET",
-        "header": [],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{grants-ui-backend-bearer_token}}",
+            "type": "text"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "",
@@ -85,7 +95,13 @@
       "name": "state",
       "request": {
         "method": "DELETE",
-        "header": [],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{grants-ui-backend-bearer_token}}",
+            "type": "text"
+          }
+        ],
         "url": {
           "raw": "{{grants-ui-backend_base_url}}/state?userId=exampleGrantUserId&businessId=exampleGrantBusinessId&grantId=exampleGrantGrantId",
           "host": ["{{grants-ui-backend_base_url}}"],

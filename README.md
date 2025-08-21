@@ -25,6 +25,7 @@ Core delivery platform Node.js Backend Template.
   - [SonarCloud](#sonarcloud)
 - [Postman Collection](#postman-collection)
   - [Getting Started](#getting-started)
+  - [Service-to-Service Authentication](#service-to-service-authentication)
   - [Usage](#usage)
   - [Keeping the Collection Updated](#keeping-the-collection-updated)
   - [Example Folder Structure](#example-folder-structure)
@@ -260,6 +261,32 @@ The project includes a Postman collection to make it easier to test and interact
    - In Postman, click on the environment dropdown in the top right corner.
    - Select the imported environment (e.g., `dev`).
 
+### Service-to-Service Authentication
+
+The API uses AES-256-GCM encrypted tokens with Basic Authentication. The **username must be blank**, and the **encrypted token is sent as the password**.
+
+#### Generating the Authorization Header
+
+1. Setup your plain, secret value (GRANTS_UI_BACKEND_AUTH_TOKEN) and encrypt/decrypt key (GRANTS_UI_BACKEND_ENCRYPTION_KEY) in your `.env` (see also `.env.local`):
+
+```
+GRANTS_UI_BACKEND_AUTH_TOKEN=<your token>
+GRANTS_UI_BACKEND_ENCRYPTION_KEY=<your encryption key>
+```
+
+2. Use the file `scripts/generateHeader.js` in the repo (example script) to generate the Bearer token:
+
+Example run:
+
+```
+$ node scripts/generateHeader.js
+$ Authorization: Basic ...
+```
+
+Copy the output `Authorization: Basic ...` header and use it in Postman under the `grants-ui-backend-bearer_token` in Environments tab for your requests.
+
+⚠️ Make sure the environment variables match what the backend config expects.
+
 ### Usage
 
 - **Send Requests**:
@@ -282,7 +309,8 @@ project-root/
 │ ├── grants-ui-backend.local.postman_environment.json
 │ ├── grants-ui-backend.dev.postman_environment.json
 │ └── grants-ui-backend.test.postman_environment.json
-
+├── scripts/
+│ └── generateHeader.js
 ```
 
 ## Licence
