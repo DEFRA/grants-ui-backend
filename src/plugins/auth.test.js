@@ -28,9 +28,8 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
 describe('Auth Plugin Integration Tests', () => {
   const INVALID_AUTH_MESSAGE = 'Invalid authentication credentials'
   const BASIC_PAYLOAD = {
-    businessId: 'test-business',
-    userId: 'test-user',
-    grantId: 'test-grant',
+    sbi: 'test-business',
+    grantCode: 'test-grant',
     grantVersion: 1,
     state: { step: 1, data: 'test' }
   }
@@ -275,7 +274,7 @@ describe('Auth Plugin Integration Tests', () => {
   })
 
   describe('Edge Cases', () => {
-    const STATE_GET_URL = '/state?businessId=test&userId=test-user&grantId=test-grant'
+    const STATE_GET_URL = '/state?sbi=test&userId=test-user&grantCode=test-grant'
     const USER_AGENT_HEADER = 'user-agent'
     const TEST_USER_AGENT = 'Test User Agent'
     it('should handle GET requests with authentication', async () => {
@@ -308,9 +307,9 @@ describe('Auth Plugin Integration Tests', () => {
 
   describe('Configuration Edge Cases', () => {
     const MINIMAL_PAYLOAD = {
-      businessId: 'test-business',
+      sbi: 'test-business',
       userId: 'test-user',
-      grantId: 'test-grant',
+      grantCode: 'test-grant',
       grantVersion: 1,
       state: { step: 1 }
     }
@@ -363,9 +362,8 @@ describe('Auth Plugin Integration Tests', () => {
   describe('Base64 Decoding Edge Cases', () => {
     const BASIC_PREFIX = 'Basic'
     const MINIMAL_PAYLOAD = {
-      businessId: 'test-business',
-      userId: 'test-user',
-      grantId: 'test-grant',
+      sbi: 'test-business',
+      grantCode: 'test-grant',
       grantVersion: 1,
       state: { step: 1 }
     }

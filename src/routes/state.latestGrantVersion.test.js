@@ -8,9 +8,8 @@ describe('State integration tests for latest grantVersion', () => {
   let mockH
 
   const baseQuery = {
-    businessId: 'business123',
-    userId: 'user123',
-    grantId: 'grant123'
+    sbi: 'business123',
+    grantCode: 'grant123'
   }
 
   beforeAll(async () => {

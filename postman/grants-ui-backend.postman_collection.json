@@ -18,7 +18,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"businessId\": \"exampleGrantBusinessId\",\n    \"userId\": \"exampleGrantUserId\",\n    \"grantId\": \"exampleGrantGrantId\",\n    \"grantVersion\": 2,\n    \"state\": {\n        \"$$__referenceNumber\": \"F99-ECB-999\",\n        \"TKsWbP\": true,\n        \"sdFYHf\": \"business4\"\n    }\n}",
+          "raw": "{\n    \"sbi\": \"exampleGrantSBI\",\n    \"grantCode\": \"exampleGrantGrantCode\",\n    \"grantVersion\": 2,\n    \"state\": {\n        \"$$__referenceNumber\": \"F99-ECB-999\",\n        \"TKsWbP\": true,\n        \"sdFYHf\": \"business4\"\n    }\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -70,21 +70,17 @@
           }
         },
         "url": {
-          "raw": "{{grants-ui-backend_base_url}}/state?userId=exampleGrantUserId&businessId=exampleGrantBusinessId&grantId=exampleGrantGrantId",
+          "raw": "{{grants-ui-backend_base_url}}/state?sbi=exampleGrantSBI&grantCode=exampleGrantGrantCode",
           "host": ["{{grants-ui-backend_base_url}}"],
           "path": ["state"],
           "query": [
             {
-              "key": "userId",
-              "value": "exampleGrantUserId"
+              "key": "sbi",
+              "value": "exampleGrantSBI"
             },
             {
-              "key": "businessId",
-              "value": "exampleGrantBusinessId"
-            },
-            {
-              "key": "grantId",
-              "value": "exampleGrantGrantId"
+              "key": "grantCode",
+              "value": "exampleGrantGrantCode"
             }
           ]
         }
@@ -103,21 +99,17 @@
           }
         ],
         "url": {
-          "raw": "{{grants-ui-backend_base_url}}/state?userId=exampleGrantUserId&businessId=exampleGrantBusinessId&grantId=exampleGrantGrantId",
+          "raw": "{{grants-ui-backend_base_url}}/state?sbi=exampleGrantSBI&grantCode=exampleGrantGrantCode",
           "host": ["{{grants-ui-backend_base_url}}"],
           "path": ["state"],
           "query": [
             {
-              "key": "userId",
-              "value": "exampleGrantUserId"
+              "key": "sbi",
+              "value": "exampleGrantSBI"
             },
             {
-              "key": "businessId",
-              "value": "exampleGrantBusinessId"
-            },
-            {
-              "key": "grantId",
-              "value": "exampleGrantGrantId"
+              "key": "grantCode",
+              "value": "exampleGrantGrantCode"
             }
           ]
         }

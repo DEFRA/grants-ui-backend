@@ -6,9 +6,8 @@ const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
 
 const stateSaveSchema = Joi.object({
-  businessId: Joi.string().required(),
-  userId: Joi.string().required(),
-  grantId: Joi.string().required(),
+  sbi: Joi.string().required(),
+  grantCode: Joi.string().required(),
   grantVersion: Joi.number().required(),
   state: Joi.object().unknown(true).required().messages({
     'object.base': '"state" must be an object'
@@ -18,9 +17,8 @@ const stateSaveSchema = Joi.object({
   .unknown(false) // Disallow unknown top-level fields
 
 const stateRetrieveSchema = Joi.object({
-  businessId: Joi.string().required(),
-  userId: Joi.string().required(),
-  grantId: Joi.string().required(),
+  sbi: Joi.string().required(),
+  grantCode: Joi.string().required(),
   grantVersion: Joi.number()
 })
 
@@ -38,11 +36,10 @@ export const stateSave = {
     validate: {
       payload: stateSaveSchema,
       failAction: (request, h, err) => {
-        const { businessId, userId, grantId, grantVersion } = request.payload
+        const { sbi, grantCode, grantVersion } = request.payload
         log(LogCodes.STATE.STATE_SAVE_FAILED, {
-          userId,
-          businessId,
-          grantId,
+          sbi,
+          grantCode,
           grantVersion,
           errorName: err.name,
           errorMessage: `POST /state, validation failed: ${err.message}`,
@@ -61,7 +58,7 @@ export const stateSave = {
       max: PAYLOAD_SIZE_MAX
     })
 
-    const { businessId, userId, grantId, grantVersion, state } = request.payload
+    const { sbi, grantCode, grantVersion, state } = request.payload
 
     const db = request.db
 
@@ -73,7 +70,7 @@ export const stateSave = {
     try {
       const result = await db
         .collection('grant-application-state')
-        .updateOne({ businessId, userId, grantId, grantVersion }, updateDoc, {
+        .updateOne({ sbi, grantCode, grantVersion }, updateDoc, {
           upsert: true
         })
 
@@ -86,9 +83,8 @@ export const stateSave = {
       const isMongoError = err.name && err.name.startsWith('Mongo')
 
       log(LogCodes.STATE.STATE_SAVE_FAILED, {
-        userId,
-        businessId,
-        grantId,
+        sbi,
+        grantCode,
         errorName: err.name,
         errorMessage: err.message,
         errorReason: err.reason,
@@ -110,11 +106,10 @@ export const stateRetrieve = {
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
-        const { businessId, userId, grantId } = request.query
+        const { sbi, grantCode } = request.query
         log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
-          userId,
-          businessId,
-          grantId,
+          sbi,
+          grantCode,
           errorName: err.name,
           errorMessage: `GET /state, validation failed: ${err.message}`,
           errorReason: err.reason,
@@ -127,14 +122,14 @@ export const stateRetrieve = {
     }
   },
   handler: async (request, h) => {
-    const { businessId, userId, grantId } = request.query
+    const { sbi, grantCode } = request.query
 
     const db = request.db
 
     try {
       const document = await db
         .collection('grant-application-state')
-        .find({ businessId, userId, grantId })
+        .find({ sbi, grantCode })
         .sort({ grantVersion: -1 }) // numeric descending
         .limit(1)
         .next()
@@ -148,9 +143,8 @@ export const stateRetrieve = {
       const isMongoError = err?.name?.startsWith('Mongo')
 
       log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
-        userId,
-        businessId,
-        grantId,
+        sbi,
+        grantCode,
         errorName: err.name,
         errorMessage: err.message,
         errorReason: err.reason,
@@ -172,11 +166,10 @@ export const stateDelete = {
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
-        const { businessId, userId, grantId } = request.query
+        const { sbi, grantCode } = request.query
         log(LogCodes.STATE.STATE_DELETE_FAILED, {
-          userId,
-          businessId,
-          grantId,
+          sbi,
+          grantCode,
           errorName: err.name,
           errorMessage: `DELETE /state, validation failed: ${err.message}`,
           errorReason: err.reason,
@@ -189,14 +182,14 @@ export const stateDelete = {
     }
   },
   handler: async (request, h) => {
-    const { businessId, userId, grantId } = request.query
+    const { sbi, grantCode } = request.query
 
     const db = request.db
 
     try {
       const doc = await db
         .collection('grant-application-state')
-        .find({ businessId, userId, grantId })
+        .find({ sbi, grantCode })
         .sort({ grantVersion: -1 })
         .limit(1)
         .next()
@@ -212,9 +205,8 @@ export const stateDelete = {
       const isMongoError = err?.name?.startsWith('Mongo')
 
       log(LogCodes.STATE.STATE_DELETE_FAILED, {
-        userId,
-        businessId,
-        grantId,
+        sbi,
+        grantCode,
         errorName: err.name,
         errorMessage: err.message,
         errorReason: err.reason,
