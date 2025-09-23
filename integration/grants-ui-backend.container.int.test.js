@@ -54,9 +54,8 @@ beforeEach(async () => {
 describe('POST /state', () => {
   it('creates a new state', async () => {
     const payload = {
-      businessId: 'biz-1',
-      userId: 'user-1',
-      grantId: 'grant-1',
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
       grantVersion: 1,
       state: { step: 'start' }
     }
@@ -73,9 +72,8 @@ describe('POST /state', () => {
     expect(response.payload).toEqual({ success: true, created: true })
 
     const doc = await db.collection('grant-application-state').findOne({
-      businessId: 'biz-1',
-      userId: 'user-1',
-      grantId: 'grant-1',
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
       grantVersion: 1
     })
     expect(doc.state).toEqual({ step: 'start' })
@@ -83,9 +81,8 @@ describe('POST /state', () => {
 
   it('updates an existing state', async () => {
     await db.collection('grant-application-state').insertOne({
-      businessId: 'biz-1',
-      userId: 'user-1',
-      grantId: 'grant-1',
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
       grantVersion: 1,
       state: { step: 'start' },
       createdAt: new Date(),
@@ -95,9 +92,8 @@ describe('POST /state', () => {
     const response = await Wreck.post(`${apiUrl}/state`, {
       json: true,
       payload: {
-        businessId: 'biz-1',
-        userId: 'user-1',
-        grantId: 'grant-1',
+        sbi: 'biz-1',
+        grantCode: 'grant-1',
         grantVersion: 1,
         state: { step: 'middle' }
       },
@@ -110,9 +106,8 @@ describe('POST /state', () => {
     expect(response.payload).toEqual({ success: true, updated: true })
 
     const doc = await db.collection('grant-application-state').findOne({
-      businessId: 'biz-1',
-      userId: 'user-1',
-      grantId: 'grant-1',
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
       grantVersion: 1
     })
     expect(doc.state).toEqual({ step: 'middle' })
@@ -123,9 +118,8 @@ describe('GET /state', () => {
   it('retrieves state', async () => {
     await db.collection('grant-application-state').insertMany([
       {
-        businessId: 'biz-1',
-        userId: 'user-1',
-        grantId: 'grant-1',
+        sbi: 'biz-1',
+        grantCode: 'grant-1',
         grantVersion: 1,
         state: { step: 'start' },
         createdAt: new Date(),
@@ -134,9 +128,8 @@ describe('GET /state', () => {
     ])
 
     const qs = new URLSearchParams({
-      businessId: 'biz-1',
-      userId: 'user-1',
-      grantId: 'grant-1'
+      sbi: 'biz-1',
+      grantCode: 'grant-1'
     }).toString()
 
     const response = await Wreck.get(`${apiUrl}/state?${qs}`, {
@@ -154,9 +147,8 @@ describe('GET /state', () => {
 describe('DELETE /state', () => {
   it('deletes state', async () => {
     await db.collection('grant-application-state').insertOne({
-      businessId: 'biz-1',
-      userId: 'user-1',
-      grantId: 'grant-1',
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
       grantVersion: 1,
       state: { step: 'start' },
       createdAt: new Date(),
@@ -164,9 +156,8 @@ describe('DELETE /state', () => {
     })
 
     const qs = new URLSearchParams({
-      businessId: 'biz-1',
-      userId: 'user-1',
-      grantId: 'grant-1'
+      sbi: 'biz-1',
+      grantCode: 'grant-1'
     }).toString()
 
     const response = await Wreck.delete(`${apiUrl}/state?${qs}`, {
@@ -179,7 +170,7 @@ describe('DELETE /state', () => {
     expect(response.res.statusCode).toBe(200)
     expect(response.payload).toEqual({ success: true, deleted: true })
 
-    const doc = await db.collection('grant-application-state').findOne({ businessId: 'biz-1' })
+    const doc = await db.collection('grant-application-state').findOne({ sbi: 'biz-1' })
     expect(doc).toBeNull()
   })
 })

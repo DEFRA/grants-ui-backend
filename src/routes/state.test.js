@@ -19,9 +19,8 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
 
 describe('State', () => {
   const defaultQuery = {
-    businessId: 'business123',
-    userId: 'user123',
-    grantId: 'grant123'
+    sbi: 'business123',
+    grantCode: 'grant123'
   }
 
   let connection
@@ -152,9 +151,8 @@ describe('State', () => {
       expect(log).toHaveBeenCalledWith(
         LogCodes.STATE.STATE_SAVE_FAILED,
         expect.objectContaining({
-          userId: defaultQuery.userId,
-          businessId: defaultQuery.businessId,
-          grantId: defaultQuery.grantId,
+          sbi: defaultQuery.sbi,
+          grantCode: defaultQuery.grantCode,
           errorName: dbError.name,
           errorMessage: dbError.message,
           errorReason: dbError.reason,
@@ -191,9 +189,8 @@ describe('State', () => {
       expect(log).toHaveBeenCalledWith(
         LogCodes.STATE.STATE_SAVE_FAILED,
         expect.objectContaining({
-          userId: invalidPayload.userId,
-          businessId: invalidPayload.businessId,
-          grantId: invalidPayload.grantId,
+          sbi: invalidPayload.sbi,
+          grantCode: invalidPayload.grantCode,
           grantVersion: invalidPayload.grantVersion,
           errorName: mockError.name,
           errorMessage: `POST /state, validation failed: ${mockError.message}`,
@@ -268,9 +265,8 @@ describe('State', () => {
       expect(log).toHaveBeenCalledWith(
         LogCodes.STATE.STATE_RETRIEVE_FAILED,
         expect.objectContaining({
-          userId: defaultQuery.userId,
-          businessId: defaultQuery.businessId,
-          grantId: defaultQuery.grantId,
+          sbi: defaultQuery.sbi,
+          grantCode: defaultQuery.grantCode,
           errorName: dbError.name,
           errorMessage: dbError.message,
           errorReason: dbError.reason,
@@ -289,7 +285,7 @@ describe('State', () => {
     test('should validate query and throw error for invalid data', () => {
       const invalidQuery = {
         // Missing required fields
-        grantId: 'grant123'
+        grantCode: 'grant123'
       }
 
       const mockValidationRequest = {
@@ -308,9 +304,8 @@ describe('State', () => {
       expect(log).toHaveBeenCalledWith(
         LogCodes.STATE.STATE_RETRIEVE_FAILED,
         expect.objectContaining({
-          userId: invalidQuery.userId,
-          businessId: invalidQuery.businessId,
-          grantId: invalidQuery.grantId,
+          sbi: invalidQuery.sbi,
+          grantCode: invalidQuery.grantCode,
           errorName: mockError.name,
           errorMessage: `GET /state, validation failed: ${mockError.message}`,
           errorReason: mockError.reason,
@@ -393,9 +388,8 @@ describe('State', () => {
       expect(log).toHaveBeenCalledWith(
         LogCodes.STATE.STATE_DELETE_FAILED,
         expect.objectContaining({
-          userId: defaultQuery.userId,
-          businessId: defaultQuery.businessId,
-          grantId: defaultQuery.grantId,
+          sbi: defaultQuery.sbi,
+          grantCode: defaultQuery.grantCode,
           errorName: dbError.name,
           errorMessage: dbError.message,
           errorReason: dbError.reason,
@@ -413,7 +407,7 @@ describe('State', () => {
     test('should validate query and throw error for invalid data', () => {
       const invalidQuery = {
         // Missing required fields
-        grantId: 'grant123'
+        grantCode: 'grant123'
       }
 
       const mockValidationRequest = {
@@ -432,9 +426,8 @@ describe('State', () => {
       expect(log).toHaveBeenCalledWith(
         LogCodes.STATE.STATE_DELETE_FAILED,
         expect.objectContaining({
-          userId: invalidQuery.userId,
-          businessId: invalidQuery.businessId,
-          grantId: invalidQuery.grantId,
+          sbi: invalidQuery.sbi,
+          grantCode: invalidQuery.grantCode,
           errorName: mockError.name,
           errorMessage: `DELETE /state, validation failed: ${mockError.message}`,
           errorReason: mockError.reason,

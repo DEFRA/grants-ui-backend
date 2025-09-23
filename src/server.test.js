@@ -74,9 +74,8 @@ describe('POST /state payload size logging', () => {
       method: HTTP_POST,
       url: '/state',
       payload: {
-        businessId: 'BIZ123',
-        userId: 'USER456',
-        grantId: 'GRANT789',
+        sbi: 'BIZ123',
+        grantCode: 'GRANT789',
         grantVersion: 1,
         state: { a: 'small' }
       },
@@ -101,7 +100,7 @@ describe('POST /state payload size logging', () => {
   test('DELETE endpoint requires authentication', async () => {
     const response = await server.inject({
       method: HTTP_DELETE,
-      url: '/state?businessId=BIZ123&userId=USER456&grantId=GRANT789',
+      url: '/state?sbi=BIZ123&grantCode=GRANT789',
       headers: {
         [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON
       }
@@ -118,9 +117,8 @@ describe('POST /state payload size logging', () => {
       method: HTTP_POST,
       url: '/state',
       payload: {
-        businessId: 'BIZ123',
-        userId: 'USER456',
-        grantId: 'GRANT789',
+        sbi: 'BIZ123',
+        grantCode: 'GRANT789',
         grantVersion: 1,
         state: largeObj
       },
@@ -139,8 +137,7 @@ describe('POST /state payload size logging', () => {
         payloadSize: expect.any(Number),
         threshold: 500_000,
         max: 1_048_576,
-        path: '/state',
-        userId: 'USER456'
+        path: '/state'
       })
     )
   })

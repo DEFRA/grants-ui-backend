@@ -9,22 +9,22 @@ export const LogCodes = {
     STATE_PAYLOAD_SIZE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
-        `Large payload approaching limit | size=${messageOptions.payloadSize} | threshold=${messageOptions.threshold} | max=${messageOptions.max} | path=${messageOptions.path} | userId=${messageOptions.userId}`
+        `Large payload approaching limit | size=${messageOptions.payloadSize} | threshold=${messageOptions.threshold} | max=${messageOptions.max} | path=${messageOptions.path}}`
     },
     STATE_DELETE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
-        `Failed to delete application state | userId=${messageOptions.userId} | businessId=${messageOptions.businessId} | grantId=${messageOptions.grantId} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+        `Failed to delete application state | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     },
     STATE_RETRIEVE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
-        `Failed to retrieve application state | userId=${messageOptions.userId} | businessId=${messageOptions.businessId} | grantId=${messageOptions.grantId} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+        `Failed to retrieve application state | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     },
     STATE_SAVE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
-        `Failed to retrieve application state | userId=${messageOptions.userId} | businessId=${messageOptions.businessId} | grantId=${messageOptions.grantId} | grantVersion=${messageOptions.grantVersion} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+        `Failed to retrieve application state | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     }
   },
   AUTH: {
