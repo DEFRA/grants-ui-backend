@@ -194,7 +194,7 @@ describe('Auth Plugin Integration Tests', () => {
       expect(response.result.message).toBe(INVALID_AUTH_MESSAGE)
     })
 
-    it('should reject request with only "Basic" prefix', async () => {
+    it('should reject request with only "Bearer" prefix', async () => {
       const response = await server.inject({
         method: HTTP_POST,
         url: STATE_URL,
@@ -344,7 +344,7 @@ describe('Auth Plugin Integration Tests', () => {
   })
 
   describe('Base64 Decoding Edge Cases', () => {
-    const BEARER_PREFIX = 'Basic'
+    const BEARER_PREFIX = 'Bearer'
     const MINIMAL_PAYLOAD = {
       sbi: 'test-business',
       grantCode: 'test-grant',
@@ -481,7 +481,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: `Basic ${credentials}`
+            [AUTH_HEADER]: `Bearer ${credentials}`
           },
           payload: BASIC_PAYLOAD
         })
@@ -517,7 +517,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: `Basic ${credentials}`
+            [AUTH_HEADER]: `Bearer ${credentials}`
           },
           payload: BASIC_PAYLOAD
         })
@@ -553,7 +553,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: `Basic ${credentials}`
+            [AUTH_HEADER]: `Bearer ${credentials}`
           },
           payload: BASIC_PAYLOAD
         })
@@ -605,7 +605,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: `Basic ${credentials}`
+            [AUTH_HEADER]: `Bearer ${credentials}`
           },
           payload: BASIC_PAYLOAD
         })

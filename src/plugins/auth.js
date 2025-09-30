@@ -74,16 +74,20 @@ function validateAuthToken(authHeader) {
     return { isValid: false, error: 'Server encryption not configured' }
   }
 
-  const encryptedToken = Buffer.from(authHeader.split(' ').pop(), 'base64').toString('utf-8')
-  const actualToken = decryptToken(encryptedToken)
-  if (!actualToken) {
+  try {
+    const encryptedToken = Buffer.from(authHeader.split(' ').pop(), 'base64').toString('utf-8')
+    const actualToken = decryptToken(encryptedToken)
+    if (!actualToken) {
+      return { isValid: false, error: 'Invalid encrypted token' }
+    }
+
+    const tokensMatch = actualToken === expectedToken
+
+    if (!tokensMatch) {
+      return { isValid: false, error: 'Invalid bearer token' }
+    }
+  } catch (error) {
     return { isValid: false, error: 'Invalid encrypted token' }
-  }
-
-  const tokensMatch = actualToken === expectedToken
-
-  if (!tokensMatch) {
-    return { isValid: false, error: 'Invalid bearer token' }
   }
 
   return { isValid: true }

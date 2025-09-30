@@ -269,7 +269,7 @@ The project includes a Postman collection to make it easier to test and interact
 
 ### Service-to-Service Authentication
 
-The API uses AES-256-GCM encrypted tokens with Basic Authentication. The **username must be blank**, and the **encrypted token is sent as the password**.
+The API uses AES-256-GCM encrypted tokens with Bearer Authentication.
 
 #### Generating the Authorization Header
 
@@ -286,7 +286,7 @@ GRANTS_UI_BACKEND_ENCRYPTION_KEY=<your encryption key>
 npm run generate:auth-header
 ```
 
-Copy the output `Authorization: Basic ...` header and use it in Postman under the `grants-ui-backend-bearer_token` in Environments tab for your requests.
+Copy the output `Authorization: Bearer ...` header and use it in Postman under the `grants-ui-backend-bearer_token` in Environments tab for your requests.
 
 ⚠️ Make sure the environment variables match what the backend config expects.
 
