@@ -25,8 +25,8 @@ const encryptToken = (token, encryptionKey) => {
 
 const createAuthHeader = () => {
   const encryptedToken = encryptToken(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
-  const credentials = Buffer.from(`:${encryptedToken}`).toString('base64')
-  return `Basic ${credentials}`
+  const credentials = Buffer.from(`${encryptedToken}`).toString('base64')
+  return `Bearer ${credentials}`
 }
 
 beforeAll(async () => {

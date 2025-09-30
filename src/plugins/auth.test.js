@@ -112,10 +112,10 @@ describe('Auth Plugin Integration Tests', () => {
 
   describe('Invalid Authentication', () => {
     const WRONG_TOKEN = 'wrong-token'
-    const BASIC_PREFIX = 'Basic'
+    const BEARER_PREFIX = 'Bearer'
     const MALFORMED_BASE64 = '@#$%^&*()'
     const EMPTY_STRING = ''
-    const MULTI_COLON_TOKEN = ':token:with:extra:colons'
+    const MULTI_COLON_TOKEN = 'token:with:extra:colons'
     it('should reject request without authorization header', async () => {
       const response = await server.inject({
         method: HTTP_POST,
@@ -153,7 +153,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} ${credentials}`
+          [AUTH_HEADER]: `${BEARER_PREFIX} ${credentials}`
         },
         payload: BASIC_PAYLOAD
       })
@@ -168,7 +168,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} ${MALFORMED_BASE64}`
+          [AUTH_HEADER]: `${BEARER_PREFIX} ${MALFORMED_BASE64}`
         },
         payload: BASIC_PAYLOAD
       })
@@ -185,7 +185,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} ${credentials}`
+          [AUTH_HEADER]: `${BEARER_PREFIX} ${credentials}`
         },
         payload: BASIC_PAYLOAD
       })
@@ -200,7 +200,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: BASIC_PREFIX
+          [AUTH_HEADER]: BEARER_PREFIX
         },
         payload: BASIC_PAYLOAD
       })
@@ -232,7 +232,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} ${credentials}`
+          [AUTH_HEADER]: `${BEARER_PREFIX} ${credentials}`
         },
         payload: BASIC_PAYLOAD
       })
@@ -344,7 +344,7 @@ describe('Auth Plugin Integration Tests', () => {
   })
 
   describe('Base64 Decoding Edge Cases', () => {
-    const BASIC_PREFIX = 'Basic'
+    const BEARER_PREFIX = 'Basic'
     const MINIMAL_PAYLOAD = {
       sbi: 'test-business',
       grantCode: 'test-grant',
@@ -359,7 +359,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} ${invalidBase64}`
+          [AUTH_HEADER]: `${BEARER_PREFIX} ${invalidBase64}`
         },
         payload: MINIMAL_PAYLOAD
       })
@@ -383,7 +383,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} force-error-token`
+          [AUTH_HEADER]: `${BEARER_PREFIX} force-error-token`
         },
         payload: MINIMAL_PAYLOAD
       })
