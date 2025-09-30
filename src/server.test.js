@@ -51,8 +51,8 @@ describe('POST /state payload size logging', () => {
     await server.initialize()
 
     const encryptedToken = encryptToken(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
-    const credentials = ':' + encryptedToken
-    authHeader = `Basic ${Buffer.from(credentials).toString('base64')}`
+    const credentials = encryptedToken
+    authHeader = `Bearer ${Buffer.from(credentials).toString('base64')}`
   })
 
   afterEach(async () => {

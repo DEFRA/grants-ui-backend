@@ -25,6 +25,11 @@ export const LogCodes = {
       level: 'error',
       messageFunc: (messageOptions) =>
         `Failed to retrieve application state | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+    },
+    STATE_PATCH_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Failed to patch application state | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     }
   },
   AUTH: {
@@ -70,6 +75,27 @@ export const LogCodes = {
     SYSTEM_SHUTDOWN: {
       level: 'info',
       messageFunc: () => `System shutdown initiated`
+    }
+  },
+  SUBMISSIONS: {
+    SUBMISSIONS_PAYLOAD_SIZE: {
+      level: 'info',
+      messageFunc: (messageOptions) => `Received payload | size=${messageOptions.payloadSize}`
+    },
+    SUBMISSIONS_PAYLOAD_SIZE_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Large payload approaching limit | size=${messageOptions.payloadSize} | threshold=${messageOptions.threshold} | max=${messageOptions.max} | path=${messageOptions.path}}`
+    },
+    SUBMISSIONS_RETRIEVE_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Failed to retrieve submissions | crn=${messageOptions.crn} | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | referenceNumber=${messageOptions.referenceNumber} | submittedAt=${messageOptions.submittedAt} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+    },
+    SUBMISSIONS_ADD_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Failed to add submission | crn=${messageOptions.crn} | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | referenceNumber=${messageOptions.referenceNumber} | submittedAt=${messageOptions.submittedAt} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     }
   }
 }

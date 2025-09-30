@@ -22,11 +22,26 @@ const stateRetrieveSchema = Joi.object({
   grantVersion: Joi.number()
 })
 
+const patchParamsSchema = Joi.object({
+  sbi: Joi.string().required(),
+  grantCode: Joi.string().required()
+})
+
+const patchSchema = Joi.object({
+  state: Joi.object({
+    applicationStatus: Joi.string().required()
+  })
+    .required()
+    .unknown(false) // Disallow any other state.* fields
+})
+  .required()
+  .unknown(false) // Disallow unknown top-level fields
+
 export const stateSave = {
   method: 'POST',
   path: '/state',
   options: {
-    auth: 'bearer-basic-auth',
+    auth: 'bearer',
     payload: {
       maxBytes: PAYLOAD_SIZE_MAX, // 1MB
       output: 'data',
@@ -102,7 +117,7 @@ export const stateRetrieve = {
   method: 'GET',
   path: '/state',
   options: {
-    auth: 'bearer-basic-auth',
+    auth: 'bearer',
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
@@ -162,7 +177,7 @@ export const stateDelete = {
   method: 'DELETE',
   path: '/state',
   options: {
-    auth: 'bearer-basic-auth',
+    auth: 'bearer',
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
@@ -215,6 +230,75 @@ export const stateDelete = {
         stack: err.stack?.split('\n')[0]
       })
       return h.response({ error: 'Failed to delete application state' }).code(500)
+    }
+  }
+}
+
+export const statePatch = {
+  method: 'PATCH',
+  path: '/state/{sbi}/{grantCode}',
+  options: {
+    auth: 'bearer',
+    payload: {
+      maxBytes: PAYLOAD_SIZE_MAX, // 1MB
+      parse: true,
+      output: 'data',
+      allow: ['application/json']
+    },
+    validate: {
+      params: patchParamsSchema,
+      payload: patchSchema,
+      failAction: (request, h, err) => {
+        const { sbi, grantCode } = request.params
+        log(LogCodes.STATE.STATE_PATCH_FAILED, {
+          sbi,
+          grantCode,
+          errorName: err.name,
+          errorMessage: `PATCH /state, validation failed: ${err.message}`,
+          errorReason: err.reason,
+          errorCode: err.code,
+          isMongoError: false,
+          stack: err.stack?.split('\n')[0]
+        })
+        throw err
+      }
+    }
+  },
+  handler: async (request, h) => {
+    const { sbi, grantCode } = request.params
+    const { applicationStatus } = request.payload.state
+
+    try {
+      const document = await request.db.collection('grant-application-state').findOneAndUpdate(
+        { sbi, grantCode },
+        {
+          $set: {
+            'state.applicationStatus': applicationStatus,
+            updatedAt: new Date()
+          }
+        },
+        { returnDocument: 'after', upsert: false }
+      )
+
+      if (!document) {
+        return h.response({ error: 'State not found' }).code(404)
+      }
+
+      return h.response({ success: true, patched: true }).code(200)
+    } catch (err) {
+      const isMongoError = err?.name?.startsWith('Mongo')
+
+      log(LogCodes.STATE.STATE_PATCH_FAILED, {
+        sbi,
+        grantCode,
+        errorName: err.name,
+        errorMessage: err.message,
+        errorReason: err.reason,
+        errorCode: err.code,
+        isMongoError,
+        stack: err.stack?.split('\n')[0]
+      })
+      return h.response({ error: 'Failed to patch application state' }).code(500)
     }
   }
 }

@@ -47,42 +47,12 @@ function decryptToken(encryptedToken) {
   }
 }
 
-function validateBasicAuth(authHeader) {
-  if (!authHeader?.startsWith('Basic ')) {
+function validateAuthToken(authHeader) {
+  if (!authHeader?.startsWith('Bearer ')) {
     return {
       isValid: false,
       error: 'Missing or invalid Authorization header format'
     }
-  }
-
-  const token = authHeader.slice(6)
-  let decodedAuth
-
-  try {
-    decodedAuth = Buffer.from(token, 'base64').toString('utf-8')
-  } catch (error) {
-    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
-      errorName: `Base64 decoding failed during authentication`
-    })
-    return {
-      isValid: false,
-      error: 'Invalid base64 encoding in Authorization header'
-    }
-  }
-
-  const colonIndex = decodedAuth.indexOf(':')
-  const username = colonIndex === -1 ? decodedAuth : decodedAuth.substring(0, colonIndex)
-  const password = colonIndex === -1 ? '' : decodedAuth.substring(colonIndex + 1)
-
-  if (username !== '') {
-    return {
-      isValid: false,
-      error: 'Username must be blank for service authentication'
-    }
-  }
-
-  if (!password) {
-    return { isValid: false, error: 'Bearer token (password) is required' }
   }
 
   const expectedToken = config.get('auth.token')
@@ -104,7 +74,8 @@ function validateBasicAuth(authHeader) {
     return { isValid: false, error: 'Server encryption not configured' }
   }
 
-  const actualToken = decryptToken(password)
+  const encryptedToken = Buffer.from(authHeader.split(' ').pop(), 'base64').toString('utf-8')
+  const actualToken = decryptToken(encryptedToken)
   if (!actualToken) {
     return { isValid: false, error: 'Invalid encrypted token' }
   }
@@ -122,12 +93,12 @@ const auth = {
   plugin: {
     name: 'auth',
     register: (server, _options) => {
-      server.auth.scheme('bearer-basic', (server, options) => {
+      server.auth.scheme('bearer', (server, options) => {
         return {
           authenticate: (request, h) => {
             const authHeader = request.headers.authorization
 
-            const validation = validateBasicAuth(authHeader)
+            const validation = validateAuthToken(authHeader)
 
             if (!validation.isValid) {
               throw Boom.unauthorized('Invalid authentication credentials')
@@ -143,7 +114,7 @@ const auth = {
         }
       })
 
-      server.auth.strategy('bearer-basic-auth', 'bearer-basic')
+      server.auth.strategy('bearer', 'bearer')
     }
   }
 }
