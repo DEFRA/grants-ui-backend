@@ -13,7 +13,7 @@ Core delivery platform Node.js Backend Template.
   - [Update dependencies](#update-dependencies)
   - [Formatting](#formatting)
     - [Windows prettier issue](#windows-prettier-issue)
-- [API endpoints](#api-endpoints)
+- [OpenAPI Specification](#openapi-specification)
 - [Development helpers](#development-helpers)
   - [MongoDB Locks](#mongodb-locks)
   - [Proxy](#proxy)
@@ -97,7 +97,7 @@ To update dependencies use [npm-check-updates](https://github.com/raineorshine/n
 > the [npm-check-updates](https://github.com/raineorshine/npm-check-updates)
 
 ```bash
-ncu --interactive --format group
+npx npm-check-updates --interactive --format group
 ```
 
 ### Formatting
@@ -110,13 +110,19 @@ If you are having issues with formatting of line breaks on Windows update your g
 git config --global core.autocrlf false
 ```
 
-## API endpoints
+## OpenAPI Specification
 
-| Endpoint             | Description                    |
-| :------------------- | :----------------------------- |
-| `GET: /health`       | Health                         |
-| `GET: /example    `  | Example API (remove as needed) |
-| `GET: /example/<id>` | Example API (remove as needed) |
+An OpenAPI 3.1 specification is available at the repository root:
+
+- File: [openapi.yaml](./openapi.yaml)
+
+How to view it:
+
+- Use any OpenAPI viewer or IDE plugin/extension (e.g. Swagger Viewer for VS Code or natively in IntelliJ).
+
+Keeping the spec up-to-date:
+
+- When you add or change routes (see src/plugins/router.js and src/routes/\*), update openapi.yaml accordingly.
 
 ## Development helpers
 
@@ -263,7 +269,7 @@ The project includes a Postman collection to make it easier to test and interact
 
 ### Service-to-Service Authentication
 
-The API uses AES-256-GCM encrypted tokens with Basic Authentication. The **username must be blank**, and the **encrypted token is sent as the password**.
+The API uses AES-256-GCM encrypted tokens with Bearer Authentication.
 
 #### Generating the Authorization Header
 
@@ -274,16 +280,13 @@ GRANTS_UI_BACKEND_AUTH_TOKEN=<your token>
 GRANTS_UI_BACKEND_ENCRYPTION_KEY=<your encryption key>
 ```
 
-2. Use the file `scripts/generateHeader.js` in the repo (example script) to generate the Bearer token:
+2. Use the npm script to generate the Bearer token:
 
-Example run:
-
-```
-$ node scripts/generateHeader.js
-$ Authorization: Basic ...
+```bash
+npm run generate:auth-header
 ```
 
-Copy the output `Authorization: Basic ...` header and use it in Postman under the `grants-ui-backend-bearer_token` in Environments tab for your requests.
+Copy the output `Authorization: Bearer ...` header and use it in Postman under the `grants-ui-backend-bearer_token` in Environments tab for your requests.
 
 ⚠️ Make sure the environment variables match what the backend config expects.
 

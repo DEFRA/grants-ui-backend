@@ -20,7 +20,6 @@ const authTag = cipher.getAuthTag().toString('base64')
 const ivB64 = iv.toString('base64')
 
 const encryptedToken = `${ivB64}:${authTag}:${encrypted}`
-const basicString = `:${encryptedToken}`
-const header = Buffer.from(basicString).toString('base64')
+const header = Buffer.from(encryptedToken).toString('base64')
 
-console.log('Authorization: Basic ' + header)
+console.log('Authorization: Bearer ' + header)

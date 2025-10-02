@@ -34,9 +34,8 @@ describe('Auth Plugin Integration Tests', () => {
     state: { step: 1, data: 'test' }
   }
 
-  const createBasicAuthCredentials = (token) => Buffer.from(`:${token}`).toString('base64')
-  const createBasicAuthHeader = (token) => `Basic ${createBasicAuthCredentials(token)}`
-  const createBearerAuthHeader = (token) => `Bearer ${token}`
+  const createBearerAuthCredentials = (token) => Buffer.from(`${token}`).toString('base64')
+  const createBearerAuthHeader = (token) => `Bearer ${createBearerAuthCredentials(token)}`
   const createUserCredentials = (username, token) => Buffer.from(`${username}:${token}`).toString('base64')
 
   const encryptToken = (token, encryptionKey) => {
@@ -54,8 +53,8 @@ describe('Auth Plugin Integration Tests', () => {
 
   const createEncryptedAuthHeader = (token, encryptionKey) => {
     const encryptedToken = encryptToken(token, encryptionKey)
-    const credentials = Buffer.from(`:${encryptedToken}`).toString('base64')
-    return `Basic ${credentials}`
+    const credentials = Buffer.from(`${encryptedToken}`).toString('base64')
+    return `Bearer ${credentials}`
   }
 
   let server
@@ -113,10 +112,10 @@ describe('Auth Plugin Integration Tests', () => {
 
   describe('Invalid Authentication', () => {
     const WRONG_TOKEN = 'wrong-token'
-    const BASIC_PREFIX = 'Basic'
+    const BEARER_PREFIX = 'Bearer'
     const MALFORMED_BASE64 = '@#$%^&*()'
     const EMPTY_STRING = ''
-    const MULTI_COLON_TOKEN = ':token:with:extra:colons'
+    const MULTI_COLON_TOKEN = 'token:with:extra:colons'
     it('should reject request without authorization header', async () => {
       const response = await server.inject({
         method: HTTP_POST,
@@ -137,22 +136,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: createBasicAuthHeader(WRONG_TOKEN)
-        },
-        payload: BASIC_PAYLOAD
-      })
-
-      expect(response.statusCode).toBe(HTTP_401_UNAUTHORIZED)
-      expect(response.result.message).toBe(INVALID_AUTH_MESSAGE)
-    })
-
-    it('should reject request with Bearer instead of Basic', async () => {
-      const response = await server.inject({
-        method: HTTP_POST,
-        url: STATE_URL,
-        headers: {
-          [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: createBearerAuthHeader(TEST_AUTH_TOKEN)
+          [AUTH_HEADER]: createBearerAuthHeader(WRONG_TOKEN)
         },
         payload: BASIC_PAYLOAD
       })
@@ -169,7 +153,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} ${credentials}`
+          [AUTH_HEADER]: `${BEARER_PREFIX} ${credentials}`
         },
         payload: BASIC_PAYLOAD
       })
@@ -184,7 +168,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} ${MALFORMED_BASE64}`
+          [AUTH_HEADER]: `${BEARER_PREFIX} ${MALFORMED_BASE64}`
         },
         payload: BASIC_PAYLOAD
       })
@@ -194,14 +178,14 @@ describe('Auth Plugin Integration Tests', () => {
     })
 
     it('should reject request with empty token', async () => {
-      const credentials = createBasicAuthCredentials(EMPTY_STRING)
+      const credentials = createBearerAuthCredentials(EMPTY_STRING)
 
       const response = await server.inject({
         method: HTTP_POST,
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} ${credentials}`
+          [AUTH_HEADER]: `${BEARER_PREFIX} ${credentials}`
         },
         payload: BASIC_PAYLOAD
       })
@@ -210,13 +194,13 @@ describe('Auth Plugin Integration Tests', () => {
       expect(response.result.message).toBe(INVALID_AUTH_MESSAGE)
     })
 
-    it('should reject request with only "Basic" prefix', async () => {
+    it('should reject request with only "Bearer" prefix', async () => {
       const response = await server.inject({
         method: HTTP_POST,
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: BASIC_PREFIX
+          [AUTH_HEADER]: BEARER_PREFIX
         },
         payload: BASIC_PAYLOAD
       })
@@ -248,7 +232,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} ${credentials}`
+          [AUTH_HEADER]: `${BEARER_PREFIX} ${credentials}`
         },
         payload: BASIC_PAYLOAD
       })
@@ -263,7 +247,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: createBasicAuthHeader(TEST_AUTH_TOKEN) // Unencrypted token
+          [AUTH_HEADER]: createBearerAuthHeader(TEST_AUTH_TOKEN) // Unencrypted token
         },
         payload: BASIC_PAYLOAD
       })
@@ -342,7 +326,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: createBasicAuthHeader('any-token')
+            [AUTH_HEADER]: createBearerAuthHeader('any-token')
           },
           payload: MINIMAL_PAYLOAD
         })
@@ -360,7 +344,7 @@ describe('Auth Plugin Integration Tests', () => {
   })
 
   describe('Base64 Decoding Edge Cases', () => {
-    const BASIC_PREFIX = 'Basic'
+    const BEARER_PREFIX = 'Bearer'
     const MINIMAL_PAYLOAD = {
       sbi: 'test-business',
       grantCode: 'test-grant',
@@ -375,7 +359,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} ${invalidBase64}`
+          [AUTH_HEADER]: `${BEARER_PREFIX} ${invalidBase64}`
         },
         payload: MINIMAL_PAYLOAD
       })
@@ -399,7 +383,7 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: `${BASIC_PREFIX} force-error-token`
+          [AUTH_HEADER]: `${BEARER_PREFIX} force-error-token`
         },
         payload: MINIMAL_PAYLOAD
       })
@@ -497,7 +481,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: `Basic ${credentials}`
+            [AUTH_HEADER]: `Bearer ${credentials}`
           },
           payload: BASIC_PAYLOAD
         })
@@ -533,7 +517,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: `Basic ${credentials}`
+            [AUTH_HEADER]: `Bearer ${credentials}`
           },
           payload: BASIC_PAYLOAD
         })
@@ -569,7 +553,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: `Basic ${credentials}`
+            [AUTH_HEADER]: `Bearer ${credentials}`
           },
           payload: BASIC_PAYLOAD
         })
@@ -621,7 +605,7 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: `Basic ${credentials}`
+            [AUTH_HEADER]: `Bearer ${credentials}`
           },
           payload: BASIC_PAYLOAD
         })

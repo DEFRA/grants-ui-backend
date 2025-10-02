@@ -1,0 +1,430 @@
+openapi: 3.1.0
+info:
+  title: Grants UI Backend API
+  version: "0.1.0"
+  description: |
+    OpenAPI specification for the Grants UI Backend service.
+
+    Notes on authentication:
+    - This API uses Bearer token authentication for service-to-service auth.
+    - Supply the header as: `Authorization: Bearer <base64(encryptedToken)>`
+    - The token is encrypted using AES-256-GCM and then base64 encoded.
+
+  contact:
+    name: DEFRA DDTS
+  license:
+    name: OGL-UK-3.0
+    url: https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+servers:
+  - url: http://localhost:3001
+    description: Local
+  - url: https://grants-ui-backend.dev.cdp-int.defra.cloud
+    description: Dev
+  - url: https://grants-ui-backend.test.cdp-int.defra.cloud
+    description: Test
+
+tags:
+  - name: Health
+    description: Service health endpoint
+  - name: State
+    description: Manage persisted grant application state
+  - name: Submissions
+    description: Record grant application submissions
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Service-to-service authentication.
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    HealthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: success
+      required: [message]
+    StateObject:
+      description: Arbitrary state object stored by the service
+      type: object
+      additionalProperties: true
+    StateSaveRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        sbi:
+          type: string
+        grantCode:
+          type: string
+        grantVersion:
+          type: integer
+          format: int32
+        state:
+          $ref: '#/components/schemas/StateObject'
+      required: [sbi, grantCode, grantVersion, state]
+    StateSaveResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        created:
+          type: boolean
+          description: Present and true when a new state record was created
+        updated:
+          type: boolean
+          description: Present and true when an existing state record was updated
+      required: [success]
+    StatePatchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        patched:
+          type: boolean
+          description: Present and true when a state record was patched
+      required: [success]
+    StateDeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        deleted:
+          type: boolean
+          example: true
+      required: [success, deleted]
+    Submission:
+      type: object
+      additionalProperties: false
+      properties:
+        crn:
+          type: string
+        sbi:
+          type: string
+        grantCode:
+          type: string
+        grantVersion:
+          type: integer
+          format: int32
+        referenceNumber:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+      required: [crn, sbi, grantCode, grantVersion, referenceNumber, submittedAt]
+    SubmissionCreateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        created:
+          type: boolean
+          example: true
+      required: [success, created]
+    SubmissionsRetrieveResponse:
+      type: array
+      description: A list of submissions matching the provided filters
+      items:
+        $ref: '#/components/schemas/Submission'
+    StatePatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        state:
+          type: object
+          additionalProperties: false
+          properties:
+            applicationStatus:
+              type: string
+          required: [applicationStatus]
+      required: [state]
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Returns a simple success message if the service is healthy.
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /state:
+    post:
+      tags: [State]
+      summary: Create or update application state
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StateSaveRequest'
+            example:
+              sbi: '1234567890'
+              grantCode: 'example-grant-with-auth'
+              grantVersion: 1
+              state:
+                formField1: 'Answer'
+      responses:
+        '201':
+          description: State created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateSaveResponse'
+        '200':
+          description: State updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateSaveResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to persist state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [State]
+      summary: Retrieve latest application state for an SBI and grant code
+      parameters:
+        - in: query
+          name: sbi
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: grantCode
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: grantVersion
+          schema:
+            type: integer
+            format: int32
+          required: false
+          description: Present in validation schema; currently the service returns the latest version regardless of value
+      responses:
+        '200':
+          description: The stored state object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateObject'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No state found for the given identifiers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to retrieve state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [State]
+      summary: Delete latest application state for an SBI and grant code
+      parameters:
+        - in: query
+          name: sbi
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: grantCode
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: grantVersion
+          schema:
+            type: integer
+            format: int32
+          required: false
+          description: Present in validation schema; currently the service deletes the latest version regardless of value
+      responses:
+        '200':
+          description: State deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateDeleteResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No state found for the given identifiers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to delete state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /state/{sbi}/{grantCode}:
+    patch:
+      tags: [State]
+      summary: Patch application status on the latest state for an SBI and grant code
+      parameters:
+        - in: path
+          name: sbi
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: grantCode
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatePatchRequest'
+            example:
+              state:
+                applicationStatus: 'SUBMITTED'
+      responses:
+        '200':
+          description: The updated state record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatePatchResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No state found for the given identifiers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to patch state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /submissions:
+    post:
+      tags: [Submissions]
+      summary: Record an application submission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Submission'
+      responses:
+        '201':
+          description: Submission recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionCreateResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to record submission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [Submissions]
+      summary: Retrieve submissions matching the given identifiers
+      parameters:
+        - in: query
+          name: sbi
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: grantCode
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: crn
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: grantVersion
+          schema:
+            type: integer
+            format: int32
+          required: false
+        - in: query
+          name: referenceNumber
+          schema:
+            type: string
+          required: false
+      responses:
+        '200':
+          description: A list of submissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionsRetrieveResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to retrieve submissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
