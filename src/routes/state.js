@@ -78,7 +78,13 @@ export const stateSave = {
     const db = request.db
 
     const updateDoc = {
-      $set: { state, updatedAt: new Date() },
+      $set: {
+        state: {
+          ...state,
+          ...(state?.submittedAt ? { submittedAt: new Date(state.submittedAt) } : {})
+        }
+      },
+      $currentDate: { updatedAt: true },
       $setOnInsert: { createdAt: new Date() }
     }
 
