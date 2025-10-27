@@ -5,14 +5,17 @@ Core delivery platform Node.js Backend Template.
 - [Requirements](#requirements)
   - [Node.js](#nodejs)
 - [Local development](#local-development)
-  - [Setup](#setup)
-  - [Development](#development)
-  - [Testing](#testing)
-  - [Production](#production)
-  - [Npm scripts](#npm-scripts)
-  - [Update dependencies](#update-dependencies)
-  - [Formatting](#formatting)
-    - [Windows prettier issue](#windows-prettier-issue)
+  - [Docker Compose (recommended)](#docker-compose-recommended)
+  - [Local Node environment](#local-node-environment)
+    - [Setup](#setup)
+    - [Environment configuration](#environment-configuration)
+    - [Development](#development)
+    - [Testing](#testing)
+    - [Production](#production)
+    - [Npm scripts](#npm-scripts)
+    - [Update dependencies](#update-dependencies)
+    - [Formatting](#formatting)
+      - [Windows prettier issue](#windows-prettier-issue)
 - [OpenAPI Specification](#openapi-specification)
 - [Development helpers](#development-helpers)
   - [MongoDB Locks](#mongodb-locks)
@@ -36,7 +39,7 @@ Core delivery platform Node.js Backend Template.
 
 ### Node.js
 
-Please install [Node.js](http://nodejs.org/) `>= v22` and [npm](https://nodejs.org/) `>= v11`. You will find it
+Please install [Node.js](http://nodejs.org/) `>= v22` and [npm](https://nodejs.org/) `>= v10`. You will find it
 easier to use the Node Version Manager [nvm](https://github.com/creationix/nvm)
 
 To use the correct version of Node.js for this application, via nvm:
@@ -48,7 +51,25 @@ nvm use
 
 ## Local development
 
-### Setup
+### Docker Compose (recommended)
+
+For a self-contained local environment (service plus MongoDB), use the provided Compose file:
+
+```bash
+docker compose up --build
+```
+
+This builds the development image and starts the dependencies defined in `compose.yml`. The backend is available on <http://localhost:3001> by default. Stop the stack with:
+
+```bash
+docker compose down
+```
+
+### Local Node environment
+
+If you prefer to run the application directly on your machine, follow the steps below.
+
+#### Setup
 
 Install application dependencies:
 
@@ -56,7 +77,23 @@ Install application dependencies:
 npm install
 ```
 
-### Development
+#### Environment configuration
+
+Copy the sample environment file and update the required variables:
+
+```bash
+cp .env.local .env
+```
+
+Set values for:
+
+- `MONGO_URI` – address of your MongoDB instance (the default assumes a local database on port 27017)
+- `GRANTS_UI_BACKEND_AUTH_TOKEN` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
+- `GRANTS_UI_BACKEND_ENCRYPTION_KEY` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
+
+An extended reference is available in `env.example.sh`.
+
+#### Development
 
 To run the application in `development` mode run:
 
@@ -64,7 +101,7 @@ To run the application in `development` mode run:
 npm run dev
 ```
 
-### Testing
+#### Testing
 
 To test the application run:
 
@@ -72,7 +109,13 @@ To test the application run:
 npm run test
 ```
 
-### Production
+Integration tests rely on Docker (via Testcontainers) and can be run with:
+
+```bash
+npm run test:integration
+```
+
+#### Production
 
 To mimic the application running in `production` mode locally run:
 
@@ -80,7 +123,7 @@ To mimic the application running in `production` mode locally run:
 npm start
 ```
 
-### Npm scripts
+#### Npm scripts
 
 All available Npm scripts can be seen in [package.json](./package.json).
 To view them in your command line run:
@@ -89,7 +132,7 @@ To view them in your command line run:
 npm run
 ```
 
-### Update dependencies
+#### Update dependencies
 
 To update dependencies use [npm-check-updates](https://github.com/raineorshine/npm-check-updates):
 
@@ -100,9 +143,9 @@ To update dependencies use [npm-check-updates](https://github.com/raineorshine/n
 npx npm-check-updates --interactive --format group
 ```
 
-### Formatting
+#### Formatting
 
-#### Windows prettier issue
+##### Windows prettier issue
 
 If you are having issues with formatting of line breaks on Windows update your global git config by running:
 
@@ -167,7 +210,7 @@ async function doStuff(server) {
 }
 ```
 
-Helper methods are also available in `/src/helpers/mongo-lock.js`.
+Helper methods are also available in `src/common/helpers/mongo-lock.js`.
 
 ### Proxy
 
@@ -204,8 +247,12 @@ docker build --target development --no-cache --tag grants-ui-backend:development
 Run:
 
 ```bash
-docker run -e PORT=3001 -p 3001:3001 grants-ui-backend:development
+docker run \
+  -e PORT=3001 \
+  -p 3001:3001 \
+  grants-ui-backend:development
 ```
+Set any additional environment variables required by your deployment (see [Environment configuration](#environment-configuration)).
 
 ### Production image
 
@@ -218,15 +265,16 @@ docker build --no-cache --tag grants-ui-backend .
 Run:
 
 ```bash
-docker run -e PORT=3001 -p 3001:3001 grants-ui-backend
+docker run \
+  -e PORT=3001 \
+  -p 3001:3001 \
+  grants-ui-backend
 ```
+Set any additional environment variables required by your deployment (see [Environment configuration](#environment-configuration)).
 
 ### Docker Compose
 
-A local environment with:
-
-- MongoDB
-- This service.
+For day-to-day development, follow [Docker Compose (recommended)](#docker-compose-recommended). For reference, the same command is shown below:
 
 ```bash
 docker compose up --build -d
