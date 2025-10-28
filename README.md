@@ -12,6 +12,7 @@ Core delivery platform Node.js Backend Template.
     - [Environment configuration](#environment-configuration)
     - [Development](#development)
     - [Testing](#testing)
+    - [Git hooks](#git-hooks)
     - [Production](#production)
     - [Npm scripts](#npm-scripts)
     - [Update dependencies](#update-dependencies)
@@ -134,6 +135,14 @@ npm run test:integration
 ```
 
 The frontend documents complementary UI testing patterns in its [testing framework section](https://github.com/DEFRA/grants-ui#testing-framework).
+
+#### Git hooks
+
+Husky installs a pre-commit hook during `npm install`. The hook runs `npm run format:check`, `npm run lint`, and `npm test`, mirroring the workflow in [grants-ui](https://github.com/DEFRA/grants-ui). If commits are blocked:
+
+- run `npm run setup:husky` to reinstall the hooks
+- address formatting or lint failures with `npm run lint:fix`
+- fix failing tests locally before committing
 
 #### Production
 
