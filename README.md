@@ -2,6 +2,7 @@
 
 Core delivery platform Node.js Backend Template.
 
+- [Related documentation](#related-documentation)
 - [Requirements](#requirements)
   - [Node.js](#nodejs)
 - [Local development](#local-development)
@@ -18,6 +19,8 @@ Core delivery platform Node.js Backend Template.
       - [Windows prettier issue](#windows-prettier-issue)
 - [OpenAPI Specification](#openapi-specification)
 - [Development helpers](#development-helpers)
+  - [Structured logging](#structured-logging)
+  - [Application state and frontend rehydration](#application-state-and-frontend-rehydration)
   - [MongoDB Locks](#mongodb-locks)
   - [Proxy](#proxy)
 - [Docker](#docker)
@@ -31,15 +34,26 @@ Core delivery platform Node.js Backend Template.
   - [Service-to-Service Authentication](#service-to-service-authentication)
   - [Usage](#usage)
   - [Keeping the Collection Updated](#keeping-the-collection-updated)
-  - [Example Folder Structure](#example-folder-structure)
+- [Example Folder Structure](#example-folder-structure)
 - [Licence](#licence)
   - [About the licence](#about-the-licence)
+
+## Related documentation
+
+This service works alongside the [grants-ui frontend](https://github.com/DEFRA/grants-ui). That README captures the end-to-end user journey and shared engineering practices. Useful companion sections include:
+
+- [DXT Forms Engine Plugin](https://github.com/DEFRA/grants-ui#dxt-forms-engine-plugin) – how journeys are composed and which payloads this backend receives
+- [Session Rehydration](https://github.com/DEFRA/grants-ui#session-rehydration) – lifecycle of state stored in MongoDB by this service
+- [Structured Logging System](https://github.com/DEFRA/grants-ui#structured-logging-system) – log code conventions shared across UI and backend services
+- [Analytics](https://github.com/DEFRA/grants-ui#analytics) – how application telemetry is captured on the frontend, complementing the events emitted here
+
+Use this README for backend-specific setup; refer to the frontend README when you need context about journeys, shared tooling, or logging standards.
 
 ## Requirements
 
 ### Node.js
 
-Please install [Node.js](http://nodejs.org/) `>= v22` and [npm](https://nodejs.org/) `>= v10`. You will find it
+Please install [Node.js](http://nodejs.org/) `>= v22` and [npm](https://nodejs.org/) `>= v9` (the project is routinely tested with npm v10). You will find it
 easier to use the Node Version Manager [nvm](https://github.com/creationix/nvm)
 
 To use the correct version of Node.js for this application, via nvm:
@@ -64,6 +78,8 @@ This builds the development image and starts the dependencies defined in `compos
 ```bash
 docker compose down
 ```
+
+To spin up the full stack with the frontend, follow the [Docker guidance in grants-ui](https://github.com/DEFRA/grants-ui#docker).
 
 ### Local Node environment
 
@@ -93,6 +109,8 @@ Set values for:
 
 An extended reference is available in `env.example.sh`.
 
+Keep these values in sync with the frontend configuration described in the [grants-ui environment guidance](https://github.com/DEFRA/grants-ui#environment-variables) so clients can authenticate successfully.
+
 #### Development
 
 To run the application in `development` mode run:
@@ -114,6 +132,8 @@ Integration tests rely on Docker (via Testcontainers) and can be run with:
 ```bash
 npm run test:integration
 ```
+
+The frontend documents complementary UI testing patterns in its [testing framework section](https://github.com/DEFRA/grants-ui#testing-framework).
 
 #### Production
 
@@ -168,6 +188,14 @@ Keeping the spec up-to-date:
 - When you add or change routes (see src/plugins/router.js and src/routes/\*), update openapi.yaml accordingly.
 
 ## Development helpers
+
+### Structured logging
+
+Application logs follow the shared, code-driven format used by the Grants UI frontend. Log codes live in `src/common/helpers/logging/log-codes.js` and are validated on startup; unit tests exist alongside the helpers (`src/common/helpers/logging/*.test.js`). When introducing new log codes, mirror the approach described in the [frontend structured logging guide](https://github.com/DEFRA/grants-ui#structured-logging-system) and update the relevant tests.
+
+### Application state and frontend rehydration
+
+Mongo documents written to the `grant-application-state` collection are rehydrated by the frontend during user journeys. Review the [frontend session rehydration documentation](https://github.com/DEFRA/grants-ui#session-rehydration) before modifying stored shapes or lifecycle expectations, and update the OpenAPI schema plus Postman collection accordingly.
 
 ### MongoDB Locks
 
@@ -234,6 +262,8 @@ return await fetch(url, {
 })
 ```
 
+The frontend relies on the same proxy configuration; see its [proxy documentation](https://github.com/DEFRA/grants-ui#proxy) if you are troubleshooting cross-repo HTTP behaviour.
+
 ## Docker
 
 ### Development image
@@ -252,6 +282,7 @@ docker run \
   -p 3001:3001 \
   grants-ui-backend:development
 ```
+
 Set any additional environment variables required by your deployment (see [Environment configuration](#environment-configuration)).
 
 ### Production image
@@ -270,6 +301,7 @@ docker run \
   -p 3001:3001 \
   grants-ui-backend
 ```
+
 Set any additional environment variables required by your deployment (see [Environment configuration](#environment-configuration)).
 
 ### Docker Compose
