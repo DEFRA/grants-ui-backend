@@ -10,13 +10,14 @@ updates:
     groups:
       build:
         patterns:
+          - '@babel/*'
           - 'autoprefixer'
+          - 'babel-*'
 
       lint:
         patterns:
+          - 'neostandard'
           - 'prettier'
-          - 'stylelint'
-          - 'stylelint-*'
 
       logging:
         patterns:
@@ -25,11 +26,22 @@ updates:
           - 'pino'
           - 'pino-*'
 
+      hapi:
+        patterns:
+          - '@defra/hapi-*'
+          - '@hapi/*'
+          - 'hapi-pulse'
+
+      test:
+        patterns:
+          - '@shelf/jest-*'
+          - 'babel-jest'
+          - 'jest'
+          - 'testcontainers'
+
       tools:
         patterns:
-          - 'babel-jest'
           - 'husky'
-          - 'jest'
           - 'nodemon'
           - 'npm-run-all'
 
