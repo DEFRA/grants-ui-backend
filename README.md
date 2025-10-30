@@ -2,19 +2,26 @@
 
 Core delivery platform Node.js Backend Template.
 
+- [Related documentation](#related-documentation)
 - [Requirements](#requirements)
   - [Node.js](#nodejs)
 - [Local development](#local-development)
-  - [Setup](#setup)
-  - [Development](#development)
-  - [Testing](#testing)
-  - [Production](#production)
-  - [Npm scripts](#npm-scripts)
-  - [Update dependencies](#update-dependencies)
-  - [Formatting](#formatting)
-    - [Windows prettier issue](#windows-prettier-issue)
+  - [Docker Compose (recommended)](#docker-compose-recommended)
+  - [Local Node environment](#local-node-environment)
+    - [Setup](#setup)
+    - [Environment configuration](#environment-configuration)
+    - [Development](#development)
+    - [Testing](#testing)
+    - [Git hooks](#git-hooks)
+    - [Production](#production)
+    - [Npm scripts](#npm-scripts)
+    - [Update dependencies](#update-dependencies)
+    - [Formatting](#formatting)
+      - [Windows prettier issue](#windows-prettier-issue)
 - [OpenAPI Specification](#openapi-specification)
 - [Development helpers](#development-helpers)
+  - [Structured logging](#structured-logging)
+  - [Application state and frontend rehydration](#application-state-and-frontend-rehydration)
   - [MongoDB Locks](#mongodb-locks)
   - [Proxy](#proxy)
 - [Docker](#docker)
@@ -28,15 +35,26 @@ Core delivery platform Node.js Backend Template.
   - [Service-to-Service Authentication](#service-to-service-authentication)
   - [Usage](#usage)
   - [Keeping the Collection Updated](#keeping-the-collection-updated)
-  - [Example Folder Structure](#example-folder-structure)
+- [Example Folder Structure](#example-folder-structure)
 - [Licence](#licence)
   - [About the licence](#about-the-licence)
+
+## Related documentation
+
+This service works alongside the [grants-ui frontend](https://github.com/DEFRA/grants-ui). That README captures the end-to-end user journey and shared engineering practices. Useful companion sections include:
+
+- [DXT Forms Engine Plugin](https://github.com/DEFRA/grants-ui#dxt-forms-engine-plugin) – how journeys are composed and which payloads this backend receives
+- [Session Rehydration](https://github.com/DEFRA/grants-ui#session-rehydration) – lifecycle of state stored in MongoDB by this service
+- [Structured Logging System](https://github.com/DEFRA/grants-ui#structured-logging-system) – log code conventions shared across UI and backend services
+- [Analytics](https://github.com/DEFRA/grants-ui#analytics) – how application telemetry is captured on the frontend, complementing the events emitted here
+
+Use this README for backend-specific setup; refer to the frontend README when you need context about journeys, shared tooling, or logging standards.
 
 ## Requirements
 
 ### Node.js
 
-Please install [Node.js](http://nodejs.org/) `>= v22` and [npm](https://nodejs.org/) `>= v11`. You will find it
+Please install [Node.js](http://nodejs.org/) `>= v22` and [npm](https://nodejs.org/) `>= v9` (the project is routinely tested with npm v10). You will find it
 easier to use the Node Version Manager [nvm](https://github.com/creationix/nvm)
 
 To use the correct version of Node.js for this application, via nvm:
@@ -48,7 +66,27 @@ nvm use
 
 ## Local development
 
-### Setup
+### Docker Compose (recommended)
+
+For a self-contained local environment (service plus MongoDB), use the provided Compose file:
+
+```bash
+docker compose up --build
+```
+
+This builds the development image and starts the dependencies defined in `compose.yml`. The backend is available on <http://localhost:3001> by default. Stop the stack with:
+
+```bash
+docker compose down
+```
+
+To spin up the full stack with the frontend, follow the [Docker guidance in grants-ui](https://github.com/DEFRA/grants-ui#docker).
+
+### Local Node environment
+
+If you prefer to run the application directly on your machine, follow the steps below.
+
+#### Setup
 
 Install application dependencies:
 
@@ -56,7 +94,25 @@ Install application dependencies:
 npm install
 ```
 
-### Development
+#### Environment configuration
+
+Copy the sample environment file and update the required variables:
+
+```bash
+cp .env.local .env
+```
+
+Set values for:
+
+- `MONGO_URI` – address of your MongoDB instance (the default assumes a local database on port 27017)
+- `GRANTS_UI_BACKEND_AUTH_TOKEN` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
+- `GRANTS_UI_BACKEND_ENCRYPTION_KEY` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
+
+An extended reference is available in `env.example.sh`.
+
+Keep these values in sync with the frontend configuration described in the [grants-ui environment guidance](https://github.com/DEFRA/grants-ui#environment-variables) so clients can authenticate successfully.
+
+#### Development
 
 To run the application in `development` mode run:
 
@@ -64,7 +120,7 @@ To run the application in `development` mode run:
 npm run dev
 ```
 
-### Testing
+#### Testing
 
 To test the application run:
 
@@ -72,7 +128,23 @@ To test the application run:
 npm run test
 ```
 
-### Production
+Integration tests rely on Docker (via Testcontainers) and can be run with:
+
+```bash
+npm run test:integration
+```
+
+The frontend documents complementary UI testing patterns in its [testing framework section](https://github.com/DEFRA/grants-ui#testing-framework).
+
+#### Git hooks
+
+Husky installs a pre-commit hook during `npm install`. The hook runs `npm run format:check`, `npm run lint`, and `npm test`, mirroring the workflow in [grants-ui](https://github.com/DEFRA/grants-ui). If commits are blocked:
+
+- run `npm run setup:husky` to reinstall the hooks
+- address formatting or lint failures with `npm run lint:fix`
+- fix failing tests locally before committing
+
+#### Production
 
 To mimic the application running in `production` mode locally run:
 
@@ -80,7 +152,7 @@ To mimic the application running in `production` mode locally run:
 npm start
 ```
 
-### Npm scripts
+#### Npm scripts
 
 All available Npm scripts can be seen in [package.json](./package.json).
 To view them in your command line run:
@@ -89,7 +161,7 @@ To view them in your command line run:
 npm run
 ```
 
-### Update dependencies
+#### Update dependencies
 
 To update dependencies use [npm-check-updates](https://github.com/raineorshine/npm-check-updates):
 
@@ -100,9 +172,9 @@ To update dependencies use [npm-check-updates](https://github.com/raineorshine/n
 npx npm-check-updates --interactive --format group
 ```
 
-### Formatting
+#### Formatting
 
-#### Windows prettier issue
+##### Windows prettier issue
 
 If you are having issues with formatting of line breaks on Windows update your global git config by running:
 
@@ -125,6 +197,14 @@ Keeping the spec up-to-date:
 - When you add or change routes (see src/plugins/router.js and src/routes/\*), update openapi.yaml accordingly.
 
 ## Development helpers
+
+### Structured logging
+
+Application logs follow the shared, code-driven format used by the Grants UI frontend. Log codes live in `src/common/helpers/logging/log-codes.js` and are validated on startup; unit tests exist alongside the helpers (`src/common/helpers/logging/*.test.js`). When introducing new log codes, mirror the approach described in the [frontend structured logging guide](https://github.com/DEFRA/grants-ui#structured-logging-system) and update the relevant tests.
+
+### Application state and frontend rehydration
+
+Mongo documents written to the `grant-application-state` collection are rehydrated by the frontend during user journeys. Review the [frontend session rehydration documentation](https://github.com/DEFRA/grants-ui#session-rehydration) before modifying stored shapes or lifecycle expectations, and update the OpenAPI schema plus Postman collection accordingly.
 
 ### MongoDB Locks
 
@@ -167,7 +247,7 @@ async function doStuff(server) {
 }
 ```
 
-Helper methods are also available in `/src/helpers/mongo-lock.js`.
+Helper methods are also available in `src/common/helpers/mongo-lock.js`.
 
 ### Proxy
 
@@ -191,6 +271,8 @@ return await fetch(url, {
 })
 ```
 
+The frontend relies on the same proxy configuration; see its [proxy documentation](https://github.com/DEFRA/grants-ui#proxy) if you are troubleshooting cross-repo HTTP behaviour.
+
 ## Docker
 
 ### Development image
@@ -204,8 +286,13 @@ docker build --target development --no-cache --tag grants-ui-backend:development
 Run:
 
 ```bash
-docker run -e PORT=3001 -p 3001:3001 grants-ui-backend:development
+docker run \
+  -e PORT=3001 \
+  -p 3001:3001 \
+  grants-ui-backend:development
 ```
+
+Set any additional environment variables required by your deployment (see [Environment configuration](#environment-configuration)).
 
 ### Production image
 
@@ -218,15 +305,17 @@ docker build --no-cache --tag grants-ui-backend .
 Run:
 
 ```bash
-docker run -e PORT=3001 -p 3001:3001 grants-ui-backend
+docker run \
+  -e PORT=3001 \
+  -p 3001:3001 \
+  grants-ui-backend
 ```
+
+Set any additional environment variables required by your deployment (see [Environment configuration](#environment-configuration)).
 
 ### Docker Compose
 
-A local environment with:
-
-- MongoDB
-- This service.
+For day-to-day development, follow [Docker Compose (recommended)](#docker-compose-recommended). For reference, the same command is shown below:
 
 ```bash
 docker compose up --build -d
