@@ -1,4 +1,4 @@
-import { MongoClient } from 'mongodb'
+import { MongoClient, ReadPreference } from 'mongodb'
 import { LockManager } from 'mongo-locks'
 
 import { config } from '../../config.js'
@@ -13,8 +13,20 @@ export const mongoDb = {
       server.logger.info('Setting up MongoDb')
 
       const client = await MongoClient.connect(options.mongoUri, {
-        retryWrites: options.retryWrites,
-        readPreference: options.readPreference,
+        appName: 'grants-ui-backend',
+        maxPoolSize: options.maxPoolSize,
+        minPoolSize: options.minPoolSize,
+        // Fail fast if threads are queued for a connection too long
+        waitQueueTimeoutMS: 200,
+        // Drop idle sockets to keep the pool fresh behind LBs
+        maxIdleTimeMS: options.maxIdleTimeMS,
+        // Quicker topology selection on failover
+        serverSelectionTimeoutMS: 5_000,
+        // Retryable reads help on transient primary changes
+        retryReads: true,
+        retryWrites: false,
+        // Prefer secondary but don’t error if there isn’t one
+        readPreference: ReadPreference.secondaryPreferred,
         ...(server.secureContext && { secureContext: server.secureContext })
       })
 
@@ -41,8 +53,9 @@ export const mongoDb = {
   options: {
     mongoUri: mongoConfig.uri,
     databaseName: mongoConfig.databaseName,
-    retryWrites: false,
-    readPreference: 'secondary'
+    maxPoolSize: mongoConfig.maxPoolSize,
+    minPoolSize: mongoConfig.minPoolSize,
+    maxIdleTimeMS: mongoConfig.maxIdleTimeMS
   }
 }
 

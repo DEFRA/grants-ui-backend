@@ -22,6 +22,7 @@ Core delivery platform Node.js Backend Template.
 - [Development helpers](#development-helpers)
   - [Structured logging](#structured-logging)
   - [Application state and frontend rehydration](#application-state-and-frontend-rehydration)
+  - [Mongo configuration](#mongo-configuration)
   - [MongoDB Locks](#mongodb-locks)
   - [Proxy](#proxy)
 - [Docker](#docker)
@@ -205,6 +206,25 @@ Application logs follow the shared, code-driven format used by the Grants UI fro
 ### Application state and frontend rehydration
 
 Mongo documents written to the `grant-application-state` collection are rehydrated by the frontend during user journeys. Review the [frontend session rehydration documentation](https://github.com/DEFRA/grants-ui#session-rehydration) before modifying stored shapes or lifecycle expectations, and update the OpenAPI schema plus Postman collection accordingly.
+
+### Mongo configuration
+
+The service’s MongoDB connection can be tuned via the following environment variables (see `src/config.js`). Sensible defaults are provided for local development, so you only need to override them when required by your environment or performance profile.
+
+- `MONGO_URI` (default: `mongodb://127.0.0.1:27017`)
+  Connection string for your MongoDB deployment.
+
+- `MONGO_DATABASE` (default: `grants-ui-backend`)
+  Database name used by the service.
+
+- `MONGO_MAX_POOL_SIZE` (default: `25`)
+  Maximum number of connections in the client pool.
+
+- `MONGO_MIN_POOL_SIZE` (default: `5`)
+  Minimum number of connections to keep in the pool.
+
+- `MONGO_MAX_IDLE_TIME_MS` (default: `60000`)
+  How long an idle connection may remain in the pool before being closed, in milliseconds.
 
 ### MongoDB Locks
 
