@@ -97,6 +97,41 @@ export const LogCodes = {
       messageFunc: (messageOptions) =>
         `Failed to add submission | crn=${messageOptions.crn} | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | referenceNumber=${messageOptions.referenceNumber} | submittedAt=${messageOptions.submittedAt} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     }
+  },
+  SEED: {
+    SEED_STARTED: {
+      level: 'info',
+      messageFunc: () => `Seed operation started`
+    },
+    SEED_COLLECTION_CLEARED: {
+      level: 'info',
+      messageFunc: (messageOptions) =>
+        `Collection cleared | collection=${messageOptions.collection} | deletedCount=${messageOptions.deletedCount}`
+    },
+    SEED_COLLECTION_INSERTED: {
+      level: 'info',
+      messageFunc: (messageOptions) =>
+        `Collection seeded | collection=${messageOptions.collection} | insertedCount=${messageOptions.insertedCount}`
+    },
+    SEED_COMPLETED: {
+      level: 'info',
+      messageFunc: (messageOptions) => `Seed operation completed | totalInserted=${messageOptions.totalInserted}`
+    },
+    SEED_FILE_READ_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Failed to read seed file | filePath=${messageOptions.filePath} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | stack=${messageOptions.stack}`
+    },
+    SEED_PARSE_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Failed to parse JSONL | filePath=${messageOptions.filePath} | lineNumber=${messageOptions.lineNumber} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | stack=${messageOptions.stack}`
+    },
+    SEED_OPERATION_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Seed operation failed | collection=${messageOptions.collection} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+    }
   }
 }
 
