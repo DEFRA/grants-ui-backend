@@ -46,7 +46,11 @@ export const mongoDb = {
 
       server.events.on('stop', async () => {
         server.logger.info('Closing Mongo client')
-        await client.close(true)
+        try {
+          await client.close(true)
+        } catch (error) {
+          server.logger.debug(`MongoDB client close error: ${error.message}`)
+        }
       })
     }
   },
