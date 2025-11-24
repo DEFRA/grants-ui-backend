@@ -51,7 +51,7 @@
     "node-fetch": "3.3.2",
     "pino": "10.1.0",
     "pino-pretty": "13.1.2",
-    "snyk": "1.1297.3",
+    "snyk": "1.1301.0",
     "testcontainers": "11.8.1",
     "undici": "7.16.0"
   },
