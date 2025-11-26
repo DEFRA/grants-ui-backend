@@ -46,7 +46,7 @@ describe('Lock Functions', () => {
 
       expect(result).toBeNull()
       expect(log).toHaveBeenCalledWith(
-        LogCodes.SYSTEM.LOCK_ACQUIRE_FAILED,
+        LogCodes.SYSTEM.LOCK_ACQUISITION_FAILED,
         expect.objectContaining({
           resource
         })

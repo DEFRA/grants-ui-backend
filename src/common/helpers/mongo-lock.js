@@ -4,7 +4,7 @@ async function acquireLock(locker, resource, logger) {
   const lock = await locker.lock(resource)
   if (!lock) {
     if (logger) {
-      log(LogCodes.SYSTEM.LOCK_ACQUIRE_FAILED, { resource })
+      log(LogCodes.SYSTEM.LOCK_ACQUISITION_FAILED, { resource })
     }
     return null
   }
