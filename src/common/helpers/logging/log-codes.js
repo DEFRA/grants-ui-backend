@@ -75,6 +75,10 @@ export const LogCodes = {
     SYSTEM_SHUTDOWN: {
       level: 'info',
       messageFunc: () => `System shutdown initiated`
+    },
+    LOCK_ACQUISITION_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) => `Failed to acquire lock | resource=${messageOptions.resource}`
     }
   },
   SUBMISSIONS: {

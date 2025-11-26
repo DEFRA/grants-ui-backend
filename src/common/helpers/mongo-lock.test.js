@@ -1,4 +1,14 @@
 import { acquireLock, requireLock } from './mongo-lock.js'
+import { log, LogCodes } from './logging/log'
+
+jest.mock('./logging/log', () => ({
+  log: jest.fn(),
+  LogCodes: {
+    SYSTEM: {
+      LOCK_ACQUISITION_FAILED: { level: 'error', messageFunc: jest.fn() }
+    }
+  }
+}))
 
 describe('Lock Functions', () => {
   let locker
@@ -29,13 +39,19 @@ describe('Lock Functions', () => {
 
     test('should log error and return null if lock cannot be acquired', async () => {
       const resource = 'testResource'
+      expect(LogCodes.SYSTEM.LOCK_ACQUISITION_FAILED).toBeDefined()
 
       locker.lock.mockResolvedValue(null) // Mocking lock method to resolve to null
 
       const result = await acquireLock(locker, resource, logger)
 
       expect(result).toBeNull()
-      expect(logger.error).toHaveBeenCalledWith(`Failed to acquire lock for ${resource}`)
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.SYSTEM.LOCK_ACQUISITION_FAILED,
+        expect.objectContaining({
+          resource
+        })
+      )
       expect(locker.lock).toHaveBeenCalledWith(resource)
     })
 
