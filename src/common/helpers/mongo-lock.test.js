@@ -5,7 +5,7 @@ jest.mock('./logging/log', () => ({
   log: jest.fn(),
   LogCodes: {
     SYSTEM: {
-      LOCK_ACQUIRE_FAILED: { level: 'error', messageFunc: jest.fn() }
+      LOCK_ACQUISITION_FAILED: { level: 'error', messageFunc: jest.fn() }
     }
   }
 }))
@@ -39,6 +39,7 @@ describe('Lock Functions', () => {
 
     test('should log error and return null if lock cannot be acquired', async () => {
       const resource = 'testResource'
+      expect(LogCodes.SYSTEM.LOCK_ACQUISITION_FAILED).toBeDefined()
 
       locker.lock.mockResolvedValue(null) // Mocking lock method to resolve to null
 
