@@ -52,13 +52,13 @@
     "pino": "10.1.0",
     "pino-pretty": "13.1.2",
     "snyk": "1.1297.3",
-    "testcontainers": "11.8.1",
+    "testcontainers": "11.9.0",
     "undici": "7.16.0"
   },
   "devDependencies": {
     "@babel/core": "7.26.9",
     "@babel/preset-env": "7.26.9",
-    "@shelf/jest-mongodb": "5.2.2",
+    "@shelf/jest-mongodb": "6.0.2",
     "autoprefixer": "10.4.20",
     "babel-jest": "30.2.0",
     "babel-plugin-module-resolver": "5.0.2",
