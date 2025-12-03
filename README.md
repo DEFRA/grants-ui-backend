@@ -343,8 +343,7 @@ docker compose up --build -d
 
 ### Dependabot
 
-We have added an example dependabot configuration file to the repository. You can enable it by renaming
-the [.github/example.dependabot.yml](.github/example.dependabot.yml) to `.github/dependabot.yml`
+Dependabot is configured for this repository in [.github/dependabot.yml](.github/dependabot.yml)
 
 ### SonarCloud
 
@@ -360,14 +359,12 @@ The project includes a Postman collection to make it easier to test and interact
    If you don’t already have Postman installed, download it from [Postman’s official site](https://www.postman.com/).
 
 2. **Import the Collection**
-
    - Open Postman.
    - Go to **File > Import**.
    - Select the file `postman/grants-ui-backend.postman_collection.json`.
 
 3. **Import the Environment (Optional)**
    If the project includes an environment file:
-
    - Go to **File > Import**.
    - Select the file `postman/grants-ui-backend.dev.postman_environment.json`.
    - Update variables like `base_url`, `api_key` or `grant_type` as needed.
