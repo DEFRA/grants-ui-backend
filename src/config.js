@@ -9,6 +9,9 @@ convict.addFormats(convictFormatWithValidator)
 const isProduction = process.env.NODE_ENV === 'production'
 const isTest = process.env.NODE_ENV === 'test'
 
+const oneHourMs = 3600000
+const fourHoursMs = oneHourMs * 4
+
 const config = convict({
   serviceVersion: {
     doc: 'The service version, this variable is injected into your docker container in CDP environments',
@@ -140,6 +143,14 @@ const config = convict({
       default: '',
       env: 'GRANTS_UI_BACKEND_ENCRYPTION_KEY',
       sensitive: true
+    }
+  },
+  applicationLock: {
+    ttlMs: {
+      doc: 'Application lock timeout in milliseconds',
+      format: Number,
+      default: fourHoursMs,
+      env: 'APPLICATION_LOCK_TTL_MS'
     }
   }
 })

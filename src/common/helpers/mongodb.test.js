@@ -1,5 +1,4 @@
 import { Db, MongoClient } from 'mongodb'
-import { LockManager } from 'mongo-locks'
 import { createServer } from '../../server.js'
 import { Server } from '@hapi/hapi'
 import { mongoDb } from './mongodb.js'
@@ -17,10 +16,13 @@ describe('#mongoDb', () => {
       await server.stop({ timeout: 0 })
     })
 
+    afterEach(async () => {
+      await server.db.collection('application-locks').deleteMany({})
+    })
+
     test('Server should have expected MongoDb decorators', () => {
       expect(server.db).toBeInstanceOf(Db)
       expect(server.mongoClient).toBeInstanceOf(MongoClient)
-      expect(server.locker).toBeInstanceOf(LockManager)
     })
 
     test('MongoDb should have expected database name', () => {
@@ -47,6 +49,23 @@ describe('#mongoDb', () => {
       expect(server.db).toBeDefined()
 
       await server.mongoClient.close()
+    })
+
+    test('creates unique index for application locks', async () => {
+      const indexes = await server.db.collection('application-locks').indexes()
+      const uniqueIndex = indexes.find(
+        (i) => i.unique && i.key.grantCode === 1 && i.key.grantVersion === 1 && i.key.sbi === 1
+      )
+
+      expect(uniqueIndex).toBeDefined()
+    })
+
+    test('creates a TTL index on application locks', async () => {
+      const indexes = await server.db.collection('application-locks').indexes()
+      const ttlIndex = indexes.find((i) => i.key.expiresAt === 1)
+
+      expect(ttlIndex).toBeDefined()
+      expect(ttlIndex.expireAfterSeconds).toBe(0)
     })
   })
 

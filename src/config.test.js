@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals'
+import { LOCK_TTL_MS } from './common/helpers/application-lock.js'
 
 describe('#config', () => {
   let originalEnv
@@ -41,5 +42,9 @@ describe('#config', () => {
 
     const redactPaths = config.get('log.redact')
     expect(Array.isArray(redactPaths)).toBe(true)
+  })
+
+  test('loads TTL from configuration', () => {
+    expect(LOCK_TTL_MS).toBe(4 * 60 * 60 * 1000)
   })
 })
