@@ -176,13 +176,15 @@ export async function refreshApplicationLock(db, { grantCode, grantVersion, sbi,
  * @param {number} params.grantVersion
  * @param {string} params.sbi
  * @param {string} params.ownerId - DefraID user ID
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} True if the lock was released, false otherwise
  */
 export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
-  await db.collection('application-locks').deleteOne({
+  const result = await db.collection('application-locks').deleteOne({
     grantCode,
     grantVersion,
     sbi,
     ownerId
   })
+
+  return result.deletedCount === 1
 }
