@@ -226,48 +226,62 @@ The service’s MongoDB connection can be tuned via the following environment va
 - `MONGO_MAX_IDLE_TIME_MS` (default: `60000`)
   How long an idle connection may remain in the pool before being closed, in milliseconds.
 
-### MongoDB Locks
+### Application locking
 
-If you require a write lock for Mongo you can acquire it via `server.locker` or `request.locker`:
+This service enforces exclusive application access to grant applications using a MongoDB-backed locking mechanism.
 
-```javascript
-async function doStuff(server) {
-  const lock = await server.locker.lock('unique-resource-name')
+Locks are scoped to a single application, identified by:
 
-  if (!lock) {
-    // Lock unavailable
-    return
-  }
+- `grantCode`
+- `grantVersion`
+- `sbi` (Single Business Identifier)
 
-  try {
-    // do stuff
-  } finally {
-    await lock.free()
-  }
+Only one user may view/edit a given application at a time.
+
+#### How locking works
+
+- When a request enters a route protected by the application lock pre-handler, the backend:
+  - attempts to acquire a lock for the authenticated user
+  - refreshes the lock if the same user already holds it
+  - blocks access if another user holds an active lock
+
+- Locks are **time-limited** (TTL-based) and automatically expire if the user becomes inactive.
+
+- If a lock expires, it can be taken over by another user.
+
+#### Enforcement
+
+Locking is enforced at the request level using a Hapi pre-handler:
+
+```js
+options: {
+  pre: [{ method: enforceApplicationLock }]
 }
 ```
 
-Keep it small and atomic.
+If another user holds the lock, the request is rejected with:
 
-You may use **using** for the lock resource management.
-Note test coverage reports do not like that syntax.
+- HTTP 423 – Locked
+- Message: Another applicant is currently viewing/editing this application
 
-```javascript
-async function doStuff(server) {
-  await using lock = await server.locker.lock('unique-resource-name')
+#### Storage
 
-  if (!lock) {
-    // Lock unavailable
-    return
-  }
+Lock state is stored in MongoDB in the `application-locks` collection.
 
-  // do stuff
+Each lock document contains:
 
-  // lock automatically released
-}
-```
+- application identifiers (grantCode, grantVersion, sbi)
+- ownerId (DefraID user identifier)
+- lockedAt
+- expiresAt
 
-Helper methods are also available in `src/common/helpers/mongo-lock.js`.
+A unique index ensures only one active lock exists per application.
+
+#### Notes
+
+- Lock acquisition is atomic and safe under concurrent access.
+- Lock contention is treated as an expected condition, not an error.
+- Lock release on submission or sign-out is handled at route / workflow level and is out of scope for this section.
 
 ### Proxy
 
