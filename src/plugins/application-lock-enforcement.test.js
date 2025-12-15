@@ -1,5 +1,5 @@
 import { acquireApplicationLock } from '../common/helpers/application-lock.js'
-import { enforceApplicationLock } from './application-lock.js'
+import { enforceApplicationLock } from './application-lock-enforcement.js'
 import { createServer } from '../server.js'
 
 describe('applicationLockPlugin', () => {
