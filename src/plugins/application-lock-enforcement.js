@@ -1,14 +1,41 @@
-// src/plugins/application-lock.js
 import Boom from '@hapi/boom'
 import { acquireApplicationLock, refreshApplicationLock } from '../common/helpers/application-lock.js'
+import { verifyLockToken } from '../common/helpers/lock/lock-token.js'
 
 /**
- * Extracts lock identifiers from request.
- * Adjust this when real route parameters are known.
+ * Extracts the owner and grant identifiers from the application lock token header.
+ *
+ * This function reads the 'x-application-lock-owner' header, verifies the JWT,
+ * and returns the owner ID and grant code. It does not access the request body,
+ * query parameters, or path.
+ *
+ * @param {Object} request - Hapi request object
+ * @param {Object} request.headers - Request headers
+ * @throws {Boom.unauthorized} If the header is missing or the token is invalid
+ * @returns {Object} An object containing:
+ *   - ownerId: string, the user who owns the lock
+ *   - grantCode: string, the grant application code
+ *   - grantVersion: number, defaults to 1
  */
 function extractLockKeys(request) {
-  const { grantCode, sbi } = request.params
-  return { grantCode, grantVersion: Number(request.params.grantVersion), sbi }
+  const rawToken = request.headers['x-application-lock-owner']
+  if (!rawToken) throw Boom.unauthorized('Missing lock token')
+
+  let payload
+  try {
+    payload = verifyLockToken(rawToken)
+  } catch (err) {
+    throw Boom.unauthorized('Invalid lock token')
+  }
+
+  const ownerId = payload.sub
+  const grantCode = payload.grantCode
+
+  return {
+    ownerId,
+    grantCode,
+    grantVersion: 1
+  }
 }
 
 /**
@@ -23,15 +50,16 @@ function extractLockKeys(request) {
  *
  * @param {import('@hapi/hapi').Request} request
  * @param {import('@hapi/hapi').ResponseToolkit} h
- * @returns {Promise<symbol>} h.continue
+ * @returns {Promise<symbol>} Resolves with h.continue
  */
 export async function enforceApplicationLock(request, h) {
-  const { grantCode, grantVersion, sbi } = extractLockKeys(request)
+  const { ownerId, grantCode, grantVersion } = extractLockKeys(request)
 
-  // DefraID user identity (auth plugin already sets credentials)
-  const ownerId = request.auth?.credentials?.contactId
+  if (!grantCode) {
+    throw Boom.badRequest('Missing application identifiers')
+  }
+
   if (!ownerId) {
-    // This should not happen normally; safeguard anyway
     throw Boom.unauthorized('Missing user identity')
   }
 
@@ -41,7 +69,6 @@ export async function enforceApplicationLock(request, h) {
   const lock = await acquireApplicationLock(db, {
     grantCode,
     grantVersion,
-    sbi,
     ownerId
   })
 
@@ -51,7 +78,7 @@ export async function enforceApplicationLock(request, h) {
   }
 
   // 2. If lock already owned by this user, refresh expiry
-  await refreshApplicationLock(db, { grantCode, grantVersion, sbi, ownerId })
+  await refreshApplicationLock(db, { grantCode, grantVersion, ownerId })
 
   return h.continue
 }

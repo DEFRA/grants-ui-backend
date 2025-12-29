@@ -9,6 +9,7 @@ import {
 } from './test-helpers/http-header-constants.js'
 import crypto from 'crypto'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+import jwt from 'jsonwebtoken'
 
 // Mock log
 jest.mock('~/src/common/helpers/logging/log.js', () => ({
@@ -37,6 +38,23 @@ const encryptToken = (token, encryptionKey) => {
 
   return `${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted}`
 }
+
+const LOCK_SECRET = 'default-lock-token-secret'
+const TEST_CONTACT_ID = 'auth-test-user'
+
+const createLockToken = ({ sub, grantCode }) =>
+  jwt.sign(
+    {
+      sub,
+      grantCode,
+      typ: 'lock'
+    },
+    LOCK_SECRET,
+    {
+      issuer: 'grants-ui',
+      audience: 'grants-backend'
+    }
+  )
 
 describe('POST /state payload size logging', () => {
   let server
@@ -70,18 +88,23 @@ describe('POST /state payload size logging', () => {
   })
 
   test('logs payload size info for small payload (handled in route)', async () => {
+    const payload = {
+      sbi: 'BIZ123',
+      grantCode: 'GRANT789',
+      grantVersion: 1,
+      state: { a: 'small' }
+    }
     const response = await server.inject({
       method: HTTP_POST,
       url: '/state',
-      payload: {
-        sbi: 'BIZ123',
-        grantCode: 'GRANT789',
-        grantVersion: 1,
-        state: { a: 'small' }
-      },
+      payload,
       headers: {
         [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-        [AUTH_HEADER]: authHeader
+        [AUTH_HEADER]: authHeader,
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          grantCode: payload.grantCode
+        })
       }
     })
 
@@ -112,19 +135,24 @@ describe('POST /state payload size logging', () => {
 
   test('logs warning for large payload (handled in route)', async () => {
     const largeObj = { foo: 'x'.repeat(600_000) }
+    const payload = {
+      sbi: 'BIZ123',
+      grantCode: 'GRANT789',
+      grantVersion: 1,
+      state: largeObj
+    }
 
     const response = await server.inject({
       method: HTTP_POST,
       url: '/state',
-      payload: {
-        sbi: 'BIZ123',
-        grantCode: 'GRANT789',
-        grantVersion: 1,
-        state: largeObj
-      },
+      payload,
       headers: {
         [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-        [AUTH_HEADER]: authHeader
+        [AUTH_HEADER]: authHeader,
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          grantCode: payload.grantCode
+        })
       }
     })
 

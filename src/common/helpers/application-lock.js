@@ -27,11 +27,10 @@ export function getApplicationLockId(grantCode, grantVersion, sbi) {
  * @param {Object} params
  * @param {string} params.grantCode
  * @param {number} params.grantVersion
- * @param {string} params.sbi
  * @param {string} params.ownerId - DefraID user ID
  * @returns {Promise<Object|null>} Lock document if acquired, otherwise null
  */
-export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
+export async function acquireApplicationLock(db, { grantCode, grantVersion, ownerId }) {
   const now = new Date()
   const expiresAt = new Date(now.getTime() + LOCK_TTL_MS)
   const collection = db.collection('application-locks')
@@ -41,7 +40,6 @@ export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi,
       {
         grantCode,
         grantVersion,
-        sbi,
         $or: [
           { expiresAt: { $lte: now } }, // expired
           { ownerId }, // re-entrant
@@ -52,7 +50,6 @@ export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi,
         $set: {
           grantCode,
           grantVersion,
-          sbi,
           ownerId,
           lockedAt: now,
           expiresAt
@@ -82,11 +79,10 @@ export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi,
  * @param {Object} params
  * @param {string} params.grantCode
  * @param {number} params.grantVersion
- * @param {string} params.sbi
  * @param {string} params.ownerId - DefraID user ID
  * @returns {Promise<boolean>} True if the lock was refreshed, false otherwise
  */
-export async function refreshApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
+export async function refreshApplicationLock(db, { grantCode, grantVersion, ownerId }) {
   const now = new Date()
   const expiresAt = new Date(now.getTime() + LOCK_TTL_MS)
 
@@ -94,7 +90,6 @@ export async function refreshApplicationLock(db, { grantCode, grantVersion, sbi,
     {
       grantCode,
       grantVersion,
-      sbi,
       ownerId
     },
     {
@@ -114,15 +109,13 @@ export async function refreshApplicationLock(db, { grantCode, grantVersion, sbi,
  * @param {Object} params
  * @param {string} params.grantCode
  * @param {number} params.grantVersion
- * @param {string} params.sbi
  * @param {string} params.ownerId - DefraID user ID
  * @returns {Promise<boolean>} True if the lock was released, false otherwise
  */
-export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
+export async function releaseApplicationLock(db, { grantCode, grantVersion, ownerId }) {
   const result = await db.collection('application-locks').deleteOne({
     grantCode,
     grantVersion,
-    sbi,
     ownerId
   })
 

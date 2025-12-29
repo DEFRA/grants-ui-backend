@@ -1,7 +1,8 @@
 import { MongoClient } from 'mongodb'
-import { stateDelete, stateRetrieve, stateSave } from './state.js'
+import { stateDelete, statePatch, stateRetrieve, stateSave } from './state.js'
 import { logIfApproachingPayloadLimit } from '~/src/common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+import { enforceApplicationLock } from '../plugins/application-lock-enforcement.js'
 
 jest.mock('~/src/common/helpers/logging/log-if-approaching-payload-limit.js', () => ({
   logIfApproachingPayloadLimit: jest.fn()
@@ -68,6 +69,25 @@ describe('State', () => {
       server: mockServer,
       db
     }
+  })
+
+  describe('state routes lock enforcement', () => {
+    test('stateSave route is protected by application lock', () => {
+      expect(stateSave.options.pre).toBeDefined()
+      expect(stateSave.options.pre[0].method).toBe(enforceApplicationLock)
+    })
+
+    test('stateRetrieve route is protected by application lock', () => {
+      expect(stateRetrieve.options.pre[0].method).toBe(enforceApplicationLock)
+    })
+
+    test('stateDelete route is protected by application lock', () => {
+      expect(stateDelete.options.pre[0].method).toBe(enforceApplicationLock)
+    })
+
+    test('statePatch route is protected by application lock', () => {
+      expect(statePatch.options.pre[0].method).toBe(enforceApplicationLock)
+    })
   })
 
   describe('stateSave', () => {

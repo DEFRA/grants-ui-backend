@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '../common/helpers/logging/log.js'
+import { releaseApplicationLock } from '../common/helpers/application-lock.js'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
@@ -69,6 +70,14 @@ export const addSubmission = {
 
     try {
       await db.collection('grant_application_submissions').insertOne(request.payload)
+
+      // Release application edit lock after successful submission
+      await releaseApplicationLock(db, {
+        grantCode,
+        grantVersion,
+        sbi,
+        ownerId: request.auth.credentials.contactId
+      })
 
       return h.response({ success: true, created: true }).code(201)
     } catch (err) {
