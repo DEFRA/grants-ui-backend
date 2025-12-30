@@ -146,6 +146,13 @@ const config = convict({
     }
   },
   applicationLock: {
+    secret: {
+      doc: 'Secret used to sign application lock tokens',
+      format: String,
+      default: 'default-lock-token-secret',
+      env: 'LOCK_TOKEN_SECRET',
+      sensitive: true
+    },
     ttlMs: {
       doc: 'Application lock timeout in milliseconds',
       format: Number,

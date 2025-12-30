@@ -60,8 +60,10 @@ export const mongoDb = {
 }
 
 async function createIndexes(db) {
-  await db.collection('application-locks').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
-  await db.collection('application-locks').createIndex({ grantCode: 1, grantVersion: 1, sbi: 1 }, { unique: true })
+  await db.collection('grant-application-locks').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+  await db
+    .collection('grant-application-locks')
+    .createIndex({ grantCode: 1, grantVersion: 1, sbi: 1 }, { unique: true })
 
   await db
     .collection('grant-application-state')

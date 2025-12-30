@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '../common/helpers/logging/log.js'
+import { enforceApplicationLock } from '../plugins/application-lock-enforcement.js'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
@@ -42,6 +43,7 @@ export const stateSave = {
   path: '/state',
   options: {
     auth: 'bearer',
+    pre: [{ method: enforceApplicationLock }],
     payload: {
       maxBytes: PAYLOAD_SIZE_MAX, // 1MB
       output: 'data',
@@ -124,6 +126,7 @@ export const stateRetrieve = {
   path: '/state',
   options: {
     auth: 'bearer',
+    pre: [{ method: enforceApplicationLock }],
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
@@ -184,6 +187,7 @@ export const stateDelete = {
   path: '/state',
   options: {
     auth: 'bearer',
+    pre: [{ method: enforceApplicationLock }],
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
@@ -245,6 +249,7 @@ export const statePatch = {
   path: '/state/{sbi}/{grantCode}',
   options: {
     auth: 'bearer',
+    pre: [{ method: enforceApplicationLock }],
     payload: {
       maxBytes: PAYLOAD_SIZE_MAX, // 1MB
       parse: true,
