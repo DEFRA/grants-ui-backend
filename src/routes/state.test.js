@@ -13,7 +13,8 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
     STATE: {
       STATE_SAVE_FAILED: { level: 'error', messageFunc: jest.fn() },
       STATE_RETRIEVE_FAILED: { level: 'error', messageFunc: jest.fn() },
-      STATE_DELETE_FAILED: { level: 'error', messageFunc: jest.fn() }
+      STATE_DELETE_FAILED: { level: 'error', messageFunc: jest.fn() },
+      STATE_PATCH_FAILED: { level: 'error', messageFunc: jest.fn() }
     }
   }
 }))

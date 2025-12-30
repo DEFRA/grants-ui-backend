@@ -1,10 +1,5 @@
 import { createServer } from '../../server'
-import {
-  acquireApplicationLock,
-  getApplicationLockId,
-  refreshApplicationLock,
-  releaseApplicationLock
-} from './application-lock'
+import { acquireApplicationLock, refreshApplicationLock, releaseApplicationLock } from './application-lock'
 
 describe('getApplicationLockId', () => {
   let server
@@ -18,12 +13,7 @@ describe('getApplicationLockId', () => {
   })
 
   afterEach(async () => {
-    await server.db.collection('application-locks').deleteMany({})
-  })
-
-  test('generates a lock ID from grantCode, version, and sbi', () => {
-    const id = getApplicationLockId('EGWA', 1, '106514040')
-    expect(id).toBe('app-lock:EGWA:1:106514040')
+    await server.db.collection('grant-application-locks').deleteMany({})
   })
 
   test('acquire and release lock', async () => {
@@ -55,7 +45,7 @@ describe('getApplicationLockId', () => {
     await new Promise((resolve) => setTimeout(resolve, 10)) // small delay
 
     const refreshed = await refreshApplicationLock(db, params)
-    const doc = await db.collection('application-locks').findOne({ ownerId: 'user-1' })
+    const doc = await db.collection('grant-application-locks').findOne({ ownerId: 'user-1' })
 
     expect(refreshed).toBe(true)
     expect(doc.expiresAt.getTime()).toBeGreaterThan(oldExpiry.getTime())
@@ -65,7 +55,7 @@ describe('getApplicationLockId', () => {
     const db = server.db
     const now = new Date()
 
-    await db.collection('application-locks').insertOne({
+    await db.collection('grant-application-locks').insertOne({
       grantCode: 'EGWA',
       grantVersion: 1,
       sbi: '106',

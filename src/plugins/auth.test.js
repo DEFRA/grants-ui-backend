@@ -27,9 +27,10 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
 }))
 
 async function seedApplicationLock(server, { sbi, grantCode, grantVersion, ownerId }) {
-  await server.db.collection('application-locks').insertOne({
+  await server.db.collection('grant-application-locks').insertOne({
     grantCode,
     grantVersion,
+    sbi,
     ownerId,
     lockedAt: new Date(),
     expiresAt: new Date(Date.now() + 60_000) // valid lock
@@ -38,11 +39,13 @@ async function seedApplicationLock(server, { sbi, grantCode, grantVersion, owner
 
 const LOCK_SECRET = 'default-lock-token-secret'
 
-const createLockToken = ({ sub, grantCode }) =>
+const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
   jwt.sign(
     {
       sub,
+      sbi,
       grantCode,
+      grantVersion,
       typ: 'lock'
     },
     LOCK_SECRET,
@@ -103,6 +106,7 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
   describe('Valid Authentication', () => {
     it('should authenticate with correct encrypted bearer token', async () => {
       await seedApplicationLock(server, {
+        sbi: BASIC_PAYLOAD.sbi,
         grantCode: BASIC_PAYLOAD.grantCode,
         grantVersion: BASIC_PAYLOAD.grantVersion,
         ownerId: TEST_CONTACT_ID
@@ -116,7 +120,9 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
           [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY),
           'x-application-lock-owner': createLockToken({
             sub: TEST_CONTACT_ID,
-            grantCode: BASIC_PAYLOAD.grantCode
+            sbi: BASIC_PAYLOAD.sbi,
+            grantCode: BASIC_PAYLOAD.grantCode,
+            grantVersion: BASIC_PAYLOAD.grantVersion
           })
         },
         payload: BASIC_PAYLOAD
@@ -507,7 +513,9 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
             [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY),
             'x-application-lock-owner': createLockToken({
               sub: TEST_CONTACT_ID,
-              grantCode: BASIC_PAYLOAD.grantCode
+              sbi: BASIC_PAYLOAD.sbi,
+              grantCode: BASIC_PAYLOAD.grantCode,
+              grantVersion: BASIC_PAYLOAD.grantVersion
             })
           },
           payload: BASIC_PAYLOAD
