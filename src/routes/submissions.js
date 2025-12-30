@@ -2,7 +2,7 @@ import Joi from 'joi'
 import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '../common/helpers/logging/log.js'
 import { releaseApplicationLock } from '../common/helpers/application-lock.js'
-import { extractLockKeys } from '../plugins/application-lock-enforcement.js'
+import { enforceApplicationLock, extractLockKeys } from '../plugins/application-lock-enforcement.js'
 import { Boom } from '@hapi/boom'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
@@ -32,6 +32,7 @@ export const addSubmission = {
   path: '/submissions',
   options: {
     auth: 'bearer',
+    pre: [{ method: enforceApplicationLock }],
     payload: {
       maxBytes: PAYLOAD_SIZE_MAX, // 1MB
       output: 'data',
