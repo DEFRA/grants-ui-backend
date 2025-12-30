@@ -146,7 +146,6 @@ export const stateRetrieve = {
     }
   },
   handler: async (request, h) => {
-    console.log('[BE] Incoming headers:', request.headers)
     const { sbi, grantCode } = request.query
 
     const db = request.db

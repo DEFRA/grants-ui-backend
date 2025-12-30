@@ -33,11 +33,13 @@ const createAuthHeader = () => {
 const LOCK_SECRET = 'default-lock-token-secret'
 const TEST_CONTACT_ID = 'auth-test-user'
 
-const createLockToken = ({ sub, grantCode }) =>
+const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
   jwt.sign(
     {
       sub,
+      sbi,
       grantCode,
+      grantVersion,
       typ: 'lock'
     },
     LOCK_SECRET,
@@ -52,10 +54,6 @@ beforeAll(async () => {
   process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
 
   apiUrl = process.env.API_URL
-  console.log('Integration Test Setup:')
-  console.log(`API URL: ${apiUrl}`)
-  console.log(`Auth token set: ${!!process.env.GRANTS_UI_BACKEND_AUTH_TOKEN}`)
-  console.log(`Encryption key set: ${!!process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY}`)
 
   client = await MongoClient.connect(process.env.MONGO_URI)
   db = client.db()
@@ -85,7 +83,9 @@ describe('POST /state', () => {
         authorization: createAuthHeader(),
         'x-application-lock-owner': createLockToken({
           sub: TEST_CONTACT_ID,
-          grantCode: payload.grantCode
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
         })
       }
     })
@@ -126,7 +126,9 @@ describe('POST /state', () => {
         authorization: createAuthHeader(),
         'x-application-lock-owner': createLockToken({
           sub: TEST_CONTACT_ID,
-          grantCode: payload.grantCode
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
         })
       }
     })
@@ -170,7 +172,9 @@ describe('GET /state', () => {
         authorization: createAuthHeader(),
         'x-application-lock-owner': createLockToken({
           sub: TEST_CONTACT_ID,
-          grantCode: payload.grantCode
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
         })
       }
     })
@@ -205,7 +209,9 @@ describe('DELETE /state', () => {
         authorization: createAuthHeader(),
         'x-application-lock-owner': createLockToken({
           sub: TEST_CONTACT_ID,
-          grantCode: payload.grantCode
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
         })
       }
     })

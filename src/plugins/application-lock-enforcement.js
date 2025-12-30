@@ -3,21 +3,23 @@ import { acquireApplicationLock, refreshApplicationLock } from '../common/helper
 import { verifyLockToken } from '../common/helpers/lock/lock-token.js'
 
 /**
- * Extracts the owner and grant identifiers from the application lock token header.
+ * Extracts lock-scoping identifiers from the application lock token header.
  *
  * This function reads the 'x-application-lock-owner' header, verifies the JWT,
- * and returns the owner ID and grant code. It does not access the request body,
- * query parameters, or path.
+ * and derives the lock owner and scope identifiers (SBI and grant details).
  *
  * @param {Object} request - Hapi request object
  * @param {Object} request.headers - Request headers
- * @throws {Boom.unauthorized} If the header is missing or the token is invalid
+ * @throws {Boom.unauthorized} If the header is missing or the token is invalid,
+ *   or the token type is incorrect
+ * @throws {Boom.badRequest} If required lock-scoping claims are missing
  * @returns {Object} An object containing:
- *   - ownerId: string, the user who owns the lock
- *   - grantCode: string, the grant application code
- *   - grantVersion: number, defaults to 1
+ *   - ownerId {string} User identifier owning the lock (JWT `sub`)
+ *   - sbi {string} Single Business Identifier defining the lock scope
+ *   - grantCode {string} Grant application code
+ *   - grantVersion {number} Grant scheme version
  */
-function extractLockKeys(request) {
+export function extractLockKeys(request) {
   const rawToken = request.headers['x-application-lock-owner']
   if (!rawToken) throw Boom.unauthorized('Missing lock token')
 
@@ -28,13 +30,30 @@ function extractLockKeys(request) {
     throw Boom.unauthorized('Invalid lock token')
   }
 
-  const ownerId = payload.sub
-  const grantCode = payload.grantCode
+  const { sub: ownerId, sbi, grantCode, grantVersion, typ } = payload
+
+  if (typ !== 'lock') {
+    throw Boom.unauthorized('Invalid lock token type')
+  }
+
+  if (!sbi) {
+    throw Boom.badRequest('Missing SBI in lock token')
+  }
+
+  if (!grantCode) {
+    throw Boom.badRequest('Missing grant code in lock token')
+  }
+
+  const version = Number(grantVersion ?? 1)
+  if (Number.isNaN(version)) {
+    throw Boom.badRequest('Invalid grantVersion in lock token')
+  }
 
   return {
     ownerId,
+    sbi,
     grantCode,
-    grantVersion: 1
+    grantVersion: version
   }
 }
 
@@ -53,7 +72,7 @@ function extractLockKeys(request) {
  * @returns {Promise<symbol>} Resolves with h.continue
  */
 export async function enforceApplicationLock(request, h) {
-  const { ownerId, grantCode, grantVersion } = extractLockKeys(request)
+  const { ownerId, sbi, grantCode, grantVersion } = extractLockKeys(request)
 
   if (!grantCode) {
     throw Boom.badRequest('Missing application identifiers')
@@ -69,6 +88,7 @@ export async function enforceApplicationLock(request, h) {
   const lock = await acquireApplicationLock(db, {
     grantCode,
     grantVersion,
+    sbi,
     ownerId
   })
 
@@ -78,7 +98,7 @@ export async function enforceApplicationLock(request, h) {
   }
 
   // 2. If lock already owned by this user, refresh expiry
-  await refreshApplicationLock(db, { grantCode, grantVersion, ownerId })
+  await refreshApplicationLock(db, { grantCode, grantVersion, sbi, ownerId })
 
   return h.continue
 }

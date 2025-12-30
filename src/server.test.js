@@ -42,11 +42,13 @@ const encryptToken = (token, encryptionKey) => {
 const LOCK_SECRET = 'default-lock-token-secret'
 const TEST_CONTACT_ID = 'auth-test-user'
 
-const createLockToken = ({ sub, grantCode }) =>
+const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
   jwt.sign(
     {
       sub,
+      sbi,
       grantCode,
+      grantVersion,
       typ: 'lock'
     },
     LOCK_SECRET,
@@ -103,7 +105,9 @@ describe('POST /state payload size logging', () => {
         [AUTH_HEADER]: authHeader,
         'x-application-lock-owner': createLockToken({
           sub: TEST_CONTACT_ID,
-          grantCode: payload.grantCode
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
         })
       }
     })
@@ -151,7 +155,9 @@ describe('POST /state payload size logging', () => {
         [AUTH_HEADER]: authHeader,
         'x-application-lock-owner': createLockToken({
           sub: TEST_CONTACT_ID,
-          grantCode: payload.grantCode
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
         })
       }
     })
