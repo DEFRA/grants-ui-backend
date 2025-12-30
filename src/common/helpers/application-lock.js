@@ -33,7 +33,6 @@ export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi,
         $or: [
           { expiresAt: { $lte: now } }, // expired
           { ownerId } // re-entrant
-          // { expiresAt: { $exists: false } } // no lock yet
         ]
       },
       {
