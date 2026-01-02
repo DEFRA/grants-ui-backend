@@ -1,4 +1,5 @@
 import { config } from '../../config.js'
+import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 
 export const LOCK_TTL_MS = config.get('applicationLock.ttlMs')
 
@@ -53,6 +54,20 @@ export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi,
 
     return result ?? null
   } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.SYSTEM.APPLICATION_LOCK_ACQUISITION_FAILED, {
+      sbi,
+      ownerId,
+      grantCode,
+      grantVersion,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+
     if (err.code === 11000) {
       return null
     }
@@ -74,22 +89,39 @@ export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi,
  * @returns {Promise<boolean>} True if the lock was refreshed, false otherwise
  */
 export async function refreshApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
-  const now = new Date()
-  const expiresAt = new Date(now.getTime() + LOCK_TTL_MS)
+  try {
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + LOCK_TTL_MS)
 
-  const result = await db.collection('grant-application-locks').updateOne(
-    {
+    const result = await db.collection('grant-application-locks').updateOne(
+      {
+        grantCode,
+        grantVersion,
+        sbi,
+        ownerId
+      },
+      {
+        $set: { expiresAt }
+      }
+    )
+
+    return result.matchedCount === 1
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.SYSTEM.APPLICATION_LOCK_ACQUISITION_FAILED, {
+      sbi,
+      ownerId,
       grantCode,
       grantVersion,
-      sbi,
-      ownerId
-    },
-    {
-      $set: { expiresAt }
-    }
-  )
-
-  return result.matchedCount === 1
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
 }
 
 /**
@@ -102,16 +134,33 @@ export async function refreshApplicationLock(db, { grantCode, grantVersion, sbi,
  * @param {string} params.grantCode
  * @param {number} params.grantVersion
  * @param {string} params.sbi
- * @param {string} params.ownerId - DefraID user ID
+ * @param {number} params.ownerId - DefraID user ID
  * @returns {Promise<boolean>} True if the lock was released, false otherwise
  */
 export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
-  const result = await db.collection('grant-application-locks').deleteOne({
-    grantCode,
-    grantVersion,
-    sbi,
-    ownerId
-  })
-
-  return result.deletedCount === 1
+  try {
+    const result = await db.collection('grant-application-locks').deleteOne({
+      grantCode,
+      grantVersion,
+      sbi,
+      ownerId
+    })
+    console.log('releaseApplicationLock result:', result)
+    return result.deletedCount === 1
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.SYSTEM.APPLICATION_LOCK_RELEASE_FAILED, {
+      sbi,
+      ownerId,
+      grantCode,
+      grantVersion,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
 }
