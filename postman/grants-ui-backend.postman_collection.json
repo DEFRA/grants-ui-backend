@@ -14,6 +14,11 @@
             "key": "Authorization",
             "value": "{{grants-ui-backend-bearer_token}}",
             "type": "text"
+          },
+          {
+            "key": "x-application-lock-owner",
+            "value": "{{grants-ui-backend-lock_owner_token}}",
+            "type": "text"
           }
         ],
         "body": {
@@ -58,6 +63,11 @@
             "key": "Authorization",
             "value": "{{grants-ui-backend-bearer_token}}",
             "type": "text"
+          },
+          {
+            "key": "x-application-lock-owner",
+            "value": "{{grants-ui-backend-lock_owner_token}}",
+            "type": "text"
           }
         ],
         "body": {
@@ -96,6 +106,11 @@
             "key": "Authorization",
             "value": "{{grants-ui-backend-bearer_token}}",
             "type": "text"
+          },
+          {
+            "key": "x-application-lock-owner",
+            "value": "{{grants-ui-backend-lock_owner_token}}",
+            "type": "text"
           }
         ],
         "url": {
@@ -110,6 +125,42 @@
             {
               "key": "grantCode",
               "value": "exampleGrantGrantCode"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "admin application lock",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{grants-ui-backend-bearer_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{grants-ui-backend_base_url}}/admin/application-lock?sbi=exampleGrantSBI&ownerId=exampleOwnerId&grantCode=exampleGrantGrantCode&grantVersion=exampleGrantVersion",
+          "host": ["{{grants-ui-backend_base_url}}"],
+          "path": ["admin", "application-lock"],
+          "query": [
+            {
+              "key": "sbi",
+              "value": "exampleGrantSBI"
+            },
+            {
+              "key": "ownerId",
+              "value": "exampleOwnerId"
+            },
+            {
+              "key": "grantCode",
+              "value": "exampleGrantGrantCode"
+            },
+            {
+              "key": "grantVersion",
+              "value": "exampleGrantVersion"
             }
           ]
         }
