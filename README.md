@@ -410,6 +410,48 @@ Copy the output `Authorization: Bearer ...` header and use it in Postman under t
 
 ⚠️ Make sure the environment variables match what the backend config expects.
 
+### Generating an Application Lock Header
+
+Some requests require a Lock Token (state operations) to acquire or release an application lock. This header is generated locally using a Node script. The admin delete application lock does not require lock token.
+
+#### Environment variables
+
+Make sure your .env file contains:
+
+```
+APPLICATION_LOCK_SECRET=<64-character hex key>
+USER_ID=<user-id-of-the-user-holding-the-token>
+SBI=<sbi-holding-the-token>
+GRANT_CODE=<grant-code-holding-the-token>
+GRANT_VERSION=<grant-version-holding-the-token>
+```
+
+This key is separate from your auth token and is used to generate the lock header.
+
+#### Generate the Lock Token
+
+Run the npm script:
+
+```
+npm run generate:lock-header
+```
+
+This outputs a header in the format:
+
+```
+x-application-lock-owner: <lock-token>
+```
+
+Copy this token and include it in your Postman requests to endpoints that require application locks.
+
+Script location
+
+The script lives in:
+
+```
+scripts/generateLockHeader.js
+```
+
 ### Usage
 
 - **Send Requests**:
@@ -433,7 +475,8 @@ project-root/
 │ ├── grants-ui-backend.dev.postman_environment.json
 │ └── grants-ui-backend.test.postman_environment.json
 ├── scripts/
-│ └── generateHeader.js
+│ ├── generateAuthHeader.js
+│ └── generateLockHeader.js
 ```
 
 ## Licence

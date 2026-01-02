@@ -49,7 +49,6 @@ export const LogCodes = {
         `Auth debug for path=${messageOptions.path}: isAuthenticated=${messageOptions.isAuthenticated}, strategy=${messageOptions.strategy}, mode=${messageOptions.mode}, hasCredentials=${messageOptions.hasCredentials}, hasToken=${messageOptions.hasToken}, hasProfile=${messageOptions.hasProfile}, userAgent=${messageOptions.userAgent}, referer=${messageOptions.referer}, queryParams=${JSON.stringify(messageOptions.queryParams)}, authError=${messageOptions.authError}`
     }
   },
-
   SYSTEM: {
     ENV_CONFIG_DEBUG: {
       level: 'debug',
@@ -76,9 +75,15 @@ export const LogCodes = {
       level: 'info',
       messageFunc: () => `System shutdown initiated`
     },
-    LOCK_ACQUISITION_FAILED: {
+    APPLICATION_LOCK_ACQUISITION_FAILED: {
       level: 'error',
-      messageFunc: (messageOptions) => `Failed to acquire lock | resource=${messageOptions.resource}`
+      messageFunc: ({ sbi, ownerId, grantCode, grantVersion, stack }) =>
+        `Failed to acquire application lock | sbi=${sbi} | ownerId=${ownerId} | grantCode=${grantCode} | grantVersion=${grantVersion} | stack=${stack}`
+    },
+    APPLICATION_LOCK_RELEASE_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Failed to release application lock | sbi=${messageOptions.sbi} | ownerId=${messageOptions.ownerId} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     }
   },
   SUBMISSIONS: {
