@@ -1,5 +1,5 @@
 import Boom from '@hapi/boom'
-import { acquireApplicationLock } from '../common/helpers/application-lock.js'
+import { acquireOrRefreshApplicationLock } from '../common/helpers/application-lock.js'
 import { verifyLockToken } from '../common/helpers/lock/lock-token.js'
 
 /**
@@ -84,8 +84,7 @@ export async function enforceApplicationLock(request, h) {
 
   const db = request.db
 
-  // 1. Try to acquire lock (or refresh own lock)
-  const lock = await acquireApplicationLock(db, {
+  const lock = await acquireOrRefreshApplicationLock(db, {
     grantCode,
     grantVersion,
     sbi,

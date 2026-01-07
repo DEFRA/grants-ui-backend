@@ -1,4 +1,4 @@
-import { acquireApplicationLock } from '../common/helpers/application-lock.js'
+import { acquireOrRefreshApplicationLock } from '../common/helpers/application-lock.js'
 import { enforceApplicationLock } from './application-lock-enforcement.js'
 import { createServer } from '../server.js'
 import jwt from 'jsonwebtoken'
@@ -129,7 +129,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   test('blocks access when lock is owned by another user', async () => {
     const db = server.db
 
-    await acquireApplicationLock(db, {
+    await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',
       grantVersion: 3,
       sbi: '123456789',
@@ -152,7 +152,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   test('allows same user to refresh their own lock', async () => {
     const db = server.db
 
-    await acquireApplicationLock(db, {
+    await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',
       grantVersion: 4,
       sbi: '123456789',

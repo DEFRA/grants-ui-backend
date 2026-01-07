@@ -1,5 +1,5 @@
 import { createServer } from '../../server'
-import { acquireApplicationLock, releaseApplicationLock } from './application-lock'
+import { acquireOrRefreshApplicationLock, releaseApplicationLock } from './application-lock'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 
 jest.mock('~/src/common/helpers/logging/log.js', () => ({
@@ -37,12 +37,12 @@ describe('getApplicationLockId', () => {
       ownerId: 'user-1'
     }
 
-    const lock = await acquireApplicationLock(db, params)
+    const lock = await acquireOrRefreshApplicationLock(db, params)
     expect(lock).toBeTruthy()
 
     await releaseApplicationLock(db, params)
 
-    const lock2 = await acquireApplicationLock(db, params)
+    const lock2 = await acquireOrRefreshApplicationLock(db, params)
     expect(lock2).toBeTruthy()
   })
 
@@ -59,7 +59,7 @@ describe('getApplicationLockId', () => {
       expiresAt: new Date(now.getTime() - 60_000) // expired
     })
 
-    const lock = await acquireApplicationLock(db, {
+    const lock = await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',
       grantVersion: 1,
       sbi: '106',
@@ -75,8 +75,8 @@ describe('getApplicationLockId', () => {
 
     const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
 
-    await acquireApplicationLock(db, params)
-    const second = await acquireApplicationLock(db, params)
+    await acquireOrRefreshApplicationLock(db, params)
+    const second = await acquireOrRefreshApplicationLock(db, params)
 
     expect(second.ownerId).toBe('user-1')
   })
@@ -92,7 +92,7 @@ describe('getApplicationLockId', () => {
 
     const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
 
-    await expect(acquireApplicationLock(fakeDb, params)).rejects.toThrow('Mongo exploded')
+    await expect(acquireOrRefreshApplicationLock(fakeDb, params)).rejects.toThrow('Mongo exploded')
 
     expect(log).toHaveBeenCalledWith(
       LogCodes.SYSTEM.APPLICATION_LOCK_ACQUISITION_FAILED,
