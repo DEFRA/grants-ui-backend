@@ -1,5 +1,5 @@
 import { createServer } from '../../server'
-import { acquireApplicationLock, refreshApplicationLock, releaseApplicationLock } from './application-lock'
+import { acquireApplicationLock, releaseApplicationLock } from './application-lock'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 
 jest.mock('~/src/common/helpers/logging/log.js', () => ({
@@ -44,22 +44,6 @@ describe('getApplicationLockId', () => {
 
     const lock2 = await acquireApplicationLock(db, params)
     expect(lock2).toBeTruthy()
-  })
-
-  test('refreshApplicationLock extends expiry', async () => {
-    const db = server.db
-    const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
-
-    const first = await acquireApplicationLock(db, params)
-    const oldExpiry = first.expiresAt
-
-    await new Promise((resolve) => setTimeout(resolve, 10)) // small delay
-
-    const refreshed = await refreshApplicationLock(db, params)
-    const doc = await db.collection('grant-application-locks').findOne({ ownerId: 'user-1' })
-
-    expect(refreshed).toBe(true)
-    expect(doc.expiresAt.getTime()).toBeGreaterThan(oldExpiry.getTime())
   })
 
   test('expired lock can be taken over by another user', async () => {
@@ -109,33 +93,6 @@ describe('getApplicationLockId', () => {
     const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
 
     await expect(acquireApplicationLock(fakeDb, params)).rejects.toThrow('Mongo exploded')
-
-    expect(log).toHaveBeenCalledWith(
-      LogCodes.SYSTEM.APPLICATION_LOCK_ACQUISITION_FAILED,
-      expect.objectContaining({
-        grantCode: 'EGWA',
-        grantVersion: 1,
-        sbi: '106',
-        ownerId: 'user-1',
-        errorName: 'MongoServerError',
-        errorMessage: 'Mongo exploded',
-        isMongoError: true
-      })
-    )
-  })
-
-  test('logs error when refreshApplicationLock fails', async () => {
-    const fakeDb = {
-      collection: () => ({
-        updateOne: () => {
-          throw Object.assign(new Error('Mongo exploded'), { name: 'MongoServerError', code: 123 })
-        }
-      })
-    }
-
-    const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
-
-    await expect(refreshApplicationLock(fakeDb, params)).rejects.toThrow('Mongo exploded')
 
     expect(log).toHaveBeenCalledWith(
       LogCodes.SYSTEM.APPLICATION_LOCK_ACQUISITION_FAILED,

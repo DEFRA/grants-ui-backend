@@ -1,5 +1,5 @@
 import Boom from '@hapi/boom'
-import { acquireApplicationLock, refreshApplicationLock } from '../common/helpers/application-lock.js'
+import { acquireApplicationLock } from '../common/helpers/application-lock.js'
 import { verifyLockToken } from '../common/helpers/lock/lock-token.js'
 
 /**
@@ -96,9 +96,6 @@ export async function enforceApplicationLock(request, h) {
     // Someone else holds the lock
     throw Boom.locked('Another applicant is currently editing this application')
   }
-
-  // 2. If lock already owned by this user, refresh expiry
-  await refreshApplicationLock(db, { grantCode, grantVersion, sbi, ownerId })
 
   return h.continue
 }

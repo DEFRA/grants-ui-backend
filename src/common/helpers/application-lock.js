@@ -1,5 +1,5 @@
 import { config } from '../../config.js'
-import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+import { log, LogCodes } from '../helpers/logging/log.js'
 
 export const LOCK_TTL_MS = config.get('applicationLock.ttlMs')
 
@@ -71,55 +71,6 @@ export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi,
     if (err.code === 11000) {
       return null
     }
-    throw err
-  }
-}
-
-/**
- * Extends the expiry time of an existing application lock.
- *
- * The lock will only be refreshed if it is owned by the given user.
- *
- * @param {import('mongodb').Db} db - MongoDB database instance
- * @param {Object} params
- * @param {string} params.grantCode
- * @param {number} params.grantVersion
- * @param {string} params.sbi
- * @param {string} params.ownerId - DefraID user ID
- * @returns {Promise<boolean>} True if the lock was refreshed, false otherwise
- */
-export async function refreshApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
-  try {
-    const now = new Date()
-    const expiresAt = new Date(now.getTime() + LOCK_TTL_MS)
-
-    const result = await db.collection('grant-application-locks').updateOne(
-      {
-        grantCode,
-        grantVersion,
-        sbi,
-        ownerId
-      },
-      {
-        $set: { expiresAt }
-      }
-    )
-
-    return result.matchedCount === 1
-  } catch (err) {
-    const isMongoError = err?.name?.startsWith('Mongo')
-    log(LogCodes.SYSTEM.APPLICATION_LOCK_ACQUISITION_FAILED, {
-      sbi,
-      ownerId,
-      grantCode,
-      grantVersion,
-      errorName: err.name,
-      errorMessage: err.message,
-      errorReason: err.reason,
-      errorCode: err.code,
-      isMongoError,
-      stack: err.stack?.split('\n')[0]
-    })
     throw err
   }
 }
