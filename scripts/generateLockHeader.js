@@ -10,7 +10,7 @@ import jwt from 'jsonwebtoken'
  *   GRANT_CODE=<grant code>
  *   GRANT_VERSION=<optional, defaults to 1>
  *
- * Then run: node generate-lock-token.js
+ * Then run: node generateLockHeader.js
  */
 
 // Load configuration from environment variables
