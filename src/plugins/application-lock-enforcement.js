@@ -36,6 +36,10 @@ export function extractLockKeys(request) {
     throw Boom.unauthorized('Invalid lock token type')
   }
 
+  if (!ownerId) {
+    throw Boom.unauthorized('Missing user identity')
+  }
+
   if (!sbi) {
     throw Boom.badRequest('Missing SBI in lock token')
   }
@@ -58,6 +62,36 @@ export function extractLockKeys(request) {
 }
 
 /**
+ * Returns true if the application has already been submitted.
+ *
+ * A submitted application must:
+ * - NOT acquire or refresh locks
+ * - Be viewable by other users in the same SBI
+ * - Be immutable (no further state writes)
+ *
+ * @param {import('mongodb').Db} db
+ * @param {Object} params
+ * @param {string} params.sbi
+ * @param {string} params.grantCode
+ * @param {number} params.grantVersion
+ * @returns {Promise<boolean>}
+ */
+export async function hasApplicationBeenSubmitted(db, { sbi, grantCode, grantVersion }) {
+  const submission = await db.collection('grant_application_submissions').findOne(
+    {
+      sbi,
+      grantCode,
+      grantVersion
+    },
+    {
+      projection: { _id: 1 }
+    }
+  )
+
+  return Boolean(submission)
+}
+
+/**
  * Hapi pre-handler that enforces exclusive edit access to a grant application.
  *
  * Attempts to acquire or refresh an application edit lock for the
@@ -74,15 +108,21 @@ export function extractLockKeys(request) {
 export async function enforceApplicationLock(request, h) {
   const { ownerId, sbi, grantCode, grantVersion } = extractLockKeys(request)
 
-  if (!grantCode) {
-    throw Boom.badRequest('Missing application identifiers')
-  }
-
-  if (!ownerId) {
-    throw Boom.unauthorized('Missing user identity')
-  }
-
   const db = request.db
+
+  const isSubmitted = await hasApplicationBeenSubmitted(db, {
+    sbi,
+    grantCode,
+    grantVersion
+  })
+
+  if (isSubmitted && request.method.toLowerCase() !== 'get') {
+    throw Boom.forbidden('Application has already been submitted')
+  }
+
+  if (isSubmitted) {
+    return h.continue
+  }
 
   const lock = await acquireOrRefreshApplicationLock(db, {
     grantCode,
@@ -92,7 +132,6 @@ export async function enforceApplicationLock(request, h) {
   })
 
   if (!lock) {
-    // Someone else holds the lock
     throw Boom.locked('Another applicant is currently editing this application')
   }
 
