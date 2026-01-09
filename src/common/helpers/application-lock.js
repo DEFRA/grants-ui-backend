@@ -15,90 +15,6 @@ export function getApplicationLockId(grantCode, grantVersion, sbi) {
 }
 
 /**
- * Attempts to acquire an existing lock if:
- *  - the lock has expired, or
- *  - the lock is already owned by the same user (re-entrant access).
- *
- * This operation is atomic and does not create new lock documents.
- *
- * @param {import('mongodb').Collection} collection - MongoDB lock collection
- * @param {Object} params
- * @param {string} params.grantCode
- * @param {number} params.grantVersion
- * @param {string} params.sbi
- * @param {string} params.ownerId - DefraID user ID
- * @param {Object} timing
- * @param {Date} timing.now
- * @param {Date} timing.expiresAt
- * @returns {Promise<Object|null>} The updated lock document, or null if not acquirable
- */
-async function tryAcquireExistingLock(collection, { grantCode, grantVersion, sbi, ownerId }, { now, expiresAt }) {
-  const result = await collection.findOneAndUpdate(
-    {
-      grantCode,
-      grantVersion,
-      sbi,
-      $or: [{ expiresAt: { $lte: now } }, { ownerId }]
-    },
-    {
-      $set: {
-        ownerId,
-        lockedAt: now,
-        expiresAt
-      }
-    },
-    { returnDocument: 'after' }
-  )
-
-  return result?.value ?? null
-}
-
-/**
- * Creates a new application lock.
- *
- * If a concurrent request creates the lock first, a duplicate key
- * error will be raised and translated into a null return value.
- *
- * @param {import('mongodb').Collection} collection - MongoDB lock collection
- * @param {Object} params
- * @param {string} params.grantCode
- * @param {number} params.grantVersion
- * @param {string} params.sbi
- * @param {string} params.ownerId - DefraID user ID
- * @param {Object} timing
- * @param {Date} timing.now
- * @param {Date} timing.expiresAt
- * @returns {Promise<Object|null>} Newly created lock document, or null if already locked
- */
-async function createNewLock(collection, { grantCode, grantVersion, sbi, ownerId }, { now, expiresAt }) {
-  try {
-    const insertResult = await collection.insertOne({
-      grantCode,
-      grantVersion,
-      sbi,
-      ownerId,
-      lockedAt: now,
-      expiresAt
-    })
-
-    return {
-      _id: insertResult.insertedId,
-      grantCode,
-      grantVersion,
-      sbi,
-      ownerId,
-      lockedAt: now,
-      expiresAt
-    }
-  } catch (err) {
-    if (err.code === 11000) {
-      return null
-    }
-    throw err
-  }
-}
-
-/**
  * Acquires an exclusive lock for an application.
  *
  * Lock acquisition rules:
@@ -120,17 +36,41 @@ export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi,
   const expiresAt = new Date(now.getTime() + LOCK_TTL_MS)
   const collection = db.collection('application-locks')
 
-  const existingLock = await tryAcquireExistingLock(
-    collection,
-    { grantCode, grantVersion, sbi, ownerId },
-    { now, expiresAt }
-  )
+  try {
+    const result = await collection.findOneAndUpdate(
+      {
+        grantCode,
+        grantVersion,
+        sbi,
+        $or: [
+          { expiresAt: { $lte: now } }, // expired
+          { ownerId }, // re-entrant
+          { expiresAt: { $exists: false } } // no lock yet
+        ]
+      },
+      {
+        $set: {
+          grantCode,
+          grantVersion,
+          sbi,
+          ownerId,
+          lockedAt: now,
+          expiresAt
+        }
+      },
+      {
+        upsert: true,
+        returnDocument: 'after'
+      }
+    )
 
-  if (existingLock) {
-    return existingLock
+    return result ?? null
+  } catch (err) {
+    if (err.code === 11000) {
+      return null
+    }
+    throw err
   }
-
-  return createNewLock(collection, { grantCode, grantVersion, sbi, ownerId }, { now, expiresAt })
 }
 
 /**
