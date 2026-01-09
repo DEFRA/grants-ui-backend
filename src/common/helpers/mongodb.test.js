@@ -17,7 +17,7 @@ describe('#mongoDb', () => {
     })
 
     afterEach(async () => {
-      await server.db.collection('application-locks').deleteMany({})
+      await server.db.collection('grant-application-locks').deleteMany({})
     })
 
     test('Server should have expected MongoDb decorators', () => {
@@ -52,7 +52,7 @@ describe('#mongoDb', () => {
     })
 
     test('creates unique index for application locks', async () => {
-      const indexes = await server.db.collection('application-locks').indexes()
+      const indexes = await server.db.collection('grant-application-locks').indexes()
       const uniqueIndex = indexes.find(
         (i) => i.unique && i.key.grantCode === 1 && i.key.grantVersion === 1 && i.key.sbi === 1
       )
@@ -61,7 +61,7 @@ describe('#mongoDb', () => {
     })
 
     test('creates a TTL index on application locks', async () => {
-      const indexes = await server.db.collection('application-locks').indexes()
+      const indexes = await server.db.collection('grant-application-locks').indexes()
       const ttlIndex = indexes.find((i) => i.key.expiresAt === 1)
 
       expect(ttlIndex).toBeDefined()

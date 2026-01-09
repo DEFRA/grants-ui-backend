@@ -23,7 +23,7 @@ Core delivery platform Node.js Backend Template.
   - [Structured logging](#structured-logging)
   - [Application state and frontend rehydration](#application-state-and-frontend-rehydration)
   - [Mongo configuration](#mongo-configuration)
-  - [MongoDB Locks](#mongodb-locks)
+  - [MongoDB Locks](#application-locking)
   - [Proxy](#proxy)
 - [Docker](#docker)
   - [Development image](#development-image)
@@ -236,7 +236,7 @@ Locks are scoped to a single application, identified by:
 - `grantVersion`
 - `sbi` (Single Business Identifier)
 
-Only one user may view/edit a given application at a time.
+Only one user from a given business may view/edit a given application at a time.
 
 #### How locking works
 
@@ -266,7 +266,7 @@ If another user holds the lock, the request is rejected with:
 
 #### Storage
 
-Lock state is stored in MongoDB in the `application-locks` collection.
+Lock state is stored in MongoDB in the `grant-application-locks` collection.
 
 Each lock document contains:
 

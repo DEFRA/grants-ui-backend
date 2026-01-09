@@ -9,6 +9,7 @@ import {
   HTTP_401_UNAUTHORIZED
 } from '~/src/test-helpers/http-header-constants.js'
 import crypto from 'crypto'
+import jwt from 'jsonwebtoken'
 
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 
@@ -25,7 +26,36 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
   }
 }))
 
-describe('Auth Plugin Integration Tests', () => {
+async function seedApplicationLock(server, { sbi, grantCode, grantVersion, ownerId }) {
+  await server.db.collection('grant-application-locks').insertOne({
+    grantCode,
+    grantVersion,
+    sbi,
+    ownerId,
+    lockedAt: new Date(),
+    expiresAt: new Date(Date.now() + 60_000) // valid lock
+  })
+}
+
+const LOCK_SECRET = 'default-lock-token-secret'
+
+const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
+  jwt.sign(
+    {
+      sub,
+      sbi,
+      grantCode,
+      grantVersion,
+      typ: 'lock'
+    },
+    LOCK_SECRET,
+    {
+      issuer: 'grants-ui',
+      audience: 'grants-backend'
+    }
+  )
+
+describe('Auth + Lock Enforcement Integration Tests', () => {
   const INVALID_AUTH_MESSAGE = 'Invalid authentication credentials'
   const BASIC_PAYLOAD = {
     sbi: 'test-business',
@@ -33,6 +63,7 @@ describe('Auth Plugin Integration Tests', () => {
     grantVersion: 1,
     state: { step: 1, data: 'test' }
   }
+  const TEST_CONTACT_ID = 'auth-test-user'
 
   const createBearerAuthCredentials = (token) => Buffer.from(`${token}`).toString('base64')
   const createBearerAuthHeader = (token) => `Bearer ${createBearerAuthCredentials(token)}`
@@ -74,12 +105,25 @@ describe('Auth Plugin Integration Tests', () => {
 
   describe('Valid Authentication', () => {
     it('should authenticate with correct encrypted bearer token', async () => {
+      await seedApplicationLock(server, {
+        sbi: BASIC_PAYLOAD.sbi,
+        grantCode: BASIC_PAYLOAD.grantCode,
+        grantVersion: BASIC_PAYLOAD.grantVersion,
+        ownerId: TEST_CONTACT_ID
+      })
+
       const response = await server.inject({
         method: HTTP_POST,
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
+          [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY),
+          'x-application-lock-owner': createLockToken({
+            sub: TEST_CONTACT_ID,
+            sbi: BASIC_PAYLOAD.sbi,
+            grantCode: BASIC_PAYLOAD.grantCode,
+            grantVersion: BASIC_PAYLOAD.grantVersion
+          })
         },
         payload: BASIC_PAYLOAD
       })
@@ -93,7 +137,11 @@ describe('Auth Plugin Integration Tests', () => {
         url: STATE_URL,
         headers: {
           [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-          [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
+          [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY),
+          'x-application-lock-owner': createLockToken({
+            sub: TEST_CONTACT_ID,
+            grantCode: BASIC_PAYLOAD.grantCode
+          })
         },
         payload: BASIC_PAYLOAD
       })
@@ -287,6 +335,55 @@ describe('Auth Plugin Integration Tests', () => {
       expect(response.statusCode).toBe(HTTP_401_UNAUTHORIZED)
       expect(response.result.message).toBe(INVALID_AUTH_MESSAGE)
     })
+
+    it('should reject request with valid bearer token but missing lock token', async () => {
+      const response = await server.inject({
+        method: HTTP_POST,
+        url: STATE_URL,
+        headers: {
+          [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
+          [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
+        },
+        payload: BASIC_PAYLOAD
+      })
+
+      expect(response.statusCode).toBe(HTTP_401_UNAUTHORIZED)
+    })
+
+    it('should reject request with invalid lock token', async () => {
+      const response = await server.inject({
+        method: HTTP_POST,
+        url: STATE_URL,
+        headers: {
+          [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
+          [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY),
+          'x-application-lock-owner': 'not-a-jwt'
+        },
+        payload: BASIC_PAYLOAD
+      })
+
+      expect(response.statusCode).toBe(HTTP_401_UNAUTHORIZED)
+    })
+
+    it('should rejects lock token with wrong audience', async () => {
+      const badToken = jwt.sign({ sub: TEST_CONTACT_ID, grantCode: BASIC_PAYLOAD.grantCode }, LOCK_SECRET, {
+        issuer: 'grants-ui',
+        audience: 'wrong-audience'
+      })
+
+      const response = await server.inject({
+        method: HTTP_POST,
+        url: STATE_URL,
+        headers: {
+          [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
+          [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY),
+          'x-application-lock-owner': badToken
+        },
+        payload: BASIC_PAYLOAD
+      })
+
+      expect(response.statusCode).toBe(HTTP_401_UNAUTHORIZED)
+    })
   })
 
   describe('Configuration Edge Cases', () => {
@@ -413,7 +510,13 @@ describe('Auth Plugin Integration Tests', () => {
           url: STATE_URL,
           headers: {
             [CONTENT_TYPE_HEADER]: CONTENT_TYPE_JSON,
-            [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY)
+            [AUTH_HEADER]: createEncryptedAuthHeader(TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY),
+            'x-application-lock-owner': createLockToken({
+              sub: TEST_CONTACT_ID,
+              sbi: BASIC_PAYLOAD.sbi,
+              grantCode: BASIC_PAYLOAD.grantCode,
+              grantVersion: BASIC_PAYLOAD.grantVersion
+            })
           },
           payload: BASIC_PAYLOAD
         })

@@ -1,6 +1,9 @@
 import Joi from 'joi'
 import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '../common/helpers/logging/log.js'
+import { releaseApplicationLock } from '../common/helpers/application-lock.js'
+import { enforceApplicationLock, extractLockKeys } from '../plugins/application-lock-enforcement.js'
+import { Boom } from '@hapi/boom'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
@@ -29,6 +32,7 @@ export const addSubmission = {
   path: '/submissions',
   options: {
     auth: 'bearer',
+    pre: [{ method: enforceApplicationLock }],
     payload: {
       maxBytes: PAYLOAD_SIZE_MAX, // 1MB
       output: 'data',
@@ -65,10 +69,35 @@ export const addSubmission = {
 
     const { crn, sbi, grantCode, grantVersion, referenceNumber, submittedAt } = request.payload
 
+    const {
+      ownerId,
+      sbi: tokenSbi,
+      grantCode: tokenGrantCode,
+      grantVersion: tokenGrantVersion
+    } = extractLockKeys(request)
+
+    if (tokenSbi !== sbi) {
+      throw Boom.badRequest('SBI in payload does not match lock token')
+    }
+    if (tokenGrantCode !== grantCode) {
+      throw Boom.badRequest('Grant code in payload does not match lock token')
+    }
+    if (tokenGrantVersion !== grantVersion) {
+      throw Boom.badRequest('Grant version in payload does not match lock token')
+    }
+
     const db = request.db
 
     try {
       await db.collection('grant_application_submissions').insertOne(request.payload)
+
+      // Release application edit lock after successful submission
+      await releaseApplicationLock(db, {
+        grantCode,
+        grantVersion,
+        sbi: tokenSbi,
+        ownerId: ownerId
+      })
 
       return h.response({ success: true, created: true }).code(201)
     } catch (err) {

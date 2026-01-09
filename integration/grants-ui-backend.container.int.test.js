@@ -2,6 +2,7 @@ import Wreck from '@hapi/wreck'
 import { MongoClient } from 'mongodb'
 import { describe, it, expect, beforeAll, beforeEach } from '@jest/globals'
 import crypto from 'crypto'
+import jwt from 'jsonwebtoken'
 
 let db
 let apiUrl
@@ -29,15 +30,30 @@ const createAuthHeader = () => {
   return `Bearer ${credentials}`
 }
 
+const LOCK_SECRET = 'default-lock-token-secret'
+const TEST_CONTACT_ID = 'auth-test-user'
+
+const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
+  jwt.sign(
+    {
+      sub,
+      sbi,
+      grantCode,
+      grantVersion,
+      typ: 'lock'
+    },
+    LOCK_SECRET,
+    {
+      issuer: 'grants-ui',
+      audience: 'grants-backend'
+    }
+  )
+
 beforeAll(async () => {
   process.env.GRANTS_UI_BACKEND_AUTH_TOKEN = TEST_AUTH_TOKEN
   process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
 
   apiUrl = process.env.API_URL
-  console.log('Integration Test Setup:')
-  console.log(`API URL: ${apiUrl}`)
-  console.log(`Auth token set: ${!!process.env.GRANTS_UI_BACKEND_AUTH_TOKEN}`)
-  console.log(`Encryption key set: ${!!process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY}`)
 
   client = await MongoClient.connect(process.env.MONGO_URI)
   db = client.db()
@@ -64,7 +80,13 @@ describe('POST /state', () => {
       json: true,
       payload,
       headers: {
-        authorization: createAuthHeader()
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
+        })
       }
     })
 
@@ -80,11 +102,14 @@ describe('POST /state', () => {
   })
 
   it('updates an existing state', async () => {
-    await db.collection('grant-application-state').insertOne({
+    const payload = {
       sbi: 'biz-1',
       grantCode: 'grant-1',
       grantVersion: 1,
-      state: { step: 'start' },
+      state: { step: 'start' }
+    }
+    await db.collection('grant-application-state').insertOne({
+      ...payload,
       createdAt: new Date(),
       updatedAt: new Date()
     })
@@ -98,7 +123,13 @@ describe('POST /state', () => {
         state: { step: 'middle' }
       },
       headers: {
-        authorization: createAuthHeader()
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
+        })
       }
     })
 
@@ -116,12 +147,15 @@ describe('POST /state', () => {
 
 describe('GET /state', () => {
   it('retrieves state', async () => {
+    const payload = {
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: 1,
+      state: { step: 'start' }
+    }
     await db.collection('grant-application-state').insertMany([
       {
-        sbi: 'biz-1',
-        grantCode: 'grant-1',
-        grantVersion: 1,
-        state: { step: 'start' },
+        ...payload,
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -135,7 +169,13 @@ describe('GET /state', () => {
     const response = await Wreck.get(`${apiUrl}/state?${qs}`, {
       json: true,
       headers: {
-        authorization: createAuthHeader()
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
+        })
       }
     })
 
@@ -146,11 +186,14 @@ describe('GET /state', () => {
 
 describe('DELETE /state', () => {
   it('deletes state', async () => {
-    await db.collection('grant-application-state').insertOne({
+    const payload = {
       sbi: 'biz-1',
       grantCode: 'grant-1',
       grantVersion: 1,
-      state: { step: 'start' },
+      state: { step: 'start' }
+    }
+    await db.collection('grant-application-state').insertOne({
+      ...payload,
       createdAt: new Date(),
       updatedAt: new Date()
     })
@@ -163,7 +206,13 @@ describe('DELETE /state', () => {
     const response = await Wreck.delete(`${apiUrl}/state?${qs}`, {
       json: true,
       headers: {
-        authorization: createAuthHeader()
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
+        })
       }
     })
 

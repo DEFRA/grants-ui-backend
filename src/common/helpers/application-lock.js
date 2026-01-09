@@ -3,22 +3,10 @@ import { config } from '../../config.js'
 export const LOCK_TTL_MS = config.get('applicationLock.ttlMs')
 
 /**
- * Builds a deterministic lock identifier for an application.
- *
- * @param {string} grantCode - Grant scheme code
- * @param {number} grantVersion - Grant scheme version
- * @param {string} sbi - Single Business Identifier
- * @returns {string} Application lock identifier
- */
-export function getApplicationLockId(grantCode, grantVersion, sbi) {
-  return `app-lock:${grantCode}:${grantVersion}:${sbi}`
-}
-
-/**
- * Acquires an exclusive lock for an application.
+ * Acquires an exclusive lock for an application for a given organisation.
  *
  * Lock acquisition rules:
- *  - Only one user may hold a lock for a given application at a time
+ *  - Only one user from the same organisation may hold a lock for a given application at a time
  *  - Expired locks may be taken over
  *  - The same user may re-acquire (refresh) their own lock
  *  - If another active user holds the lock, null is returned
@@ -34,7 +22,7 @@ export function getApplicationLockId(grantCode, grantVersion, sbi) {
 export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
   const now = new Date()
   const expiresAt = new Date(now.getTime() + LOCK_TTL_MS)
-  const collection = db.collection('application-locks')
+  const collection = db.collection('grant-application-locks')
 
   try {
     const result = await collection.findOneAndUpdate(
@@ -44,8 +32,7 @@ export async function acquireApplicationLock(db, { grantCode, grantVersion, sbi,
         sbi,
         $or: [
           { expiresAt: { $lte: now } }, // expired
-          { ownerId }, // re-entrant
-          { expiresAt: { $exists: false } } // no lock yet
+          { ownerId } // re-entrant
         ]
       },
       {
@@ -90,7 +77,7 @@ export async function refreshApplicationLock(db, { grantCode, grantVersion, sbi,
   const now = new Date()
   const expiresAt = new Date(now.getTime() + LOCK_TTL_MS)
 
-  const result = await db.collection('application-locks').updateOne(
+  const result = await db.collection('grant-application-locks').updateOne(
     {
       grantCode,
       grantVersion,
@@ -119,7 +106,7 @@ export async function refreshApplicationLock(db, { grantCode, grantVersion, sbi,
  * @returns {Promise<boolean>} True if the lock was released, false otherwise
  */
 export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
-  const result = await db.collection('application-locks').deleteOne({
+  const result = await db.collection('grant-application-locks').deleteOne({
     grantCode,
     grantVersion,
     sbi,
