@@ -40,7 +40,7 @@ export const applicationLockRelease = {
   handler: async (request, h) => {
     const { sbi, ownerId, grantCode, grantVersion } = request.query
     const db = request.db
-    console.log(`Releasing application lock for: ${(sbi, ownerId, grantCode, grantVersion)}`)
+
     try {
       const released = await releaseApplicationLock(db, {
         sbi,

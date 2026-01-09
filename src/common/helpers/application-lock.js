@@ -96,7 +96,7 @@ export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi,
       sbi,
       ownerId
     })
-    console.log('releaseApplicationLock result:', result)
+
     return result.deletedCount === 1
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
