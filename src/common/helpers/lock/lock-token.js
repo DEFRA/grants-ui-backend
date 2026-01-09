@@ -13,7 +13,6 @@ import jwt from 'jsonwebtoken'
  * - Backend must still validate against stored lock state
  *
  * @param {string} token - JWT lock token
- * @param {string} secret - Shared secret used to sign the token
  * @returns {Object} Decoded and verified token payload
  * @throws {Error} If token is invalid or verification fails
  */

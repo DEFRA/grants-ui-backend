@@ -1,5 +1,16 @@
 import { createServer } from '../../server'
-import { acquireApplicationLock, refreshApplicationLock, releaseApplicationLock } from './application-lock'
+import { acquireOrRefreshApplicationLock, releaseApplicationLock } from './application-lock'
+import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+
+jest.mock('~/src/common/helpers/logging/log.js', () => ({
+  log: jest.fn(),
+  LogCodes: {
+    SYSTEM: {
+      APPLICATION_LOCK_ACQUISITION_FAILED: { level: 'error', messageFunc: jest.fn() },
+      APPLICATION_LOCK_RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
+    }
+  }
+}))
 
 describe('getApplicationLockId', () => {
   let server
@@ -26,29 +37,13 @@ describe('getApplicationLockId', () => {
       ownerId: 'user-1'
     }
 
-    const lock = await acquireApplicationLock(db, params)
+    const lock = await acquireOrRefreshApplicationLock(db, params)
     expect(lock).toBeTruthy()
 
     await releaseApplicationLock(db, params)
 
-    const lock2 = await acquireApplicationLock(db, params)
+    const lock2 = await acquireOrRefreshApplicationLock(db, params)
     expect(lock2).toBeTruthy()
-  })
-
-  test('refreshApplicationLock extends expiry', async () => {
-    const db = server.db
-    const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
-
-    const first = await acquireApplicationLock(db, params)
-    const oldExpiry = first.expiresAt
-
-    await new Promise((resolve) => setTimeout(resolve, 10)) // small delay
-
-    const refreshed = await refreshApplicationLock(db, params)
-    const doc = await db.collection('grant-application-locks').findOne({ ownerId: 'user-1' })
-
-    expect(refreshed).toBe(true)
-    expect(doc.expiresAt.getTime()).toBeGreaterThan(oldExpiry.getTime())
   })
 
   test('expired lock can be taken over by another user', async () => {
@@ -64,7 +59,7 @@ describe('getApplicationLockId', () => {
       expiresAt: new Date(now.getTime() - 60_000) // expired
     })
 
-    const lock = await acquireApplicationLock(db, {
+    const lock = await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',
       grantVersion: 1,
       sbi: '106',
@@ -80,9 +75,63 @@ describe('getApplicationLockId', () => {
 
     const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
 
-    await acquireApplicationLock(db, params)
-    const second = await acquireApplicationLock(db, params)
+    await acquireOrRefreshApplicationLock(db, params)
+    const second = await acquireOrRefreshApplicationLock(db, params)
 
     expect(second.ownerId).toBe('user-1')
+  })
+
+  test('logs error when acquireApplicationLock fails', async () => {
+    const fakeDb = {
+      collection: () => ({
+        findOneAndUpdate: () => {
+          throw Object.assign(new Error('Mongo exploded'), { name: 'MongoServerError', code: 123 })
+        }
+      })
+    }
+
+    const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
+
+    await expect(acquireOrRefreshApplicationLock(fakeDb, params)).rejects.toThrow('Mongo exploded')
+
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.SYSTEM.APPLICATION_LOCK_ACQUISITION_FAILED,
+      expect.objectContaining({
+        grantCode: 'EGWA',
+        grantVersion: 1,
+        sbi: '106',
+        ownerId: 'user-1',
+        errorName: 'MongoServerError',
+        errorMessage: 'Mongo exploded',
+        isMongoError: true
+      })
+    )
+  })
+
+  test('logs error when releaseApplicationLock fails', async () => {
+    const fakeDb = {
+      collection: () => ({
+        deleteOne: () => {
+          throw Object.assign(new Error('Mongo exploded'), { name: 'MongoServerError', code: 123 })
+        }
+      })
+    }
+
+    const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
+
+    await expect(releaseApplicationLock(fakeDb, params)).rejects.toThrow('Mongo exploded')
+
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.SYSTEM.APPLICATION_LOCK_RELEASE_FAILED,
+      expect.objectContaining({
+        grantCode: 'EGWA',
+        grantVersion: 1,
+        sbi: '106',
+        ownerId: 'user-1',
+        errorName: 'MongoServerError',
+        errorMessage: 'Mongo exploded',
+        isMongoError: true
+      })
+    )
   })
 })

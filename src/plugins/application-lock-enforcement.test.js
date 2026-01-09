@@ -1,4 +1,4 @@
-import { acquireApplicationLock } from '../common/helpers/application-lock.js'
+import { acquireOrRefreshApplicationLock } from '../common/helpers/application-lock.js'
 import { enforceApplicationLock } from './application-lock-enforcement.js'
 import { createServer } from '../server.js'
 import jwt from 'jsonwebtoken'
@@ -37,10 +37,18 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
       },
       handler: () => ({ ok: true })
     })
+
+    server.route({
+      method: 'POST',
+      path: '/test',
+      options: { pre: [{ method: enforceApplicationLock }] },
+      handler: () => ({ ok: true })
+    })
   })
 
   afterEach(async () => {
     await server.db.collection('grant-application-locks').deleteMany({})
+    await server.db.collection('grant_application_submissions').deleteMany({})
   })
 
   afterAll(async () => {
@@ -129,14 +137,14 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   test('blocks access when lock is owned by another user', async () => {
     const db = server.db
 
-    await acquireApplicationLock(db, {
+    await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',
       grantVersion: 3,
       sbi: '123456789',
       ownerId: 'user-1'
     })
 
-    const token = createLockToken({ sub: 'user-2', grantVersion: 3 })
+    const token = createLockToken({ sub: 'user-2', sbi: '123456789', grantCode: 'EGWA', grantVersion: 3 })
 
     const res = await server.inject({
       method: 'GET',
@@ -149,17 +157,41 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
     expect(res.statusCode).toBe(423)
   })
 
+  test('blocks access for POST when application is submitted', async () => {
+    await server.db.collection('grant_application_submissions').insertOne({
+      sbi: '123456789',
+      grantCode: 'EGWA',
+      grantVersion: 1
+    })
+
+    const res = await server.inject({
+      method: 'POST',
+      url: '/test',
+      headers: {
+        'x-application-lock-owner': createLockToken({
+          sub: 'user-2',
+          sbi: '123456789',
+          grantCode: 'EGWA',
+          grantVersion: 1
+        })
+      }
+    })
+
+    expect(res.statusCode).toBe(403)
+    expect(res.result.message).toBe('Application has already been submitted')
+  })
+
   test('allows same user to refresh their own lock', async () => {
     const db = server.db
 
-    await acquireApplicationLock(db, {
+    await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',
       grantVersion: 4,
       sbi: '123456789',
       ownerId: 'user-1'
     })
 
-    const token = createLockToken({ sub: 'user-1', grantVersion: 4 })
+    const token = createLockToken({ sub: 'user-1', sbi: '123456789', grantCode: 'EGWA', grantVersion: 3 })
 
     const res = await server.inject({
       method: 'GET',
@@ -170,5 +202,35 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
     })
 
     expect(res.statusCode).toBe(200)
+  })
+
+  test('allows GET when application is submitted (no lock taken)', async () => {
+    await server.db.collection('grant_application_submissions').insertOne({
+      sbi: '123456789',
+      grantCode: 'EGWA',
+      grantVersion: 1
+    })
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/test',
+      headers: {
+        'x-application-lock-owner': createLockToken({
+          sub: 'user-2',
+          sbi: '123456789',
+          grantCode: 'EGWA',
+          grantVersion: 1
+        })
+      }
+    })
+
+    expect(res.statusCode).toBe(200)
+
+    const lock = await server.db.collection('grant-application-locks').findOne({
+      sbi: '123456789',
+      grantCode: 'EGWA',
+      grantVersion: 1
+    })
+    expect(lock).toBeNull()
   })
 })

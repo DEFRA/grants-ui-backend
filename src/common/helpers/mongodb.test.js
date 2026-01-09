@@ -33,6 +33,22 @@ describe('#mongoDb', () => {
       expect(server.db.namespace).toBe('grants-ui-backend')
     })
 
+    test('creates unique index for application state', async () => {
+      const indexes = await server.db.collection('grant-application-state').indexes()
+      const uniqueIndex = indexes.find(
+        (i) => i.unique && i.key.sbi === 1 && i.key.grantCode === 1 && i.key.grantVersion === 1
+      )
+      expect(uniqueIndex).toBeDefined()
+    })
+
+    test('creates unique index for application submissions', async () => {
+      const indexes = await server.db.collection('grant_application_submissions').indexes()
+      const uniqueIndex = indexes.find(
+        (i) => i.unique && i.key.sbi === 1 && i.key.grantCode === 1 && i.key.grantVersion === 1
+      )
+      expect(uniqueIndex).toBeDefined()
+    })
+
     test('MongoDb plugin uses secureContext if present', async () => {
       const server = new Server()
       server.logger = { info: jest.fn() }

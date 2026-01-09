@@ -68,4 +68,8 @@ async function createIndexes(db) {
   await db
     .collection('grant-application-state')
     .createIndex({ sbi: 1, grantCode: 1, grantVersion: 1 }, { unique: true })
+
+  await db
+    .collection('grant_application_submissions')
+    .createIndex({ sbi: 1, grantCode: 1, grantVersion: 1 }, { unique: true })
 }
