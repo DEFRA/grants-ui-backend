@@ -110,17 +110,12 @@ export async function enforceApplicationLock(request, h) {
 
   const db = request.db
 
-  const isSubmitted = await hasApplicationBeenSubmitted(db, {
-    sbi,
-    grantCode,
-    grantVersion
-  })
-
-  if (isSubmitted && request.method.toLowerCase() !== 'get') {
-    throw Boom.forbidden('Application has already been submitted')
-  }
+  const isSubmitted = await hasApplicationBeenSubmitted(db, { sbi, grantCode, grantVersion })
 
   if (isSubmitted) {
+    if (request.method !== 'get') {
+      throw Boom.forbidden('Application has already been submitted')
+    }
     return h.continue
   }
 
