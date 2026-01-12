@@ -60,7 +60,7 @@
     "@babel/core": "7.28.5",
     "@babel/preset-env": "7.28.5",
     "@shelf/jest-mongodb": "6.0.2",
-    "autoprefixer": "10.4.22",
+    "autoprefixer": "10.4.23",
     "babel-jest": "30.2.0",
     "babel-plugin-module-resolver": "5.0.2",
     "babel-plugin-transform-import-meta": "2.3.3",
