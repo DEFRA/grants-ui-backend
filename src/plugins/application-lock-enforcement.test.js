@@ -3,7 +3,7 @@ import { enforceApplicationLock } from './application-lock-enforcement.js'
 import { createServer } from '../server.js'
 import jwt from 'jsonwebtoken'
 
-const LOCK_SECRET = 'default-lock-token-secret'
+const APPLICATION_LOCK_TOKEN_SECRET = 'default-lock-token-secret'
 
 function createLockToken({ sub = 'user-1', sbi = '123456789', grantCode = 'EGWA', grantVersion = 1 } = {}) {
   return jwt.sign(
@@ -14,7 +14,7 @@ function createLockToken({ sub = 'user-1', sbi = '123456789', grantCode = 'EGWA'
       grantVersion,
       typ: 'lock'
     },
-    LOCK_SECRET,
+    APPLICATION_LOCK_TOKEN_SECRET,
     {
       issuer: 'grants-ui',
       audience: 'grants-backend'
@@ -79,7 +79,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   test('401 when lock token has wrong audience', async () => {
     const badToken = jwt.sign(
       { sub: 'user-1', sbi: '123456789', grantCode: 'EGWA', grantVersion: 1, typ: 'lock' },
-      LOCK_SECRET,
+      APPLICATION_LOCK_TOKEN_SECRET,
       {
         issuer: 'grants-ui',
         audience: 'wrong-audience'
@@ -100,7 +100,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   test('rejects lock token with invalid grantVersion', async () => {
     const badToken = jwt.sign(
       { sub: 'user-1', sbi: 'SBI-123', grantCode: 'EGWA', grantVersion: 'not-a-number', typ: 'lock' },
-      LOCK_SECRET,
+      APPLICATION_LOCK_TOKEN_SECRET,
       { issuer: 'grants-ui', audience: 'grants-backend' }
     )
 

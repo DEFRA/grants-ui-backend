@@ -419,7 +419,7 @@ Some requests require a Lock Token (state operations) to acquire or release an a
 Make sure your .env file contains:
 
 ```
-APPLICATION_LOCK_SECRET=<64-character hex key>
+APPLICATION_LOCK_TOKEN_SECRET=<64-character hex key>
 USER_ID=<user-id-of-the-user-holding-the-token>
 SBI=<sbi-holding-the-token>
 GRANT_CODE=<grant-code-holding-the-token>

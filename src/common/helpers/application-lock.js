@@ -1,7 +1,7 @@
 import { config } from '../../config.js'
 import { log, LogCodes } from '../helpers/logging/log.js'
 
-export const LOCK_TTL_MS = config.get('applicationLock.ttlMs')
+export const APPLICATION_LOCK_TTL_MS = config.get('applicationLock.ttlMs')
 
 /**
  * Acquires or refreshes an exclusive lock for an application for a given organisation.
@@ -22,7 +22,7 @@ export const LOCK_TTL_MS = config.get('applicationLock.ttlMs')
  */
 export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
   const now = new Date()
-  const expiresAt = new Date(now.getTime() + LOCK_TTL_MS)
+  const expiresAt = new Date(now.getTime() + APPLICATION_LOCK_TTL_MS)
   const collection = db.collection('grant-application-locks')
 
   try {

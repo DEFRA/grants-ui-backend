@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals'
-import { LOCK_TTL_MS } from './common/helpers/application-lock.js'
+import { APPLICATION_LOCK_TTL_MS } from './common/helpers/application-lock.js'
 
 describe('#config', () => {
   let originalEnv
@@ -45,6 +45,6 @@ describe('#config', () => {
   })
 
   test('loads TTL from configuration', () => {
-    expect(LOCK_TTL_MS).toBe(4 * 60 * 60 * 1000)
+    expect(APPLICATION_LOCK_TTL_MS).toBe(4 * 60 * 60 * 1000)
   })
 })
