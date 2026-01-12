@@ -39,7 +39,7 @@ const encryptToken = (token, encryptionKey) => {
   return `${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted}`
 }
 
-const LOCK_SECRET = 'default-lock-token-secret'
+const APPLICATION_LOCK_TOKEN_SECRET = 'default-lock-token-secret'
 const TEST_CONTACT_ID = 'auth-test-user'
 
 const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
@@ -51,7 +51,7 @@ const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
       grantVersion,
       typ: 'lock'
     },
-    LOCK_SECRET,
+    APPLICATION_LOCK_TOKEN_SECRET,
     {
       issuer: 'grants-ui',
       audience: 'grants-backend'

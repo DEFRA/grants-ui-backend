@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken'
 
 /**
  * Usage: set these in your .env file:
- *   APPLICATION_LOCK_SECRET=<the same secret as grants-ui-backend>
+ *   APPLICATION_LOCK_TOKEN_SECRET=<the same secret as grants-ui-backend>
  *   USER_ID=<DEFRA user ID, e.g., user-1>
  *   SBI=<business identifier>
  *   GRANT_CODE=<grant code>
@@ -14,7 +14,7 @@ import jwt from 'jsonwebtoken'
  */
 
 // Load configuration from environment variables
-const secret = process.env.APPLICATION_LOCK_SECRET
+const secret = process.env.APPLICATION_LOCK_TOKEN_SECRET
 const userId = process.env.USER_ID
 const sbi = process.env.SBI
 const grantCode = process.env.GRANT_CODE

@@ -37,7 +37,7 @@ async function seedApplicationLock(server, { sbi, grantCode, grantVersion, owner
   })
 }
 
-const LOCK_SECRET = 'default-lock-token-secret'
+const APPLICATION_LOCK_TOKEN_SECRET = 'default-lock-token-secret'
 
 const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
   jwt.sign(
@@ -48,7 +48,7 @@ const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
       grantVersion,
       typ: 'lock'
     },
-    LOCK_SECRET,
+    APPLICATION_LOCK_TOKEN_SECRET,
     {
       issuer: 'grants-ui',
       audience: 'grants-backend'
@@ -366,10 +366,14 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
     })
 
     it('should rejects lock token with wrong audience', async () => {
-      const badToken = jwt.sign({ sub: TEST_CONTACT_ID, grantCode: BASIC_PAYLOAD.grantCode }, LOCK_SECRET, {
-        issuer: 'grants-ui',
-        audience: 'wrong-audience'
-      })
+      const badToken = jwt.sign(
+        { sub: TEST_CONTACT_ID, grantCode: BASIC_PAYLOAD.grantCode },
+        APPLICATION_LOCK_TOKEN_SECRET,
+        {
+          issuer: 'grants-ui',
+          audience: 'wrong-audience'
+        }
+      )
 
       const response = await server.inject({
         method: HTTP_POST,
