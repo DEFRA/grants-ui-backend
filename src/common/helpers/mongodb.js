@@ -16,11 +16,11 @@ export const mongoDb = {
         maxPoolSize: options.maxPoolSize,
         minPoolSize: options.minPoolSize,
         // Fail fast if threads are queued for a connection too long
-        waitQueueTimeoutMS: 200,
+        waitQueueTimeoutMS: 10_000,
         // Drop idle sockets to keep the pool fresh behind LBs
         maxIdleTimeMS: options.maxIdleTimeMS,
         // Quicker topology selection on failover
-        serverSelectionTimeoutMS: 5_000,
+        serverSelectionTimeoutMS: 10_000,
         // Retryable reads help on transient primary changes
         retryReads: true,
         retryWrites: false,
@@ -32,9 +32,12 @@ export const mongoDb = {
       const databaseName = options.databaseName
       const db = client.db(databaseName)
 
-      await createIndexes(db)
-
       server.logger.info(`MongoDb connected to ${databaseName}`)
+
+      const indexCreation = createIndexes(db).catch((err) => {
+        server.logger.error(err, 'Index creation failed')
+      })
+      server.decorate('server', 'mongoIndexesReady', indexCreation)
 
       server.decorate('server', 'mongoClient', client)
       server.decorate('server', 'db', db)

@@ -14,7 +14,7 @@ async function startServer() {
     server.logger.info(`Access your backend on http://localhost:${config.get('port')}`)
   } catch (error) {
     const logger = createLogger()
-    logger.info('Server failed to start :(')
+    logger.error('Server failed to start :(')
     logger.error(error)
   }
 

@@ -91,7 +91,6 @@ export const addSubmission = {
     try {
       await db.collection('grant_application_submissions').insertOne(request.payload)
 
-      // Release application edit lock after successful submission
       await releaseApplicationLock(db, {
         grantCode,
         grantVersion,
