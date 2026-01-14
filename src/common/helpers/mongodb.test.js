@@ -10,6 +10,7 @@ describe('#mongoDb', () => {
     beforeAll(async () => {
       server = await createServer()
       await server.initialize()
+      await server.mongoIndexesReady
     })
 
     afterAll(async () => {
@@ -51,7 +52,12 @@ describe('#mongoDb', () => {
 
     test('MongoDb plugin uses secureContext if present', async () => {
       const server = new Server()
-      server.logger = { info: jest.fn() }
+      server.logger = {
+        info: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn()
+      }
+
       server.secureContext = { secure: true }
 
       await mongoDb.plugin.register(server, {
