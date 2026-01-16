@@ -45,8 +45,8 @@ export const applicationLockRelease = {
       const released = await releaseApplicationLock(db, {
         sbi,
         grantCode,
-        grantVersion: Number(grantVersion),
-        ownerId: Number(ownerId)
+        grantVersion: grantVersion,
+        ownerId: ownerId
       })
 
       return h.response({ success: true, released }).code(200)
