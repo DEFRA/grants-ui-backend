@@ -62,36 +62,6 @@ export function extractLockKeys(request) {
 }
 
 /**
- * Returns true if the application has already been submitted.
- *
- * A submitted application must:
- * - NOT acquire or refresh locks
- * - Be viewable by other users in the same SBI
- * - Be immutable (no further state writes)
- *
- * @param {import('mongodb').Db} db
- * @param {Object} params
- * @param {string} params.sbi
- * @param {string} params.grantCode
- * @param {number} params.grantVersion
- * @returns {Promise<boolean>}
- */
-export async function hasApplicationBeenSubmitted(db, { sbi, grantCode, grantVersion }) {
-  const submission = await db.collection('grant_application_submissions').findOne(
-    {
-      sbi,
-      grantCode,
-      grantVersion
-    },
-    {
-      projection: { _id: 1 }
-    }
-  )
-
-  return Boolean(submission)
-}
-
-/**
  * Hapi pre-handler that enforces exclusive edit access to a grant application.
  *
  * Attempts to acquire or refresh an application edit lock for the
@@ -109,15 +79,6 @@ export async function enforceApplicationLock(request, h) {
   const { ownerId, sbi, grantCode, grantVersion } = extractLockKeys(request)
 
   const db = request.db
-
-  const isSubmitted = await hasApplicationBeenSubmitted(db, { sbi, grantCode, grantVersion })
-
-  if (isSubmitted) {
-    if (request.method !== 'get') {
-      throw Boom.forbidden('Application has already been submitted')
-    }
-    return h.continue
-  }
 
   const lock = await acquireOrRefreshApplicationLock(db, {
     grantCode,
