@@ -25,23 +25,25 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
   const expiresAt = new Date(now.getTime() + APPLICATION_LOCK_TTL_MS)
   const collection = db.collection('grant-application-locks')
 
+  const sbiStr = String(sbi)
+  const ownerIdStr = String(ownerId)
   try {
     const result = await collection.findOneAndUpdate(
       {
         grantCode,
         grantVersion,
-        sbi,
+        sbi: sbiStr,
         $or: [
           { expiresAt: { $lte: now } }, // expired
-          { ownerId } // re-entrant
+          { ownerId: ownerIdStr } // re-entrant
         ]
       },
       {
         $set: {
           grantCode,
           grantVersion,
-          sbi,
-          ownerId,
+          sbi: sbiStr,
+          ownerId: ownerIdStr,
           lockedAt: now,
           expiresAt
         }
@@ -56,8 +58,8 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
     log(LogCodes.SYSTEM.APPLICATION_LOCK_ACQUISITION_FAILED, {
-      sbi,
-      ownerId,
+      sbi: sbiStr,
+      ownerId: ownerIdStr,
       grantCode,
       grantVersion,
       errorName: err.name,
@@ -89,20 +91,22 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
  * @returns {Promise<boolean>} True if the lock was released, false otherwise
  */
 export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
+  const sbiStr = String(sbi)
+  const ownerIdStr = String(ownerId)
   try {
     const result = await db.collection('grant-application-locks').deleteOne({
       grantCode,
       grantVersion,
-      sbi,
-      ownerId
+      sbi: sbiStr,
+      ownerId: ownerIdStr
     })
 
     return result.deletedCount === 1
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
     log(LogCodes.SYSTEM.APPLICATION_LOCK_RELEASE_FAILED, {
-      sbi,
-      ownerId,
+      sbi: sbiStr,
+      ownerId: ownerIdStr,
       grantCode,
       grantVersion,
       errorName: err.name,

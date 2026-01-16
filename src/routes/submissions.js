@@ -94,8 +94,8 @@ export const addSubmission = {
       await releaseApplicationLock(db, {
         grantCode,
         grantVersion,
-        sbi: tokenSbi,
-        ownerId: ownerId
+        sbi,
+        ownerId
       })
 
       return h.response({ success: true, created: true }).code(201)
