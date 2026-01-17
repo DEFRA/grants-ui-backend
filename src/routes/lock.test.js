@@ -50,7 +50,7 @@ describe('applicationLockRelease route', () => {
     expect(releaseApplicationLock).toHaveBeenCalledWith(request.db, {
       sbi: '123456789',
       grantCode: 'GRANT1',
-      grantVersion: '1',
+      grantVersion: 1,
       ownerId: '34567'
     })
 
