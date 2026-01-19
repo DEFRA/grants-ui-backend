@@ -100,6 +100,11 @@ export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi,
   const sbiStr = String(sbi)
   const ownerIdStr = String(ownerId)
   const grantVersionNum = Number(grantVersion)
+
+  if (Number.isNaN(grantVersionNum)) {
+    throw new Error('Invalid grantVersion')
+  }
+
   try {
     const result = await db.collection('grant-application-locks').deleteOne({
       grantCode,
