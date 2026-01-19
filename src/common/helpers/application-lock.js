@@ -15,9 +15,9 @@ export const APPLICATION_LOCK_TTL_MS = config.get('applicationLock.ttlMs')
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {Object} params
  * @param {string} params.grantCode
- * @param {number} params.grantVersion
- * @param {string} params.sbi
- * @param {string} params.ownerId - DefraID user ID
+ * @param {number | string} params.grantVersion
+ * @param {number | string} params.sbi
+ * @param {number | string} params.ownerId - DefraID user ID
  * @returns {Promise<Object|null>} Lock document if acquired, otherwise null
  */
 export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
@@ -27,11 +27,17 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
 
   const sbiStr = String(sbi)
   const ownerIdStr = String(ownerId)
+  const grantVersionNum = Number(grantVersion ?? 1)
+
+  if (Number.isNaN(grantVersionNum)) {
+    throw new Error('Invalid grantVersion')
+  }
+
   try {
     const result = await collection.findOneAndUpdate(
       {
         grantCode,
-        grantVersion,
+        grantVersion: grantVersionNum,
         sbi: sbiStr,
         $or: [
           { expiresAt: { $lte: now } }, // expired
@@ -41,7 +47,7 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
       {
         $set: {
           grantCode,
-          grantVersion,
+          grantVersion: grantVersionNum,
           sbi: sbiStr,
           ownerId: ownerIdStr,
           lockedAt: now,
@@ -61,7 +67,7 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
       sbi: sbiStr,
       ownerId: ownerIdStr,
       grantCode,
-      grantVersion,
+      grantVersion: grantVersionNum,
       errorName: err.name,
       errorMessage: err.message,
       errorReason: err.reason,
@@ -85,18 +91,19 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {Object} params
  * @param {string} params.grantCode
- * @param {number} params.grantVersion
- * @param {string} params.sbi
- * @param {number} params.ownerId - DefraID user ID
+ * @param {number | string} params.grantVersion
+ * @param {number | string} params.sbi
+ * @param {number | string} params.ownerId - DefraID user ID
  * @returns {Promise<boolean>} True if the lock was released, false otherwise
  */
 export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
   const sbiStr = String(sbi)
   const ownerIdStr = String(ownerId)
+  const grantVersionNum = Number(grantVersion)
   try {
     const result = await db.collection('grant-application-locks').deleteOne({
       grantCode,
-      grantVersion,
+      grantVersion: grantVersionNum,
       sbi: sbiStr,
       ownerId: ownerIdStr
     })
@@ -108,7 +115,7 @@ export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi,
       sbi: sbiStr,
       ownerId: ownerIdStr,
       grantCode,
-      grantVersion,
+      grantVersion: grantVersionNum,
       errorName: err.name,
       errorMessage: err.message,
       errorReason: err.reason,

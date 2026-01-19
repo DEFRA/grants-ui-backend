@@ -45,7 +45,7 @@ export const applicationLockRelease = {
       const released = await releaseApplicationLock(db, {
         sbi,
         grantCode,
-        grantVersion: Number(grantVersion),
+        grantVersion,
         ownerId
       })
 
