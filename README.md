@@ -55,7 +55,7 @@ Use this README for backend-specific setup; refer to the frontend README when yo
 
 ### Node.js
 
-Please install [Node.js](http://nodejs.org/) `>= v24` and [npm](https://nodejs.org/) `=v11.x.x` (the project is routinely tested with npm v11). You will find it
+Please install [Node.js](http://nodejs.org/) version 24 or higher and [npm](https://nodejs.org/) `=v11.x.x` (the project is routinely tested with npm v11). The exact minimum version requirement is specified in `package.json` (`engines.node`). You will find it
 easier to use the Node Version Manager [nvm](https://github.com/creationix/nvm)
 
 To use the correct version of Node.js for this application, via nvm:
@@ -97,20 +97,32 @@ npm install
 
 #### Environment configuration
 
-Copy the sample environment file and update the required variables:
+Create your environment configuration file. You can use the provided example as a template:
 
 ```bash
-cp .env.local .env
+cp env.example.sh .env
 ```
 
-Set values for:
+**Required variables** for local development:
 
-- `MONGO_URI` – address of your MongoDB instance (the default assumes a local database on port 27017)
+- `MONGO_URI` – address of your MongoDB instance (default: `mongodb://127.0.0.1:27017`)
 - `GRANTS_UI_BACKEND_AUTH_TOKEN` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
 - `GRANTS_UI_BACKEND_ENCRYPTION_KEY` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
 - `APPLICATION_LOCK_TOKEN_SECRET` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
 
-An extended reference is available in `env.example.sh`.
+**Optional MongoDB configuration** (sensible defaults are provided):
+
+- `MONGO_DATABASE` – database name (default: `grants-ui-backend`)
+- `MONGO_MAX_POOL_SIZE` – maximum connection pool size (default: `25`)
+- `MONGO_MIN_POOL_SIZE` – minimum connection pool size (default: `5`)
+- `MONGO_MAX_IDLE_TIME_MS` – idle connection timeout in milliseconds (default: `60000`)
+
+**Application lock configuration** (required for lock-protected routes):
+
+- `APPLICATION_LOCK_TOKEN_SECRET` – secret key for signing lock tokens (64 character hex string, generate with `openssl rand -hex 32`)
+- `APPLICATION_LOCK_TTL_MS` – lock timeout in milliseconds (default: `14400000` - 4 hours)
+
+An extended reference with all available configuration options is available in `env.example.sh`.
 
 Keep these values in sync with the frontend configuration described in the [grants-ui environment guidance](https://github.com/DEFRA/grants-ui#environment-variables) so clients can authenticate successfully.
 
@@ -162,6 +174,21 @@ To view them in your command line run:
 ```bash
 npm run
 ```
+
+**Common development scripts:**
+
+- `npm run dev` – Run the application in development mode with auto-reload
+- `npm run dev:debug` – Run in development mode with debugger breakpoint support
+- `npm start` – Run the application in production mode
+- `npm test` – Run unit tests with coverage
+- `npm run test:watch` – Run tests in watch mode
+- `npm run test:integration` – Run integration tests (requires Docker)
+- `npm run lint` – Check code for linting errors
+- `npm run lint:fix` – Automatically fix linting errors
+- `npm run format` – Auto-format code with Prettier
+- `npm run format:check` – Check code formatting without making changes
+- `npm run generate:auth-header` – Generate Bearer token for API authentication
+- `npm run generate:lock-header` – Generate lock token for application lock-protected routes
 
 #### Update dependencies
 
@@ -241,14 +268,30 @@ Only one user from a given business may view/edit a given application at a time.
 
 #### How locking works
 
-- When a request enters a route protected by the application lock pre-handler, the backend:
-  - attempts to acquire a lock for the authenticated user
-  - refreshes the lock if the same user already holds it
-  - blocks access if another user holds an active lock
+Lock-protected routes require a JWT token in the `x-application-lock-owner` header. This token identifies the user attempting to acquire the lock and includes the application scope (SBI, grantCode, grantVersion).
 
-- Locks are **time-limited** (TTL-based) and automatically expire if the user becomes inactive.
+When a request enters a route protected by the application lock pre-handler, the backend:
 
-- If a lock expires, it can be taken over by another user.
+1. Extracts and validates the lock token from the `x-application-lock-owner` header
+2. Attempts to acquire or refresh a lock for the authenticated user
+3. Refreshes the lock if the same user already holds it
+4. Blocks access if another user holds an active lock
+
+Locks are **time-limited** (TTL-based) and automatically expire if the user becomes inactive. The default TTL is 4 hours, configurable via `APPLICATION_LOCK_TTL_MS`.
+
+If a lock expires, it can be taken over by another user.
+
+**Lock token format:**
+
+The lock token is a JWT containing:
+
+- `sub` – User identifier (DefraID user ID)
+- `sbi` – Single Business Identifier
+- `grantCode` – Grant application code
+- `grantVersion` – Grant scheme version
+- `typ` – Token type (must be `'lock'`)
+
+Generate lock tokens using `npm run generate:lock-header` (see [Generating an Application Lock Header](#generating-an-application-lock-header)).
 
 #### Enforcement
 
@@ -263,7 +306,7 @@ options: {
 If another user holds the lock, the request is rejected with:
 
 - HTTP 423 – Locked
-- Message: Another applicant is currently viewing/editing this application
+- Message: Another applicant is currently editing this application
 
 #### Storage
 
@@ -350,7 +393,7 @@ Set any additional environment variables required by your deployment (see [Envir
 
 ### Docker Compose
 
-For day-to-day development, follow [Docker Compose (recommended)](#docker-compose-recommended). For reference, the same command is shown below:
+For day-to-day development, follow [Docker Compose (recommended)](#docker-compose-recommended). The service runs in the foreground by default. To run in detached mode (background), add the `-d` flag:
 
 ```bash
 docker compose up --build -d
@@ -394,7 +437,7 @@ The API uses AES-256-GCM encrypted tokens with Bearer Authentication.
 
 #### Generating the Authorization Header
 
-1. Setup your plain, secret value (GRANTS_UI_BACKEND_AUTH_TOKEN) and encrypt/decrypt key (GRANTS_UI_BACKEND_ENCRYPTION_KEY) in your `.env` (see also `.env.local`):
+1. Setup your plain, secret value (GRANTS_UI_BACKEND_AUTH_TOKEN) and encrypt/decrypt key (GRANTS_UI_BACKEND_ENCRYPTION_KEY) in your environment variables (see `env.example.sh` for reference):
 
 ```
 GRANTS_UI_BACKEND_AUTH_TOKEN=<your token>
@@ -417,7 +460,7 @@ Some requests require a Lock Token (state operations) to acquire or release an a
 
 #### Environment variables
 
-Make sure your .env file contains:
+For local testing with Postman, set these environment variables in your `.env` file (these are separate from the backend service configuration):
 
 ```
 APPLICATION_LOCK_TOKEN_SECRET=<64-character hex key>
@@ -427,7 +470,7 @@ GRANT_CODE=<grant-code-holding-the-token>
 GRANT_VERSION=<grant-version-holding-the-token>
 ```
 
-This key is separate from your auth token and is used to generate the lock header.
+**Note:** `APPLICATION_LOCK_TOKEN_SECRET` must match the value configured in the backend service. The other variables (USER_ID, SBI, GRANT_CODE, GRANT_VERSION) are only needed for generating test tokens and should match the application you're testing.
 
 #### Generate the Lock Token
 
