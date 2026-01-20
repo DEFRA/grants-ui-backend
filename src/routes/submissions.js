@@ -3,7 +3,7 @@ import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-a
 import { log, LogCodes } from '../common/helpers/logging/log.js'
 import { releaseApplicationLock } from '../common/helpers/application-lock.js'
 import { enforceApplicationLock, extractLockKeys } from '../plugins/application-lock-enforcement.js'
-import { Boom } from '@hapi/boom'
+import Boom from '@hapi/boom'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
