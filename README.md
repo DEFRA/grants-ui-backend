@@ -34,6 +34,8 @@ Core delivery platform Node.js Backend Template.
 - [Postman Collection](#postman-collection)
   - [Getting Started](#getting-started)
   - [Service-to-Service Authentication](#service-to-service-authentication)
+  - [Lock-header](#generating-an-application-lock-header)
+  - [Lock-release-header](#generating-an-application-lock-release-header)
   - [Usage](#usage)
   - [Keeping the Collection Updated](#keeping-the-collection-updated)
 - [Example Folder Structure](#example-folder-structure)
