@@ -28,3 +28,4 @@ TRACING_HEADER=x-cdp-request-id
 # Service-to-service authentication
 GRANTS_UI_BACKEND_AUTH_TOKEN=  # 64-char alphanumeric string (no capitals). Generate: openssl rand -hex 32
 GRANTS_UI_BACKEND_ENCRYPTION_KEY=  # 64-char alphanumeric string. Generate: openssl rand -hex 32
+APPLICATION_LOCK_TOKEN_SECRET=  # 64-char alphanumeric string. Generate: openssl rand -hex 32

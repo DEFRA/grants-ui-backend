@@ -108,6 +108,7 @@ Set values for:
 - `MONGO_URI` – address of your MongoDB instance (the default assumes a local database on port 27017)
 - `GRANTS_UI_BACKEND_AUTH_TOKEN` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
 - `GRANTS_UI_BACKEND_ENCRYPTION_KEY` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
+- `APPLICATION_LOCK_TOKEN_SECRET` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
 
 An extended reference is available in `env.example.sh`.
 
@@ -444,12 +445,38 @@ x-application-lock-owner: <lock-token>
 
 Copy this token and include it in your Postman requests to endpoints that require application locks.
 
-Script location
-
-The script lives in:
+Script location:
 
 ```
 scripts/generateLockHeader.js
+```
+
+#### Generate the Lock Release Token (Sign-out)
+
+Run the npm script:
+
+```
+npm run generate:lock-release-header
+```
+
+This outputs a header in the format:
+
+```
+x-application-lock-release: <release-token>
+```
+
+Use this header when calling:
+
+```
+DELETE /application-locks
+```
+
+This endpoint releases all application locks held by the authenticated user, typically during sign-out.
+
+Script location:
+
+```
+scripts/generateLockReleaseHeader.js
 ```
 
 ### Usage
@@ -476,7 +503,8 @@ project-root/
 │ └── grants-ui-backend.test.postman_environment.json
 ├── scripts/
 │ ├── generateAuthHeader.js
-│ └── generateLockHeader.js
+│ ├── generateLockHeader.js
+│ └── generateLockReleaseHeader.js
 ```
 
 ## Licence

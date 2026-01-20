@@ -60,6 +60,15 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
       }
     )
 
+    if (result) {
+      log(LogCodes.SYSTEM.APPLICATION_LOCK_ACQUIRED, {
+        sbi: sbiStr,
+        ownerId: ownerIdStr,
+        grantCode,
+        grantVersion: grantVersionNum
+      })
+    }
+
     return result ?? null
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
@@ -113,7 +122,18 @@ export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi,
       ownerId: ownerIdStr
     })
 
-    return result.deletedCount === 1
+    const deleted = result.deletedCount === 1
+
+    if (deleted) {
+      log(LogCodes.SYSTEM.APPLICATION_LOCK_RELEASED, {
+        sbi: sbiStr,
+        ownerId: ownerIdStr,
+        grantCode,
+        grantVersion: grantVersionNum
+      })
+    }
+
+    return deleted
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
     log(LogCodes.SYSTEM.APPLICATION_LOCK_RELEASE_FAILED, {
@@ -121,6 +141,44 @@ export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi,
       ownerId: ownerIdStr,
       grantCode,
       grantVersion: grantVersionNum,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Releases all application locks held by the given user.
+ *
+ * @param {import('mongodb').Db} db
+ * @param {number | string} params.ownerId - DefraID user ID
+ * @returns {Promise<number>} Number of locks released
+ */
+export async function releaseAllApplicationLocksForOwner(db, { ownerId }) {
+  const ownerIdStr = String(ownerId)
+
+  try {
+    const result = await db.collection('grant-application-locks').deleteMany({
+      ownerId: ownerIdStr
+    })
+
+    if (result.deletedCount > 0) {
+      log(LogCodes.SYSTEM.APPLICATION_LOCKS_RELEASED, {
+        ownerId,
+        releasedCount: result.deletedCount
+      })
+    }
+
+    return result.deletedCount ?? 0
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.SYSTEM.APPLICATION_LOCKS_RELEASE_FAILED, {
+      ownerId: ownerIdStr,
       errorName: err.name,
       errorMessage: err.message,
       errorReason: err.reason,

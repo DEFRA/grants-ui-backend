@@ -1,4 +1,9 @@
 import Wreck from '@hapi/wreck'
+import {
+  TEST_AUTH_TOKEN,
+  TEST_ENCRYPTION_KEY,
+  APPLICATION_LOCK_TOKEN_SECRET
+} from '../src/test-helpers/auth-constants.js'
 import { MongoClient } from 'mongodb'
 import { describe, it, expect, beforeAll, beforeEach } from '@jest/globals'
 import crypto from 'crypto'
@@ -7,9 +12,6 @@ import jwt from 'jsonwebtoken'
 let db
 let apiUrl
 let client
-
-const TEST_AUTH_TOKEN = 'test-token-test-token-test-token-test-token-test-t-64-chars-long'
-const TEST_ENCRYPTION_KEY = 'test-encryption-key-test-encryption-key-test-encry-64-chars-long'
 
 const encryptToken = (token, encryptionKey) => {
   const iv = crypto.randomBytes(12)
@@ -30,7 +32,6 @@ const createAuthHeader = () => {
   return `Bearer ${credentials}`
 }
 
-const APPLICATION_LOCK_TOKEN_SECRET = 'default-lock-token-secret'
 const TEST_CONTACT_ID = 'auth-test-user'
 
 const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
@@ -41,6 +42,19 @@ const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
       grantCode,
       grantVersion,
       typ: 'lock'
+    },
+    APPLICATION_LOCK_TOKEN_SECRET,
+    {
+      issuer: 'grants-ui',
+      audience: 'grants-backend'
+    }
+  )
+
+const createLockReleaseToken = ({ sub }) =>
+  jwt.sign(
+    {
+      sub,
+      typ: 'lock-release'
     },
     APPLICATION_LOCK_TOKEN_SECRET,
     {
@@ -65,6 +79,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await db.collection('grant-application-state').deleteMany({})
+  await db.collection('grant-application-locks').deleteMany({})
 })
 
 describe('POST /state', () => {
@@ -221,5 +236,128 @@ describe('DELETE /state', () => {
 
     const doc = await db.collection('grant-application-state').findOne({ sbi: 'biz-1' })
     expect(doc).toBeNull()
+  })
+})
+
+describe('PATCH /state/{sbi}/{grantCode}', () => {
+  it('patches applicationStatus on existing state', async () => {
+    await db.collection('grant-application-state').insertOne({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: 1,
+      state: {
+        applicationStatus: 'DRAFT'
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+
+    const response = await Wreck.patch(`${apiUrl}/state/biz-1/grant-1`, {
+      json: true,
+      payload: {
+        state: {
+          applicationStatus: 'SUBMITTED'
+        }
+      },
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: 'biz-1',
+          grantCode: 'grant-1',
+          grantVersion: 1
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload).toEqual({ success: true, patched: true })
+
+    const doc = await db.collection('grant-application-state').findOne({
+      sbi: 'biz-1',
+      grantCode: 'grant-1'
+    })
+
+    expect(doc.state.applicationStatus).toBe('SUBMITTED')
+  })
+})
+
+describe('DELETE /admin/application-lock', () => {
+  it('removes a specific application lock', async () => {
+    await db.collection('grant-application-locks').insertOne({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: 1,
+      ownerId: TEST_CONTACT_ID,
+      lockedAt: new Date(),
+      expiresAt: new Date(Date.now() + 60000)
+    })
+
+    const qs = new URLSearchParams({
+      sbi: 'biz-1',
+      ownerId: TEST_CONTACT_ID,
+      grantCode: 'grant-1',
+      grantVersion: 1
+    }).toString()
+
+    const response = await Wreck.delete(`${apiUrl}/admin/application-lock?${qs}`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader()
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload).toEqual({
+      success: true,
+      released: true
+    })
+
+    const lock = await db.collection('grant-application-locks').findOne({ sbi: 'biz-1' })
+
+    expect(lock).toBeNull()
+  })
+})
+
+describe('DELETE /application-locks', () => {
+  it('releases all locks for an owner', async () => {
+    await db.collection('grant-application-locks').insertMany([
+      {
+        sbi: 'biz-1',
+        grantCode: 'grant-1',
+        grantVersion: 1,
+        ownerId: TEST_CONTACT_ID,
+        lockedAt: new Date(),
+        expiresAt: new Date(Date.now() + 60000)
+      },
+      {
+        sbi: 'biz-2',
+        grantCode: 'grant-2',
+        grantVersion: 1,
+        ownerId: TEST_CONTACT_ID,
+        lockedAt: new Date(),
+        expiresAt: new Date(Date.now() + 60000)
+      }
+    ])
+
+    const response = await Wreck.delete(`${apiUrl}/application-locks`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-release': createLockReleaseToken({
+          sub: TEST_CONTACT_ID
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload).toEqual({
+      success: true,
+      deletedCount: 2
+    })
+
+    const remaining = await db.collection('grant-application-locks').find({ ownerId: TEST_CONTACT_ID }).toArray()
+
+    expect(remaining).toHaveLength(0)
   })
 })

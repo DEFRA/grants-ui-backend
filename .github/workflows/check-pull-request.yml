@@ -35,6 +35,7 @@ jobs:
         env:
           GRANTS_UI_BACKEND_AUTH_TOKEN: test-token-test-token-test-token-test-token-test-t-64-chars-long
           GRANTS_UI_BACKEND_ENCRYPTION_KEY: test-encryption-key-test-encryption-key-test-encry-64-chars-long
+          APPLICATION_LOCK_TOKEN_SECRET: test-application-lock-key-test-application-lock-ke-64-chars-long
 
       - name: Test Docker Image Build
         run: |
