@@ -1,5 +1,5 @@
 import { health } from '../routes/health.js'
-import { applicationLockRelease } from '../routes/lock.js'
+import { applicationLockRelease, applicationLocksRelease } from '../routes/lock.js'
 import { stateSave, stateRetrieve, stateDelete, statePatch } from '../routes/state.js'
 import { addSubmission, retrieveSubmissions } from '../routes/submissions.js'
 
@@ -15,7 +15,8 @@ const router = {
         addSubmission,
         retrieveSubmissions,
         statePatch,
-        applicationLockRelease
+        applicationLockRelease,
+        applicationLocksRelease
       ])
     }
   }

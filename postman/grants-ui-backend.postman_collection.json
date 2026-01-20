@@ -166,6 +166,30 @@
         }
       },
       "response": []
+    },
+    {
+      "name": "application locks (release all for owner)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{grants-ui-backend-bearer_token}}",
+            "type": "text"
+          },
+          {
+            "key": "x-application-lock-release",
+            "value": "{{grants-ui-backend-lock_release_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{grants-ui-backend_base_url}}/application-locks",
+          "host": ["{{grants-ui-backend_base_url}}"],
+          "path": ["application-locks"]
+        }
+      },
+      "response": []
     }
   ]
 }

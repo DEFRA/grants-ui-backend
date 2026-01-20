@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
-import { verifyLockToken } from './lock-token.js'
+import { verifyLockToken, verifyOwnerLockReleaseToken } from './lock-token.js'
 import { config } from '../../../config.js'
+import { Boom } from '@hapi/boom'
 
 jest.mock('../../../config.js', () => ({
   config: {
@@ -66,5 +67,100 @@ describe('verifyLockToken', () => {
 
   it('throws on malformed token', () => {
     expect(() => verifyLockToken('not-a-jwt')).toThrow()
+  })
+})
+
+describe('verifyOwnerLockReleaseToken', () => {
+  const SECRET = 'test-lock-secret'
+
+  beforeEach(() => {
+    config.get.mockReturnValue(SECRET)
+  })
+
+  it('verifies a valid owner-scoped lock release token', () => {
+    const token = jwt.sign(
+      {
+        sub: 'user-123',
+        typ: 'lock-release'
+      },
+      SECRET,
+      {
+        issuer: 'grants-ui',
+        audience: 'grants-backend'
+      }
+    )
+
+    const result = verifyOwnerLockReleaseToken(token)
+
+    expect(result).toEqual({
+      ownerId: 'user-123'
+    })
+  })
+
+  it('throws if token typ is not lock-release', () => {
+    const token = jwt.sign(
+      {
+        sub: 'user-123',
+        typ: 'lock'
+      },
+      SECRET,
+      {
+        issuer: 'grants-ui',
+        audience: 'grants-backend'
+      }
+    )
+
+    expect(() => verifyOwnerLockReleaseToken(token)).toThrow(Boom.Boom)
+  })
+
+  it('throws if sub (ownerId) is missing', () => {
+    const token = jwt.sign(
+      {
+        typ: 'lock-release'
+      },
+      SECRET,
+      {
+        issuer: 'grants-ui',
+        audience: 'grants-backend'
+      }
+    )
+
+    expect(() => verifyOwnerLockReleaseToken(token)).toThrow(Boom.Boom)
+  })
+
+  it('throws if issuer is invalid', () => {
+    const token = jwt.sign(
+      {
+        sub: 'user-123',
+        typ: 'lock-release'
+      },
+      SECRET,
+      {
+        issuer: 'someone-else',
+        audience: 'grants-backend'
+      }
+    )
+
+    expect(() => verifyOwnerLockReleaseToken(token)).toThrow()
+  })
+
+  it('throws if audience is invalid', () => {
+    const token = jwt.sign(
+      {
+        sub: 'user-123',
+        typ: 'lock-release'
+      },
+      SECRET,
+      {
+        issuer: 'grants-ui',
+        audience: 'some-other-service'
+      }
+    )
+
+    expect(() => verifyOwnerLockReleaseToken(token)).toThrow()
+  })
+
+  it('throws on malformed token', () => {
+    expect(() => verifyOwnerLockReleaseToken('not-a-jwt')).toThrow()
   })
 })

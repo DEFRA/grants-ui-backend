@@ -1,6 +1,8 @@
 import Joi from 'joi'
 import { log, LogCodes } from '../common/helpers/logging/log.js'
-import { releaseApplicationLock } from '../common/helpers/application-lock.js'
+import { releaseAllApplicationLocksForOwner, releaseApplicationLock } from '../common/helpers/application-lock.js'
+import Boom from '@hapi/boom'
+import { verifyOwnerLockReleaseToken } from '../common/helpers/lock/lock-token.js'
 
 const applicationLockReleaseSchema = Joi.object({
   sbi: Joi.string().required(),
@@ -51,8 +53,33 @@ export const applicationLockRelease = {
 
       return h.response({ success: true, released }).code(200)
     } catch (err) {
-      // The error was already logged in the service, but you still need to respond to the client
       return h.response({ error: 'Failed to release application lock' }).code(500)
+    }
+  }
+}
+
+export const applicationLocksRelease = {
+  method: 'DELETE',
+  path: '/application-locks',
+  options: {
+    auth: 'bearer'
+  },
+
+  handler: async (request, h) => {
+    const db = request.db
+
+    const lockToken = request.headers['x-application-lock-release']
+    if (!lockToken) {
+      throw Boom.unauthorized('Missing lock token')
+    }
+
+    const { ownerId } = verifyOwnerLockReleaseToken(lockToken)
+
+    try {
+      const deletedCount = await releaseAllApplicationLocksForOwner(db, { ownerId })
+      return h.response({ success: true, deletedCount }).code(200)
+    } catch (err) {
+      return h.response({ error: 'Failed to release application locks' }).code(500)
     }
   }
 }

@@ -80,10 +80,29 @@ export const LogCodes = {
       messageFunc: ({ sbi, ownerId, grantCode, grantVersion, stack }) =>
         `Failed to acquire application lock | sbi=${sbi} | ownerId=${ownerId} | grantCode=${grantCode} | grantVersion=${grantVersion} | stack=${stack}`
     },
+    APPLICATION_LOCK_ACQUIRED: {
+      level: 'debug',
+      messageFunc: ({ sbi, ownerId, grantCode, grantVersion }) =>
+        `Acquired application lock | sbi=${sbi} | ownerId=${ownerId} | grantCode=${grantCode} | grantVersion=${grantVersion}`
+    },
     APPLICATION_LOCK_RELEASE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
-        `Failed to release application lock | sbi=${messageOptions.sbi} | ownerId=${messageOptions.ownerId} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+        `Failed to release application lock | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+    },
+    APPLICATION_LOCK_RELEASED: {
+      level: 'info',
+      messageFunc: ({ sbi, ownerId, grantCode, grantVersion }) =>
+        `Released application lock | sbi=${sbi} | ownerId=${ownerId} | grantCode=${grantCode} | grantVersion=${grantVersion}`
+    },
+    APPLICATION_LOCKS_RELEASE_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Failed to release application locks | ownerId=${messageOptions.ownerId} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+    },
+    APPLICATION_LOCKS_RELEASED: {
+      level: 'info',
+      messageFunc: ({ ownerId, releasedCount }) => `Released ${releasedCount} application locks for owner ${ownerId}`
     }
   },
   SUBMISSIONS: {

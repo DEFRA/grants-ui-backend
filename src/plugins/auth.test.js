@@ -1,4 +1,8 @@
-import { TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY } from '~/src/test-helpers/auth-constants.js'
+import {
+  TEST_AUTH_TOKEN,
+  TEST_ENCRYPTION_KEY,
+  APPLICATION_LOCK_TOKEN_SECRET
+} from '~/src/test-helpers/auth-constants.js'
 import {
   HTTP_POST,
   HTTP_GET,
@@ -22,6 +26,14 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
     AUTH: {
       TOKEN_VERIFICATION_SUCCESS: { level: 'info', messageFunc: jest.fn() },
       TOKEN_VERIFICATION_FAILURE: { level: 'error', messageFunc: jest.fn() }
+    },
+    SYSTEM: {
+      APPLICATION_LOCK_ACQUIRED: { level: 'debug', messageFunc: jest.fn() },
+      APPLICATION_LOCK_REFRESHED: { level: 'debug', messageFunc: jest.fn() },
+      APPLICATION_LOCK_RELEASED: { level: 'info', messageFunc: jest.fn() },
+      APPLICATION_LOCK_ACQUISITION_FAILED: { level: 'error', messageFunc: jest.fn() },
+      APPLICATION_LOCK_RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() },
+      APPLICATION_LOCKS_RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
     }
   }
 }))
@@ -36,8 +48,6 @@ async function seedApplicationLock(server, { sbi, grantCode, grantVersion, owner
     expiresAt: new Date(Date.now() + 60_000) // valid lock
   })
 }
-
-const APPLICATION_LOCK_TOKEN_SECRET = 'default-lock-token-secret'
 
 const createLockToken = ({ sub, sbi, grantCode, grantVersion }) =>
   jwt.sign(
@@ -93,6 +103,7 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
   beforeAll(async () => {
     process.env.GRANTS_UI_BACKEND_AUTH_TOKEN = TEST_AUTH_TOKEN
     process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
+    process.env.APPLICATION_LOCK_TOKEN_SECRET = APPLICATION_LOCK_TOKEN_SECRET
 
     const { createServer } = await import('../server.js')
     server = await createServer()
