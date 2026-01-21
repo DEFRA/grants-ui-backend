@@ -34,6 +34,8 @@ Core delivery platform Node.js Backend Template.
 - [Postman Collection](#postman-collection)
   - [Getting Started](#getting-started)
   - [Service-to-Service Authentication](#service-to-service-authentication)
+  - [Lock-header](#generating-an-application-lock-header)
+  - [Lock-release-header](#generating-an-application-lock-release-header)
   - [Usage](#usage)
   - [Keeping the Collection Updated](#keeping-the-collection-updated)
 - [Example Folder Structure](#example-folder-structure)
@@ -189,6 +191,7 @@ npm run
 - `npm run format:check` – Check code formatting without making changes
 - `npm run generate:auth-header` – Generate Bearer token for API authentication
 - `npm run generate:lock-header` – Generate lock token for application lock-protected routes
+- `npm run generate:lock-release-header` – Generate lock release token for application lock release route
 
 #### Update dependencies
 
@@ -493,6 +496,35 @@ Script location:
 ```
 scripts/generateLockHeader.js
 ```
+
+### Generating an Application Lock Release Header
+
+In addition to TTL-based expiry, application locks may be explicitly released when a user signs out or otherwise exits the application flow.
+
+Lock release is performed via a dedicated endpoint and **does not use the application-scoped lock token**.
+
+#### Lock release authentication
+
+Lock release requests must include a JWT in the `x-application-lock-release` header.
+
+This token:
+
+- Identifies the user only (`ownerId`)
+- Is **not scoped** to a specific application
+- Is used solely for releasing locks owned by that user
+- Has a distinct token type (e.g. `typ: 'lock-release'`)
+
+#### Release semantics
+
+When a valid lock-release token is presented, the backend:
+
+1. Verifies the token and extracts `ownerId`
+2. Deletes all active application locks owned by that user
+3. Returns the number of released locks
+
+This operation is idempotent.
+
+> Note: Lock release tokens are intentionally distinct from application lock tokens and must not be used for lock acquisition or enforcement.
 
 #### Generate the Lock Release Token (Sign-out)
 
