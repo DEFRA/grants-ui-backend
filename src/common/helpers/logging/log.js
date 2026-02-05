@@ -28,6 +28,7 @@ const getLoggerOfType = (level) => {
   return {
     info: (message) => logger.info(message),
     debug: (message) => logger.debug(message),
+    warn: (message) => logger.warn(message),
     error: (message) => logger.error(message)
   }[level]
 }

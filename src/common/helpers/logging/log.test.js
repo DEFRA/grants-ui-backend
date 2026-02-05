@@ -5,6 +5,7 @@ jest.mock('./logger.js', () => ({
   createLogger: () => ({
     info: jest.fn(),
     debug: jest.fn(),
+    warn: jest.fn(),
     error: jest.fn()
   })
 }))
@@ -25,6 +26,7 @@ describe('Logger Functionality', () => {
 
     expect(logger.info).toHaveBeenCalledWith('Mock log. test')
     expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.debug).not.toHaveBeenCalled()
   })
 
@@ -34,6 +36,17 @@ describe('Logger Functionality', () => {
 
     expect(logger.error).toHaveBeenCalledWith('Mock log. test')
     expect(logger.info).not.toHaveBeenCalled()
+    expect(logger.warn).not.toHaveBeenCalled()
+    expect(logger.debug).not.toHaveBeenCalled()
+  })
+
+  it('should call the warn logger with the correct interpolated message', () => {
+    mockLogCode.level = 'warn'
+    log(mockLogCode, messageOptions)
+
+    expect(logger.warn).toHaveBeenCalledWith('Mock log. test')
+    expect(logger.info).not.toHaveBeenCalled()
+    expect(logger.error).not.toHaveBeenCalled()
     expect(logger.debug).not.toHaveBeenCalled()
   })
 
@@ -43,6 +56,7 @@ describe('Logger Functionality', () => {
 
     expect(logger.debug).toHaveBeenCalledWith('Mock log. test')
     expect(logger.info).not.toHaveBeenCalled()
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.error).not.toHaveBeenCalled()
   })
 
@@ -83,6 +97,7 @@ describe('Logger Functionality', () => {
     expect(logger).toBeDefined()
     expect(logger.info).toBeDefined()
     expect(logger.debug).toBeDefined()
+    expect(logger.warn).toBeDefined()
     expect(logger.error).toBeDefined()
   })
 

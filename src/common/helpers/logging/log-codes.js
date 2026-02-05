@@ -74,33 +74,76 @@ export const LogCodes = {
     SYSTEM_SHUTDOWN: {
       level: 'info',
       messageFunc: () => `System shutdown initiated`
-    },
-    APPLICATION_LOCK_ACQUISITION_FAILED: {
-      level: 'error',
-      messageFunc: ({ sbi, ownerId, grantCode, grantVersion, stack }) =>
-        `Failed to acquire application lock | sbi=${sbi} | ownerId=${ownerId} | grantCode=${grantCode} | grantVersion=${grantVersion} | stack=${stack}`
-    },
-    APPLICATION_LOCK_ACQUIRED: {
+    }
+  },
+  APPLICATION_LOCK: {
+    ACQUIRED: {
       level: 'debug',
       messageFunc: ({ sbi, ownerId, grantCode, grantVersion }) =>
         `Acquired application lock | sbi=${sbi} | ownerId=${ownerId} | grantCode=${grantCode} | grantVersion=${grantVersion}`
     },
-    APPLICATION_LOCK_RELEASE_FAILED: {
+    ACQUISITION_FAILED: {
+      level: 'error',
+      messageFunc: ({ sbi, ownerId, grantCode, grantVersion, stack }) =>
+        `Failed to acquire application lock | sbi=${sbi} | ownerId=${ownerId} | grantCode=${grantCode} | grantVersion=${grantVersion} | stack=${stack}`
+    },
+    RELEASE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
         `Failed to release application lock | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     },
-    APPLICATION_LOCK_RELEASED: {
+    RELEASED: {
       level: 'info',
       messageFunc: ({ sbi, ownerId, grantCode, grantVersion }) =>
         `Released application lock | sbi=${sbi} | ownerId=${ownerId} | grantCode=${grantCode} | grantVersion=${grantVersion}`
     },
-    APPLICATION_LOCKS_RELEASE_FAILED: {
+    LOCK_TOKEN_MISSING: {
+      level: 'warn',
+      messageFunc: ({ path, method }) => `Missing application lock token | path=${path} | method=${method}`
+    },
+    LOCK_TOKEN_INVALID: {
+      level: 'warn',
+      messageFunc: ({ path, method, errorName, errorMessage }) =>
+        `Invalid application lock token | path=${path} | method=${method} | errorName=${errorName} | errorMessage=${errorMessage}`
+    },
+    LOCK_TOKEN_WRONG_TYPE: {
+      level: 'warn',
+      messageFunc: ({ path, method, typ }) =>
+        `Invalid application lock token type | path=${path} | method=${method} | typ=${typ}`
+    },
+    LOCK_TOKEN_MISSING_USER_IDENTITY: {
+      level: 'warn',
+      messageFunc: ({ path, method, userId }) =>
+        `Missing required lock token user identity claim | path=${path} | method=${method} | userId=${userId}`
+    },
+    LOCK_TOKEN_MISSING_SBI: {
+      level: 'warn',
+      messageFunc: ({ path, method, sbi }) =>
+        `Missing required lock token SBI claim | path=${path} | method=${method} | sbi=${sbi}`
+    },
+    LOCK_TOKEN_MISSING_GRANT_CODE: {
+      level: 'warn',
+      messageFunc: ({ path, method, grantCode }) =>
+        `Missing required lock token grant code claim | path=${path} | method=${method} | grantCode=${grantCode}`
+    },
+    LOCK_TOKEN_INVALID_VERSION: {
+      level: 'warn',
+      messageFunc: ({ path, method, grantVersion }) =>
+        `Invalid grantVersion in lock token | path=${path} | method=${method} | grantVersion=${grantVersion}`
+    },
+    LOCK_CONFLICT: {
+      level: 'info',
+      messageFunc: ({ path, method, sbi, grantCode, ownerId }) =>
+        `Application lock conflict | path=${path} | method=${method} | sbi=${sbi} | grantCode=${grantCode} | ownerId=${ownerId}`
+    }
+  },
+  APPLICATION_LOCKS: {
+    RELEASE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
         `Failed to release application locks | ownerId=${messageOptions.ownerId} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     },
-    APPLICATION_LOCKS_RELEASED: {
+    RELEASED: {
       level: 'info',
       messageFunc: ({ ownerId, releasedCount }) => `Released ${releasedCount} application locks for owner ${ownerId}`
     }

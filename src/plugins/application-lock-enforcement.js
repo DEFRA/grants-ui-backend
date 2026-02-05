@@ -1,6 +1,8 @@
 import Boom from '@hapi/boom'
 import { acquireOrRefreshApplicationLock } from '../common/helpers/application-lock.js'
 import { verifyLockToken } from '../common/helpers/lock/lock-token.js'
+import { LogCodes } from '../common/helpers/logging/log-codes.js'
+import { log } from '../common/helpers/logging/log.js'
 
 /**
  * Extracts lock-scoping identifiers from the application lock token header.
@@ -20,36 +22,72 @@ import { verifyLockToken } from '../common/helpers/lock/lock-token.js'
  *   - grantVersion {number} Grant scheme version
  */
 export function extractLockKeys(request) {
+  const path = request.path
+  const method = request.method.toUpperCase()
   const rawToken = request.headers['x-application-lock-owner']
-  if (!rawToken) throw Boom.unauthorized('Missing lock token')
+  if (!rawToken) {
+    log(LogCodes.APPLICATION_LOCK.LOCK_TOKEN_MISSING, { path, method })
+    throw Boom.unauthorized('Missing lock token')
+  }
 
   let payload
   try {
     payload = verifyLockToken(rawToken)
   } catch (err) {
+    log(LogCodes.APPLICATION_LOCK.LOCK_TOKEN_INVALID, {
+      path,
+      method,
+      errorName: err.name,
+      errorMessage: err.message
+    })
     throw Boom.unauthorized('Invalid lock token')
   }
 
   const { sub: ownerId, sbi, grantCode, grantVersion, typ } = payload
 
   if (typ !== 'lock') {
+    log(LogCodes.APPLICATION_LOCK.LOCK_TOKEN_WRONG_TYPE, {
+      path,
+      method,
+      typ
+    })
     throw Boom.unauthorized('Invalid lock token type')
   }
 
   if (!ownerId) {
+    log(LogCodes.APPLICATION_LOCK.LOCK_TOKEN_MISSING_USER_IDENTITY, {
+      path,
+      method,
+      userId: ownerId
+    })
     throw Boom.unauthorized('Missing user identity')
   }
 
   if (!sbi) {
+    log(LogCodes.APPLICATION_LOCK.LOCK_TOKEN_MISSING_SBI, {
+      path,
+      method,
+      sbi
+    })
     throw Boom.badRequest('Missing SBI in lock token')
   }
 
   if (!grantCode) {
+    log(LogCodes.APPLICATION_LOCK.LOCK_TOKEN_MISSING_GRANT_CODE, {
+      path,
+      method,
+      grantCode
+    })
     throw Boom.badRequest('Missing grant code in lock token')
   }
 
   const version = Number(grantVersion ?? 1)
   if (Number.isNaN(version)) {
+    log(LogCodes.APPLICATION_LOCK.LOCK_TOKEN_INVALID_VERSION, {
+      path,
+      method,
+      grantVersion
+    })
     throw Boom.badRequest('Invalid grantVersion in lock token')
   }
 
@@ -88,6 +126,13 @@ export async function enforceApplicationLock(request, h) {
   })
 
   if (!lock) {
+    log(LogCodes.APPLICATION_LOCK.LOCK_CONFLICT, {
+      path: request.path,
+      method: request.method,
+      sbi,
+      grantCode,
+      ownerId
+    })
     throw Boom.locked('Another applicant is currently editing this application')
   }
 

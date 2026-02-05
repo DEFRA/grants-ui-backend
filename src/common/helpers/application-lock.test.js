@@ -9,14 +9,17 @@ import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 jest.mock('~/src/common/helpers/logging/log.js', () => ({
   log: jest.fn(),
   LogCodes: {
-    SYSTEM: {
-      APPLICATION_LOCK_ACQUIRED: { level: 'info', messageFunc: jest.fn() },
-      APPLICATION_LOCK_RELEASED: { level: 'info', messageFunc: jest.fn() },
-      APPLICATION_LOCKS_RELEASED: { level: 'info', messageFunc: jest.fn() },
+    APPLICATION_LOCK: {
+      ACQUIRED: { level: 'info', messageFunc: jest.fn() },
+      RELEASED: { level: 'info', messageFunc: jest.fn() },
+      RELEASED_ALL: { level: 'info', messageFunc: jest.fn() },
 
-      APPLICATION_LOCK_ACQUISITION_FAILED: { level: 'error', messageFunc: jest.fn() },
-      APPLICATION_LOCK_RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() },
-      APPLICATION_LOCKS_RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
+      ACQUISITION_FAILED: { level: 'error', messageFunc: jest.fn() },
+      RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
+    },
+    APPLICATION_LOCKS: {
+      RELEASED: { level: 'info', messageFunc: jest.fn() },
+      RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
     }
   }
 }))
@@ -51,7 +54,7 @@ describe('application locks', () => {
     expect(lock).toBeTruthy()
 
     expect(log).toHaveBeenCalledWith(
-      LogCodes.SYSTEM.APPLICATION_LOCK_ACQUIRED,
+      LogCodes.APPLICATION_LOCK.ACQUIRED,
       expect.objectContaining({
         grantCode: 'EGWA',
         grantVersion: 1,
@@ -64,7 +67,7 @@ describe('application locks', () => {
     expect(released).toBe(true)
 
     expect(log).toHaveBeenCalledWith(
-      LogCodes.SYSTEM.APPLICATION_LOCK_RELEASED,
+      LogCodes.APPLICATION_LOCK.RELEASED,
       expect.objectContaining({
         grantCode: 'EGWA',
         grantVersion: 1,
@@ -148,7 +151,7 @@ describe('application locks', () => {
     await expect(acquireOrRefreshApplicationLock(fakeDb, params)).rejects.toThrow('Mongo exploded')
 
     expect(log).toHaveBeenCalledWith(
-      LogCodes.SYSTEM.APPLICATION_LOCK_ACQUISITION_FAILED,
+      LogCodes.APPLICATION_LOCK.ACQUISITION_FAILED,
       expect.objectContaining({
         grantCode: 'EGWA',
         grantVersion: 1,
@@ -175,7 +178,7 @@ describe('application locks', () => {
     await expect(releaseApplicationLock(fakeDb, params)).rejects.toThrow('Mongo exploded')
 
     expect(log).toHaveBeenCalledWith(
-      LogCodes.SYSTEM.APPLICATION_LOCK_RELEASE_FAILED,
+      LogCodes.APPLICATION_LOCK.RELEASE_FAILED,
       expect.objectContaining({
         grantCode: 'EGWA',
         grantVersion: 1,
@@ -201,7 +204,7 @@ describe('application locks', () => {
     expect(deletedCount).toBe(2)
 
     expect(log).toHaveBeenCalledWith(
-      LogCodes.SYSTEM.APPLICATION_LOCKS_RELEASED,
+      LogCodes.APPLICATION_LOCKS.RELEASED,
       expect.objectContaining({
         ownerId: 'user-1',
         releasedCount: 2
@@ -224,7 +227,7 @@ describe('application locks', () => {
     await expect(releaseAllApplicationLocksForOwner(fakeDb, { ownerId: 'user-1' })).rejects.toThrow('Mongo exploded')
 
     expect(log).toHaveBeenCalledWith(
-      LogCodes.SYSTEM.APPLICATION_LOCKS_RELEASE_FAILED,
+      LogCodes.APPLICATION_LOCKS.RELEASE_FAILED,
       expect.objectContaining({
         ownerId: 'user-1',
         isMongoError: true
