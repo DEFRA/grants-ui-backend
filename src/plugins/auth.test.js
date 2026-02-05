@@ -27,13 +27,25 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
       TOKEN_VERIFICATION_SUCCESS: { level: 'info', messageFunc: jest.fn() },
       TOKEN_VERIFICATION_FAILURE: { level: 'error', messageFunc: jest.fn() }
     },
-    SYSTEM: {
-      APPLICATION_LOCK_ACQUIRED: { level: 'debug', messageFunc: jest.fn() },
-      APPLICATION_LOCK_REFRESHED: { level: 'debug', messageFunc: jest.fn() },
-      APPLICATION_LOCK_RELEASED: { level: 'info', messageFunc: jest.fn() },
-      APPLICATION_LOCK_ACQUISITION_FAILED: { level: 'error', messageFunc: jest.fn() },
-      APPLICATION_LOCK_RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() },
-      APPLICATION_LOCKS_RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
+    APPLICATION_LOCK: {
+      ACQUIRED: { level: 'debug', messageFunc: jest.fn() },
+      REFRESHED: { level: 'debug', messageFunc: jest.fn() },
+      RELEASED: { level: 'info', messageFunc: jest.fn() },
+      ACQUISITION_FAILED: { level: 'error', messageFunc: jest.fn() },
+      RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() },
+      APPLICATION_LOCKS_RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() },
+      LOCK_TOKEN_MISSING: { level: 'warn', messageFunc: jest.fn() },
+      LOCK_TOKEN_INVALID: { level: 'warn', messageFunc: jest.fn() },
+      LOCK_TOKEN_WRONG_TYPE: { level: 'warn', messageFunc: jest.fn() },
+      LOCK_TOKEN_MISSING_USER_IDENTITY: { level: 'warn', messageFunc: jest.fn() },
+      LOCK_TOKEN_MISSING_SBI: { level: 'warn', messageFunc: jest.fn() },
+      LOCK_TOKEN_MISSING_GRANT_CODE: { level: 'warn', messageFunc: jest.fn() },
+      LOCK_TOKEN_INVALID_VERSION: { level: 'warn', messageFunc: jest.fn() },
+      LOCK_CONFLICT: { level: 'warn', messageFunc: jest.fn() }
+    },
+    APPLICATION_LOCKS: {
+      RELEASED: { level: 'info', messageFunc: jest.fn() },
+      RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
     }
   }
 }))

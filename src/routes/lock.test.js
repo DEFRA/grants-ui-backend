@@ -7,8 +7,8 @@ import { releaseAllApplicationLocksForOwner } from '../common/helpers/applicatio
 jest.mock('~/src/common/helpers/logging/log.js', () => ({
   log: jest.fn(),
   LogCodes: {
-    SYSTEM: {
-      APPLICATION_LOCK_RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
+    APPLICATION_LOCK: {
+      RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
     }
   }
 }))
@@ -118,7 +118,7 @@ describe('applicationLockRelease route', () => {
     expect(() => applicationLockRelease.options.validate.failAction(badRequest, {}, error)).toThrow()
 
     expect(log).toHaveBeenCalledWith(
-      LogCodes.SYSTEM.APPLICATION_LOCK_RELEASE_FAILED,
+      LogCodes.APPLICATION_LOCK.RELEASE_FAILED,
       expect.objectContaining({
         ownerId: '34567',
         grantCode: 'GRANT1',

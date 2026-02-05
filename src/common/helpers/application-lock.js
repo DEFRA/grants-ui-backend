@@ -61,7 +61,7 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
     )
 
     if (result) {
-      log(LogCodes.SYSTEM.APPLICATION_LOCK_ACQUIRED, {
+      log(LogCodes.APPLICATION_LOCK.ACQUIRED, {
         sbi: sbiStr,
         ownerId: ownerIdStr,
         grantCode,
@@ -72,7 +72,7 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
     return result ?? null
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
-    log(LogCodes.SYSTEM.APPLICATION_LOCK_ACQUISITION_FAILED, {
+    log(LogCodes.APPLICATION_LOCK.ACQUISITION_FAILED, {
       sbi: sbiStr,
       ownerId: ownerIdStr,
       grantCode,
@@ -125,7 +125,7 @@ export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi,
     const deleted = result.deletedCount === 1
 
     if (deleted) {
-      log(LogCodes.SYSTEM.APPLICATION_LOCK_RELEASED, {
+      log(LogCodes.APPLICATION_LOCK.RELEASED, {
         sbi: sbiStr,
         ownerId: ownerIdStr,
         grantCode,
@@ -136,7 +136,7 @@ export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi,
     return deleted
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
-    log(LogCodes.SYSTEM.APPLICATION_LOCK_RELEASE_FAILED, {
+    log(LogCodes.APPLICATION_LOCK.RELEASE_FAILED, {
       sbi: sbiStr,
       ownerId: ownerIdStr,
       grantCode,
@@ -168,7 +168,7 @@ export async function releaseAllApplicationLocksForOwner(db, { ownerId }) {
     })
 
     if (result.deletedCount > 0) {
-      log(LogCodes.SYSTEM.APPLICATION_LOCKS_RELEASED, {
+      log(LogCodes.APPLICATION_LOCKS.RELEASED, {
         ownerId,
         releasedCount: result.deletedCount
       })
@@ -177,7 +177,7 @@ export async function releaseAllApplicationLocksForOwner(db, { ownerId }) {
     return result.deletedCount ?? 0
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
-    log(LogCodes.SYSTEM.APPLICATION_LOCKS_RELEASE_FAILED, {
+    log(LogCodes.APPLICATION_LOCKS.RELEASE_FAILED, {
       ownerId: ownerIdStr,
       errorName: err.name,
       errorMessage: err.message,

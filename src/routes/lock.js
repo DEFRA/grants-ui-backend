@@ -21,7 +21,7 @@ export const applicationLockRelease = {
       failAction: (request, h, err) => {
         const { sbi, ownerId, grantCode, grantVersion } = request.query
 
-        log(LogCodes.SYSTEM.APPLICATION_LOCK_RELEASE_FAILED, {
+        log(LogCodes.APPLICATION_LOCK.RELEASE_FAILED, {
           sbi,
           ownerId,
           grantCode,
