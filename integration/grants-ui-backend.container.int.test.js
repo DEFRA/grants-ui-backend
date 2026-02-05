@@ -361,3 +361,263 @@ describe('DELETE /application-locks', () => {
     expect(remaining).toHaveLength(0)
   })
 })
+
+describe('GET /submissions', () => {
+  it('returns submissions ordered by submittedAt desc', async () => {
+    const sbi = crypto.randomUUID()
+    const crn1 = crypto.randomUUID()
+    const crn2 = crypto.randomUUID()
+    const crn3 = crypto.randomUUID()
+    const grantCode = 'test-grant'
+    const grantVersion = 1
+
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+    const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+
+    await db.collection('grant_application_submissions').insertMany([
+      {
+        sbi,
+        crn: crn1,
+        grantCode,
+        grantVersion,
+        referenceNumber: crypto.randomUUID(),
+        submittedAt: threeDaysAgo
+      },
+      {
+        sbi,
+        crn: crn3,
+        grantCode,
+        grantVersion,
+        referenceNumber: crypto.randomUUID(),
+        submittedAt: oneDayAgo
+      },
+      {
+        sbi,
+        crn: crn2,
+        grantCode,
+        grantVersion,
+        referenceNumber: crypto.randomUUID(),
+        submittedAt: twoDaysAgo
+      }
+    ])
+
+    const qs = new URLSearchParams({
+      sbi,
+      grantCode
+    }).toString()
+
+    const response = await Wreck.get(`${apiUrl}/submissions?${qs}`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader()
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload).toHaveLength(3)
+
+    expect(response.payload[0].crn).toBe(crn3)
+    expect(response.payload[1].crn).toBe(crn2)
+    expect(response.payload[2].crn).toBe(crn1)
+  })
+
+  it('returns empty array when no submissions exist', async () => {
+    const qs = new URLSearchParams({
+      sbi: crypto.randomUUID(),
+      grantCode: 'test-grant'
+    }).toString()
+
+    const response = await Wreck.get(`${apiUrl}/submissions?${qs}`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader()
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload).toEqual([])
+  })
+
+  it('returns 401 when authorization header is missing', async () => {
+    const response = await Wreck.request('GET', `${apiUrl}/submissions?sbi=123&grantCode=test-grant`, {
+      json: true,
+      throwOnError: false
+    })
+
+    expect(response.statusCode).toBe(401)
+  })
+
+  it('returns 400 when required query params are missing', async () => {
+    const response = await Wreck.request('GET', `${apiUrl}/submissions?sbi=123`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader()
+      },
+      throwOnError: false
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('returns expected observability headers', async () => {
+    const response = await Wreck.get(`${apiUrl}/submissions?sbi=${crypto.randomUUID()}&grantCode=test-grant`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader()
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.res.headers['content-type']).toBe('application/json; charset=utf-8')
+    expect(response.res.headers['cache-control']).toBe('no-cache')
+  })
+})
+
+describe('POST /submissions', () => {
+  it('creates a new submission', async () => {
+    const payload = {
+      sbi: 'biz-1',
+      crn: crypto.randomUUID(),
+      grantCode: 'test-grant',
+      grantVersion: 1,
+      referenceNumber: crypto.randomUUID(),
+      submittedAt: new Date().toISOString()
+    }
+
+    const response = await Wreck.post(`${apiUrl}/submissions`, {
+      json: true,
+      payload,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(201)
+    expect(response.payload).toEqual({ success: true, created: true })
+  })
+
+  it('returns expected observability headers', async () => {
+    const payload = {
+      sbi: crypto.randomUUID(),
+      crn: crypto.randomUUID(),
+      grantCode: 'test-grant',
+      grantVersion: 1,
+      referenceNumber: crypto.randomUUID(),
+      submittedAt: new Date().toISOString()
+    }
+    const response = await Wreck.post(`${apiUrl}/submissions`, {
+      json: true,
+      payload,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(201)
+    expect(response.res.headers['content-type']).toBe('application/json; charset=utf-8')
+    expect(response.res.headers['cache-control']).toBe('no-cache')
+  })
+
+  it('returns 401 when application lock token is missing', async () => {
+    const payload = {
+      sbi: crypto.randomUUID(),
+      crn: crypto.randomUUID(),
+      grantCode: 'test-grant',
+      grantVersion: 1,
+      referenceNumber: crypto.randomUUID(),
+      submittedAt: new Date().toISOString()
+    }
+
+    const res = await Wreck.request('POST', `${apiUrl}/submissions`, {
+      payload: JSON.stringify(payload),
+      headers: {
+        authorization: createAuthHeader()
+      },
+      throwOnError: false
+    })
+
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('returns 401 when authorization header is missing', async () => {
+    const response = await Wreck.request('POST', `${apiUrl}/submissions`, {
+      json: true,
+      payload: {
+        sbi: crypto.randomUUID()
+      },
+      throwOnError: false
+    })
+
+    expect(response.statusCode).toBe(401)
+  })
+
+  it('returns 400 for invalid payload', async () => {
+    const response = await Wreck.request('POST', `${apiUrl}/submissions`, {
+      json: true,
+      payload: {
+        invalid: 'payload'
+      },
+      headers: {
+        authorization: createAuthHeader()
+      },
+      throwOnError: false
+    })
+
+    expect(response.statusCode).toBe(400)
+  })
+})
+
+describe('Observability', () => {
+  it('returns successful health response', async () => {
+    const response = await Wreck.get(`${apiUrl}/health`, {
+      json: true
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.res.headers['content-type']).toContain('application/json')
+    expect(response.res.headers['cache-control']).toBe('no-cache')
+    expect(response.payload).toEqual({ message: 'success' })
+  })
+
+  if (process.env.ENVIRONMENT) {
+    it('echoes X-cdp-request-id back in the response', async () => {
+      const traceId = crypto.randomUUID().replace(/-/g, '').toLowerCase()
+
+      const response = await Wreck.post(`${apiUrl}/state`, {
+        json: true,
+        payload: {
+          sbi: 'trace-test',
+          grantCode: 'trace-grant',
+          grantVersion: 1,
+          state: {}
+        },
+        headers: {
+          authorization: createAuthHeader(),
+          'x-cdp-request-id': traceId,
+          'x-application-lock-owner': createLockToken({
+            sub: TEST_CONTACT_ID,
+            sbi: 'trace-test',
+            grantCode: 'trace-grant',
+            grantVersion: 1
+          })
+        }
+      })
+
+      expect(response.res.statusCode).toBe(201)
+      expect(response.res.headers['x-cdp-request-id']).toBe(traceId)
+    })
+  }
+})
