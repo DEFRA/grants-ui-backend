@@ -166,7 +166,7 @@ export const LogCodes = {
     SUBMISSIONS_ADD_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
-        `Failed to add submission | crn=${messageOptions.crn} | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | referenceNumber=${messageOptions.referenceNumber} | submittedAt=${messageOptions.submittedAt} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+        `Failed to add submission | crn=${messageOptions.crn} | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | referenceNumber=${messageOptions.referenceNumber} | previousReferenceNumber=${messageOptions.previousReferenceNumber} | submittedAt=${messageOptions.submittedAt} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     }
   }
 }

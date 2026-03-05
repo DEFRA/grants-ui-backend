@@ -14,6 +14,7 @@ const addSubmissionSchema = Joi.object({
   grantCode: Joi.string().required(),
   grantVersion: Joi.number().required(),
   referenceNumber: Joi.string().required(),
+  previousReferenceNumber: Joi.string().allow(null),
   submittedAt: Joi.date().required()
 })
   .required()
@@ -42,13 +43,15 @@ export const addSubmission = {
     validate: {
       payload: addSubmissionSchema,
       failAction: (request, h, err) => {
-        const { crn, sbi, grantCode, grantVersion, referenceNumber, submittedAt } = request.payload
+        const { crn, sbi, grantCode, grantVersion, referenceNumber, previousReferenceNumber, submittedAt } =
+          request.payload
         log(LogCodes.SUBMISSIONS.SUBMISSIONS_ADD_FAILED, {
           crn,
           sbi,
           grantCode,
           grantVersion,
           referenceNumber,
+          previousReferenceNumber,
           submittedAt,
           errorName: err.name,
           errorMessage: `POST /submissions, validation failed: ${err.message}`,
@@ -67,7 +70,7 @@ export const addSubmission = {
       max: PAYLOAD_SIZE_MAX
     })
 
-    const { crn, sbi, grantCode, grantVersion, referenceNumber, submittedAt } = request.payload
+    const { crn, sbi, grantCode, grantVersion, referenceNumber, previousReferenceNumber, submittedAt } = request.payload
 
     const {
       ownerId,
@@ -108,6 +111,7 @@ export const addSubmission = {
         grantCode,
         grantVersion,
         referenceNumber,
+        previousReferenceNumber,
         submittedAt,
         errorName: err.name,
         errorMessage: err.message,
