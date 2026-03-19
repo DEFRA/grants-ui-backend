@@ -7,7 +7,7 @@ export default {
   preset: '@shelf/jest-mongodb',
   watchPathIgnorePatterns: ['globalConfig'],
   testMatch: ['**/src/**/*.test.js'],
-  testPathIgnorePatterns: ['<rootDir>/integration/'],
+  testPathIgnorePatterns: ['<rootDir>/integration/', '<rootDir>/contracts/'],
   reporters: ['default', ['github-actions', { silent: false }], 'summary'],
   setupFiles: ['<rootDir>/.jest/setup-files.js'],
   setupFilesAfterEnv: ['<rootDir>/.jest/setup-files-after-env.js'],

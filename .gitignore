@@ -12,3 +12,6 @@ coverage
 
 # @shelf/jest-mongodb generated file
 globalConfig.json
+
+# Pact files are published/fetched via the Pact Broker in CI
+contracts/pacts

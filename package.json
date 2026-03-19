@@ -23,6 +23,7 @@
     "postversion": "git add package.json package-lock.json && git commit -m $npm_package_version",
     "test": "node --no-experimental-require-module ./node_modules/jest/bin/jest.js --coverage --verbose --runInBand",
     "test:watch": "node --no-experimental-require-module ./node_modules/jest/bin/jest.js --watch",
+    "test:contracts": "node --no-experimental-require-module ./node_modules/jest/bin/jest.js --config jest.contracts.config.js",
     "test:integration": "jest --config jest.int.config.js",
     "server:watch": "nodemon --inspect=0.0.0.0 --ext js,json --legacy-watch ./src",
     "server:debug": "nodemon --inspect-brk=0.0.0.0 --ext js,json --legacy-watch ./src",
@@ -34,7 +35,6 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@aws-sdk/credential-providers": "3.1001.0",
     "@defra/hapi-tracing": "1.30.0",
     "@elastic/ecs-pino-format": "1.5.0",
     "@hapi/boom": "10.0.1",
@@ -55,7 +55,7 @@
     "pino": "10.3.1",
     "pino-pretty": "13.1.3",
     "testcontainers": "11.12.0",
-    "undici": "7.22.0"
+    "undici": "7.24.0"
   },
   "overrides": {
     "lodash": "4.17.23"
@@ -68,6 +68,7 @@
     "babel-jest": "30.2.0",
     "babel-plugin-module-resolver": "5.0.2",
     "babel-plugin-transform-import-meta": "2.3.3",
+    "@pact-foundation/pact": "15.0.1",
     "eslint": "9.39.3",
     "husky": "9.1.7",
     "jest": "30.2.0",
