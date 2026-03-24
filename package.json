@@ -35,6 +35,7 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
+    "@aws-sdk/credential-providers": "3.1001.0",
     "@defra/hapi-tracing": "1.30.0",
     "@elastic/ecs-pino-format": "1.5.0",
     "@hapi/boom": "10.0.1",
@@ -63,12 +64,12 @@
   "devDependencies": {
     "@babel/core": "7.29.0",
     "@babel/preset-env": "7.29.0",
+    "@pact-foundation/pact": "15.0.1",
     "@shelf/jest-mongodb": "6.0.2",
     "autoprefixer": "10.4.27",
     "babel-jest": "30.2.0",
     "babel-plugin-module-resolver": "5.0.2",
     "babel-plugin-transform-import-meta": "2.3.3",
-    "@pact-foundation/pact": "15.0.1",
     "eslint": "9.39.3",
     "husky": "9.1.7",
     "jest": "30.2.0",
