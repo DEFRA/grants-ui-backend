@@ -2,12 +2,14 @@ import { config } from '../../config.js'
 
 import { createServer } from '../../server.js'
 import { createLogger } from './logging/logger.js'
+import { migrateApplicantToAdditionalAnswers } from '../../migrations/migrate-applicant-to-additional-answers.js'
 
 async function startServer() {
   let server
 
   try {
     server = await createServer()
+    await migrateApplicantToAdditionalAnswers(server.db, server.logger)
     await server.start()
 
     server.logger.info('Server started successfully')
