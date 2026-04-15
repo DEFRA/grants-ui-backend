@@ -66,8 +66,7 @@ components:
         grantCode:
           type: string
         grantVersion:
-          type: integer
-          format: int32
+          type: string
         state:
           $ref: '#/components/schemas/StateObject'
       required: [sbi, grantCode, grantVersion, state]
@@ -115,8 +114,7 @@ components:
         grantCode:
           type: string
         grantVersion:
-          type: integer
-          format: int32
+          type: string
         referenceNumber:
           type: string
         submittedAt:
@@ -226,8 +224,7 @@ paths:
         - in: query
           name: grantVersion
           schema:
-            type: integer
-            format: int32
+            type: string
           required: false
           description: Present in validation schema; currently the service returns the latest version regardless of value
       responses:
@@ -272,8 +269,7 @@ paths:
         - in: query
           name: grantVersion
           schema:
-            type: integer
-            format: int32
+            type: string
           required: false
           description: Present in validation schema; currently the service deletes the latest version regardless of value
       responses:

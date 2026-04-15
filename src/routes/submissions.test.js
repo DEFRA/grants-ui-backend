@@ -18,7 +18,7 @@ describe('addSubmission', () => {
     crn: '123',
     sbi: '456',
     grantCode: 'example-grant',
-    grantVersion: 1,
+    grantVersion: '1.0.0',
     referenceNumber: 'REF-123',
     previousReferenceNumber: 'OLD-REF',
     submittedAt: new Date()
@@ -35,7 +35,7 @@ describe('addSubmission', () => {
       ownerId: 'user1',
       sbi: '456',
       grantCode: 'example-grant',
-      grantVersion: 1
+      grantVersion: '1.0.0'
     })
 
     mockRequest = {
@@ -58,7 +58,7 @@ describe('addSubmission', () => {
     expect(mockDb.collection).toHaveBeenCalledWith('grant_application_submissions')
     expect(releaseApplicationLock).toHaveBeenCalledWith(mockDb, {
       grantCode: 'example-grant',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       sbi: '456',
       ownerId: 'user1'
     })
@@ -71,7 +71,7 @@ describe('addSubmission', () => {
       ownerId: 'user1',
       sbi: '999',
       grantCode: 'example-grant',
-      grantVersion: 1
+      grantVersion: '1.0.0'
     })
 
     await expect(addSubmission.handler(mockRequest, mockH)).rejects.toThrow(
@@ -109,7 +109,7 @@ describe('retrieveSubmissions', () => {
       query: {
         sbi: '456',
         grantCode: 'example-grant',
-        grantVersion: 1
+        grantVersion: '1.0.0'
       },
       db: mockDb
     }
