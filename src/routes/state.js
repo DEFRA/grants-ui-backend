@@ -6,10 +6,12 @@ import { enforceApplicationLock } from '../plugins/application-lock-enforcement.
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
 
+const grantVersionSchema = Joi.alternatives().try(Joi.number().integer(), Joi.string()).default(1)
+
 const stateSaveSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
-  grantVersion: Joi.number().required(),
+  grantVersion: grantVersionSchema,
   state: Joi.object().unknown(true).required().messages({
     'object.base': '"state" must be an object'
   })
@@ -20,12 +22,13 @@ const stateSaveSchema = Joi.object({
 const stateRetrieveSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
-  grantVersion: Joi.number()
+  grantVersion: grantVersionSchema
 })
 
 const patchParamsSchema = Joi.object({
   sbi: Joi.string().required(),
-  grantCode: Joi.string().required()
+  grantCode: Joi.string().required(),
+  grantVersion: grantVersionSchema
 })
 
 const patchSchema = Joi.object({
@@ -108,6 +111,7 @@ export const stateSave = {
       log(LogCodes.STATE.STATE_SAVE_FAILED, {
         sbi,
         grantCode,
+        grantVersion,
         errorName: err.name,
         errorMessage: err.message,
         errorReason: err.reason,
@@ -130,10 +134,11 @@ export const stateRetrieve = {
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
-        const { sbi, grantCode } = request.query
+        const { sbi, grantCode, grantVersion } = request.query
         log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
           sbi,
           grantCode,
+          grantVersion,
           errorName: err.name,
           errorMessage: `GET /state, validation failed: ${err.message}`,
           errorReason: err.reason,
@@ -146,17 +151,12 @@ export const stateRetrieve = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode } = request.query
+    const { sbi, grantCode, grantVersion } = request.query
 
     const db = request.db
 
     try {
-      const document = await db
-        .collection('grant-application-state')
-        .find({ sbi, grantCode })
-        .sort({ grantVersion: -1 }) // numeric descending
-        .limit(1)
-        .next()
+      const document = await db.collection('grant-application-state').findOne({ sbi, grantCode, grantVersion })
 
       if (!document) {
         return h.response({ error: 'State not found' }).code(404)
@@ -169,6 +169,7 @@ export const stateRetrieve = {
       log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
         sbi,
         grantCode,
+        grantVersion,
         errorName: err.name,
         errorMessage: err.message,
         errorReason: err.reason,
@@ -191,10 +192,11 @@ export const stateDelete = {
     validate: {
       query: stateRetrieveSchema,
       failAction: (request, h, err) => {
-        const { sbi, grantCode } = request.query
+        const { sbi, grantCode, grantVersion } = request.query
         log(LogCodes.STATE.STATE_DELETE_FAILED, {
           sbi,
           grantCode,
+          grantVersion,
           errorName: err.name,
           errorMessage: `DELETE /state, validation failed: ${err.message}`,
           errorReason: err.reason,
@@ -207,17 +209,12 @@ export const stateDelete = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode } = request.query
+    const { sbi, grantCode, grantVersion } = request.query
 
     const db = request.db
 
     try {
-      const doc = await db
-        .collection('grant-application-state')
-        .find({ sbi, grantCode })
-        .sort({ grantVersion: -1 })
-        .limit(1)
-        .next()
+      const doc = await db.collection('grant-application-state').findOne({ sbi, grantCode, grantVersion })
 
       if (!doc) {
         return h.response({ error: 'State not found' }).code(404)
@@ -232,6 +229,7 @@ export const stateDelete = {
       log(LogCodes.STATE.STATE_DELETE_FAILED, {
         sbi,
         grantCode,
+        grantVersion,
         errorName: err.name,
         errorMessage: err.message,
         errorReason: err.reason,
@@ -246,7 +244,7 @@ export const stateDelete = {
 
 export const statePatch = {
   method: 'PATCH',
-  path: '/state/{sbi}/{grantCode}',
+  path: '/state/{sbi}/{grantCode}/{grantVersion}',
   options: {
     auth: 'bearer',
     pre: [{ method: enforceApplicationLock }],
@@ -260,10 +258,11 @@ export const statePatch = {
       params: patchParamsSchema,
       payload: patchSchema,
       failAction: (request, h, err) => {
-        const { sbi, grantCode } = request.params
+        const { sbi, grantCode, grantVersion } = request.params
         log(LogCodes.STATE.STATE_PATCH_FAILED, {
           sbi,
           grantCode,
+          grantVersion,
           errorName: err.name,
           errorMessage: `PATCH /state, validation failed: ${err.message}`,
           errorReason: err.reason,
@@ -276,12 +275,12 @@ export const statePatch = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode } = request.params
+    const { sbi, grantCode, grantVersion } = request.params
     const { applicationStatus } = request.payload.state
 
     try {
       const document = await request.db.collection('grant-application-state').findOneAndUpdate(
-        { sbi, grantCode },
+        { sbi, grantCode, grantVersion },
         {
           $set: {
             'state.applicationStatus': applicationStatus,
@@ -302,6 +301,7 @@ export const statePatch = {
       log(LogCodes.STATE.STATE_PATCH_FAILED, {
         sbi,
         grantCode,
+        grantVersion,
         errorName: err.name,
         errorMessage: err.message,
         errorReason: err.reason,

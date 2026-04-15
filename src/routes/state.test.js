@@ -22,7 +22,8 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
 describe('State', () => {
   const defaultQuery = {
     sbi: 'business123',
-    grantCode: 'grant123'
+    grantCode: 'grant123',
+    grantVersion: '1.0.0'
   }
 
   let connection
@@ -88,6 +89,109 @@ describe('State', () => {
 
     test('statePatch route is protected by application lock', () => {
       expect(statePatch.options.pre[0].method).toBe(enforceApplicationLock)
+    })
+  })
+
+  describe('statePatch', () => {
+    const defaultParams = {
+      sbi: 'business123',
+      grantCode: 'grant123',
+      grantVersion: '1.0.0'
+    }
+
+    test('should patch applicationStatus and return 200', async () => {
+      mockRequest.params = defaultParams
+      mockRequest.payload = { state: { applicationStatus: 'IN_PROGRESS' } }
+      mockCollection.findOneAndUpdate = jest
+        .fn()
+        .mockResolvedValue({ _id: 'some-id', state: { applicationStatus: 'IN_PROGRESS' } })
+
+      await statePatch.handler(mockRequest, mockH)
+
+      expect(mockCollection.findOneAndUpdate).toHaveBeenCalledWith(
+        defaultParams,
+        expect.objectContaining({
+          $set: expect.objectContaining({ 'state.applicationStatus': 'IN_PROGRESS' })
+        }),
+        { returnDocument: 'after', upsert: false }
+      )
+      expect(mockH.response).toHaveBeenCalledWith({ success: true, patched: true })
+      expect(mockH.code).toHaveBeenCalledWith(200)
+    })
+
+    test('should return 404 when no document is found to patch', async () => {
+      mockRequest.params = defaultParams
+      mockRequest.payload = { state: { applicationStatus: 'IN_PROGRESS' } }
+      mockCollection.findOneAndUpdate = jest.fn().mockResolvedValue(null)
+
+      await statePatch.handler(mockRequest, mockH)
+
+      expect(mockCollection.findOneAndUpdate).toHaveBeenCalledWith(defaultParams, expect.any(Object), {
+        returnDocument: 'after',
+        upsert: false
+      })
+      expect(mockH.response).toHaveBeenCalledWith({ error: 'State not found' })
+      expect(mockH.code).toHaveBeenCalledWith(404)
+    })
+
+    test('should handle database errors and return 500', async () => {
+      mockRequest.params = defaultParams
+      mockRequest.payload = { state: { applicationStatus: 'IN_PROGRESS' } }
+
+      const dbError = new Error('Database error')
+      dbError.name = 'MongoError'
+      dbError.code = 500
+      dbError.reason = 'Some reason'
+      mockCollection.findOneAndUpdate = jest.fn().mockRejectedValue(dbError)
+
+      await statePatch.handler(mockRequest, mockH)
+
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.STATE.STATE_PATCH_FAILED,
+        expect.objectContaining({
+          sbi: defaultParams.sbi,
+          grantCode: defaultParams.grantCode,
+          errorName: dbError.name,
+          errorMessage: dbError.message,
+          errorReason: dbError.reason,
+          errorCode: dbError.code,
+          isMongoError: true,
+          stack: expect.stringContaining('MongoError: Database error')
+        })
+      )
+      expect(mockH.response).toHaveBeenCalledWith({ error: 'Failed to patch application state' })
+      expect(mockH.code).toHaveBeenCalledWith(500)
+    })
+
+    test('should validate params and throw error for invalid data', () => {
+      const invalidParams = { grantCode: 'grant123' }
+
+      const mockValidationRequest = {
+        server: mockServer,
+        params: invalidParams
+      }
+
+      const mockError = new Error('Validation error')
+      mockError.name = 'ValidationError'
+      mockError.code = 400
+      mockError.reason = 'Some reason'
+
+      expect(() => statePatch.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
+        'Validation error'
+      )
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.STATE.STATE_PATCH_FAILED,
+        expect.objectContaining({
+          sbi: invalidParams.sbi,
+          grantCode: invalidParams.grantCode,
+          errorName: mockError.name,
+          errorMessage: `PATCH /state, validation failed: ${mockError.message}`,
+          errorReason: mockError.reason,
+          errorCode: mockError.code,
+          isMongoError: false,
+          stack: expect.stringContaining('ValidationError: Validation error')
+        })
+      )
     })
   })
 
@@ -226,23 +330,12 @@ describe('State', () => {
 
   describe('stateRetrieve', () => {
     test('should retrieve state document and return 200', async () => {
-      const mockCursor = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        next: jest.fn().mockResolvedValue({ state: { key: 'value' } })
-      }
-      mockCollection.find.mockReturnValue(mockCursor)
+      mockCollection.findOne = jest.fn().mockResolvedValue({ state: { key: 'value' } })
       mockRequest.query = defaultQuery
-
-      const cursor = mockCollection.find()
-      cursor.next.mockResolvedValue({ state: { key: 'value' } })
 
       await stateRetrieve.handler(mockRequest, mockH)
 
-      expect(mockCollection.find).toHaveBeenCalledWith(defaultQuery)
-      expect(mockCursor.sort).toHaveBeenCalledWith({ grantVersion: -1 })
-      expect(mockCursor.limit).toHaveBeenCalledWith(1)
-      expect(mockCursor.next).toHaveBeenCalled()
+      expect(mockCollection.findOne).toHaveBeenCalledWith(defaultQuery)
 
       expect(mockH.response).toHaveBeenCalledWith({ key: 'value' })
       expect(mockH.code).toHaveBeenCalledWith(200)
@@ -250,19 +343,11 @@ describe('State', () => {
 
     test('should return 404 when state document is not found', async () => {
       mockRequest.query = defaultQuery
-      const mockCursor = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        next: jest.fn().mockResolvedValue(null) // no doc found
-      }
-      mockCollection.find.mockReturnValue(mockCursor)
+      mockCollection.findOne = jest.fn().mockResolvedValue(null)
 
       await stateRetrieve.handler(mockRequest, mockH)
 
-      expect(mockCollection.find).toHaveBeenCalledWith(defaultQuery)
-      expect(mockCursor.sort).toHaveBeenCalledWith({ grantVersion: -1 })
-      expect(mockCursor.limit).toHaveBeenCalledWith(1)
-      expect(mockCursor.next).toHaveBeenCalled()
+      expect(mockCollection.findOne).toHaveBeenCalledWith(defaultQuery)
 
       expect(mockH.response).toHaveBeenCalledWith({ error: 'State not found' })
       expect(mockH.code).toHaveBeenCalledWith(404)
@@ -274,12 +359,7 @@ describe('State', () => {
       dbError.name = 'MongoError'
       dbError.code = 500
       dbError.reason = 'Some reason'
-      const mockCursor = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        next: jest.fn().mockRejectedValue(dbError)
-      }
-      mockCollection.find.mockReturnValue(mockCursor)
+      mockCollection.findOne = jest.fn().mockRejectedValue(dbError)
 
       await stateRetrieve.handler(mockRequest, mockH)
 
@@ -342,20 +422,12 @@ describe('State', () => {
     test('should delete state document and return 200', async () => {
       mockRequest.query = defaultQuery
 
-      const mockCursor = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        next: jest.fn().mockResolvedValue({ _id: 'some-id', grantVersion: 2 })
-      }
-      mockCollection.find.mockReturnValue(mockCursor)
+      mockCollection.findOne = jest.fn().mockResolvedValue({ _id: 'some-id', grantVersion: '1.0.0' })
       mockCollection.deleteOne.mockResolvedValue({ deletedCount: 1 })
 
       await stateDelete.handler(mockRequest, mockH)
 
-      expect(mockCollection.find).toHaveBeenCalledWith(defaultQuery)
-      expect(mockCursor.sort).toHaveBeenCalledWith({ grantVersion: -1 })
-      expect(mockCursor.limit).toHaveBeenCalledWith(1)
-      expect(mockCursor.next).toHaveBeenCalled()
+      expect(mockCollection.findOne).toHaveBeenCalledWith(defaultQuery)
 
       expect(mockCollection.deleteOne).toHaveBeenCalledWith({ _id: 'some-id' })
 
@@ -369,19 +441,11 @@ describe('State', () => {
     test('should return 404 when no document is found to delete', async () => {
       mockRequest.query = defaultQuery
 
-      const mockCursor = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        next: jest.fn().mockResolvedValue(null)
-      }
-      mockCollection.find.mockReturnValue(mockCursor)
+      mockCollection.findOne = jest.fn().mockResolvedValue(null)
 
       await stateDelete.handler(mockRequest, mockH)
 
-      expect(mockCollection.find).toHaveBeenCalledWith(defaultQuery)
-      expect(mockCursor.sort).toHaveBeenCalledWith({ grantVersion: -1 })
-      expect(mockCursor.limit).toHaveBeenCalledWith(1)
-      expect(mockCursor.next).toHaveBeenCalled()
+      expect(mockCollection.findOne).toHaveBeenCalledWith(defaultQuery)
 
       expect(mockCollection.deleteOne).not.toHaveBeenCalled()
 
@@ -397,12 +461,7 @@ describe('State', () => {
       dbError.code = 500
       dbError.reason = 'Some reason'
 
-      const mockCursor = {
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        next: jest.fn().mockRejectedValue(dbError)
-      }
-      mockCollection.find.mockReturnValue(mockCursor)
+      mockCollection.findOne = jest.fn().mockRejectedValue(dbError)
 
       await stateDelete.handler(mockRequest, mockH)
 

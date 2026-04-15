@@ -100,7 +100,7 @@ describe('POST /state payload size logging', () => {
     const payload = {
       sbi: 'BIZ123',
       grantCode: 'GRANT789',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: { a: 'small' }
     }
     const response = await server.inject({
@@ -149,7 +149,7 @@ describe('POST /state payload size logging', () => {
     const payload = {
       sbi: 'BIZ123',
       grantCode: 'GRANT789',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: largeObj
     }
 
