@@ -104,7 +104,7 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
 export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
   const sbiStr = String(sbi)
   const ownerIdStr = String(ownerId)
-  const grantVersionStr = String(grantVersion ?? '1.0.0')
+  const grantVersionStr = typeof grantVersion === 'number' ? Number(grantVersion) : String(grantVersion ?? '1.0.0')
 
   try {
     const result = await db.collection('grant-application-locks').deleteOne({
