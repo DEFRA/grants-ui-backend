@@ -83,13 +83,9 @@ describe('State integration tests for grantVersion filtering', () => {
     count = await db.collection('grant-application-state').countDocuments(baseQuery)
     expect(count).toBe(2)
 
-    const remainingDocs = await db
-      .collection('grant-application-state')
-      .find(baseQuery)
-      .sort({ grantVersion: 1 })
-      .toArray()
+    const remainingDocs = await db.collection('grant-application-state').find(baseQuery).toArray()
 
-    expect(remainingDocs.map((d) => d.grantVersion)).toEqual(['1.0.0', '3.1.0'])
+    expect(remainingDocs.map((d) => d.grantVersion)).toEqual(expect.arrayContaining(['1.0.0', '3.1.0']))
 
     expect(mockH.response).toHaveBeenCalledWith({ success: true, deleted: true })
     expect(mockH.code).toHaveBeenCalledWith(200)
