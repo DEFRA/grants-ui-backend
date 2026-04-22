@@ -66,8 +66,10 @@ components:
         grantCode:
           type: string
         grantVersion:
-          type: integer
-          format: int32
+          oneOf:
+            - type: string
+            - type: integer
+          default: 1
         state:
           $ref: '#/components/schemas/StateObject'
       required: [sbi, grantCode, grantVersion, state]
@@ -115,10 +117,13 @@ components:
         grantCode:
           type: string
         grantVersion:
-          type: integer
-          format: int32
+          oneOf:
+            - type: string
+            - type: integer
         referenceNumber:
           type: string
+        previousReferenceNumber:
+          type: ['string', 'null']
         submittedAt:
           type: string
           format: date-time
@@ -181,7 +186,7 @@ paths:
             example:
               sbi: '1234567890'
               grantCode: 'example-grant-with-auth'
-              grantVersion: 1
+              grantVersion: '1.0.0'
               state:
                 formField1: 'Answer'
       responses:
@@ -211,7 +216,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     get:
       tags: [State]
-      summary: Retrieve latest application state for an SBI and grant code
+      summary: Retrieve application state for an SBI, grant code and version
       parameters:
         - in: query
           name: sbi
@@ -226,10 +231,10 @@ paths:
         - in: query
           name: grantVersion
           schema:
-            type: integer
-            format: int32
-          required: false
-          description: Present in validation schema; currently the service returns the latest version regardless of value
+            oneOf:
+              - type: string
+              - type: integer
+          required: true
       responses:
         '200':
           description: The stored state object
@@ -257,7 +262,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags: [State]
-      summary: Delete latest application state for an SBI and grant code
+      summary: Delete application state for an SBI, grant code and version
       parameters:
         - in: query
           name: sbi
@@ -272,10 +277,10 @@ paths:
         - in: query
           name: grantVersion
           schema:
-            type: integer
-            format: int32
-          required: false
-          description: Present in validation schema; currently the service deletes the latest version regardless of value
+            oneOf:
+              - type: string
+              - type: integer
+          required: true
       responses:
         '200':
           description: State deleted
@@ -301,10 +306,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /state/{sbi}/{grantCode}:
+  /state/{sbi}/{grantCode}/{grantVersion}:
     patch:
       tags: [State]
-      summary: Patch application status on the latest state for an SBI and grant code
+      summary: Patch application status on the state for an SBI, grant code and grant version
       parameters:
         - in: path
           name: sbi
@@ -315,6 +320,13 @@ paths:
           name: grantCode
           schema:
             type: string
+          required: true
+        - in: path
+          name: grantVersion
+          schema:
+            oneOf:
+              - type: string
+              - type: integer
           required: true
       requestBody:
         required: true
@@ -401,8 +413,9 @@ paths:
         - in: query
           name: grantVersion
           schema:
-            type: integer
-            format: int32
+            oneOf:
+              - type: string
+              - type: integer
           required: false
         - in: query
           name: referenceNumber

@@ -45,7 +45,7 @@ describe('application locks', () => {
 
     const params = {
       grantCode: 'EGWA',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       sbi: '106514040',
       ownerId: 'user-1'
     }
@@ -57,7 +57,7 @@ describe('application locks', () => {
       LogCodes.APPLICATION_LOCK.ACQUIRED,
       expect.objectContaining({
         grantCode: 'EGWA',
-        grantVersion: 1,
+        grantVersion: '1.0.0',
         sbi: '106514040',
         ownerId: 'user-1'
       })
@@ -70,7 +70,7 @@ describe('application locks', () => {
       LogCodes.APPLICATION_LOCK.RELEASED,
       expect.objectContaining({
         grantCode: 'EGWA',
-        grantVersion: 1,
+        grantVersion: '1.0.0',
         sbi: '106514040',
         ownerId: 'user-1'
       })
@@ -86,7 +86,7 @@ describe('application locks', () => {
 
     await db.collection('grant-application-locks').insertOne({
       grantCode: 'EGWA',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       sbi: '106',
       ownerId: 'user-1',
       lockedAt: now,
@@ -95,7 +95,7 @@ describe('application locks', () => {
 
     const lock = await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       sbi: '106',
       ownerId: 'user-2'
     })
@@ -107,7 +107,7 @@ describe('application locks', () => {
   test('same user can reacquire their own lock (re-entrant)', async () => {
     const db = server.db
 
-    const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
+    const params = { grantCode: 'EGWA', grantVersion: '1.0.0', sbi: '106', ownerId: 'user-1' }
 
     await acquireOrRefreshApplicationLock(db, params)
     const second = await acquireOrRefreshApplicationLock(db, params)
@@ -129,7 +129,7 @@ describe('application locks', () => {
 
     const result = await acquireOrRefreshApplicationLock(fakeDb, {
       grantCode: 'EGWA',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       sbi: '106',
       ownerId: 'user-1'
     })
@@ -146,7 +146,7 @@ describe('application locks', () => {
       })
     }
 
-    const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
+    const params = { grantCode: 'EGWA', grantVersion: '1.0.0', sbi: '106', ownerId: 'user-1' }
 
     await expect(acquireOrRefreshApplicationLock(fakeDb, params)).rejects.toThrow('Mongo exploded')
 
@@ -154,7 +154,7 @@ describe('application locks', () => {
       LogCodes.APPLICATION_LOCK.ACQUISITION_FAILED,
       expect.objectContaining({
         grantCode: 'EGWA',
-        grantVersion: 1,
+        grantVersion: '1.0.0',
         sbi: '106',
         ownerId: 'user-1',
         errorName: 'MongoServerError',
@@ -173,7 +173,7 @@ describe('application locks', () => {
       })
     }
 
-    const params = { grantCode: 'EGWA', grantVersion: 1, sbi: '106', ownerId: 'user-1' }
+    const params = { grantCode: 'EGWA', grantVersion: '1.0.0', sbi: '106', ownerId: 'user-1' }
 
     await expect(releaseApplicationLock(fakeDb, params)).rejects.toThrow('Mongo exploded')
 
@@ -181,7 +181,7 @@ describe('application locks', () => {
       LogCodes.APPLICATION_LOCK.RELEASE_FAILED,
       expect.objectContaining({
         grantCode: 'EGWA',
-        grantVersion: 1,
+        grantVersion: '1.0.0',
         sbi: '106',
         ownerId: 'user-1',
         errorName: 'MongoServerError',
@@ -194,9 +194,10 @@ describe('application locks', () => {
   test('releaseAllApplicationLocksForOwner deletes all locks and logs', async () => {
     const db = server.db
 
+    await db.collection('grant-application-locks').deleteMany({ ownerId: 'user-1' })
     await db.collection('grant-application-locks').insertMany([
-      { grantCode: 'A', grantVersion: 1, sbi: '1', ownerId: 'user-1' },
-      { grantCode: 'B', grantVersion: 1, sbi: '2', ownerId: 'user-1' }
+      { grantCode: 'A', grantVersion: '1.0.0', sbi: '1', ownerId: 'user-1' },
+      { grantCode: 'B', grantVersion: '1.0.0', sbi: '2', ownerId: 'user-1' }
     ])
 
     const deletedCount = await releaseAllApplicationLocksForOwner(db, { ownerId: 'user-1' })

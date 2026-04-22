@@ -19,7 +19,7 @@ import { log } from '../common/helpers/logging/log.js'
  *   - ownerId {string} User identifier owning the lock (JWT `sub`)
  *   - sbi {string} Single Business Identifier defining the lock scope
  *   - grantCode {string} Grant application code
- *   - grantVersion {number} Grant scheme version
+ *   - grantVersion {string} Grant scheme version
  */
 export function extractLockKeys(request) {
   const path = request.path
@@ -81,8 +81,7 @@ export function extractLockKeys(request) {
     throw Boom.badRequest('Missing grant code in lock token')
   }
 
-  const version = Number(grantVersion ?? 1)
-  if (Number.isNaN(version)) {
+  if (!grantVersion) {
     log(LogCodes.APPLICATION_LOCK.LOCK_TOKEN_INVALID_VERSION, {
       path,
       method,
@@ -95,7 +94,7 @@ export function extractLockKeys(request) {
     ownerId,
     sbi,
     grantCode,
-    grantVersion: version
+    grantVersion
   }
 }
 

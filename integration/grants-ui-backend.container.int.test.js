@@ -252,7 +252,7 @@ describe('PATCH /state/{sbi}/{grantCode}', () => {
       updatedAt: new Date()
     })
 
-    const response = await Wreck.patch(`${apiUrl}/state/biz-1/grant-1`, {
+    const response = await Wreck.patch(`${apiUrl}/state/biz-1/grant-1/1`, {
       json: true,
       payload: {
         state: {

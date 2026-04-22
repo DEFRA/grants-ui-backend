@@ -8,11 +8,13 @@ import Boom from '@hapi/boom'
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
 
+const grantVersionSchema = Joi.alternatives().try(Joi.number().integer(), Joi.string())
+
 const addSubmissionSchema = Joi.object({
   crn: Joi.string().required(),
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
-  grantVersion: Joi.number().required(),
+  grantVersion: grantVersionSchema.required(),
   referenceNumber: Joi.string().required(),
   previousReferenceNumber: Joi.string().allow(null),
   submittedAt: Joi.date().required()
@@ -24,7 +26,7 @@ const retrieveSubmissionsSchema = Joi.object({
   crn: Joi.string(),
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
-  grantVersion: Joi.number(),
+  grantVersion: grantVersionSchema,
   referenceNumber: Joi.string()
 })
 
@@ -85,7 +87,7 @@ export const addSubmission = {
     if (tokenGrantCode !== grantCode) {
       throw Boom.badRequest('Grant code in payload does not match lock token')
     }
-    if (tokenGrantVersion !== grantVersion) {
+    if (String(tokenGrantVersion) !== String(grantVersion)) {
       throw Boom.badRequest('Grant version in payload does not match lock token')
     }
 

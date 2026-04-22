@@ -18,7 +18,7 @@ describe('addSubmission', () => {
     crn: '123',
     sbi: '456',
     grantCode: 'example-grant',
-    grantVersion: 1,
+    grantVersion: '1.0.0',
     referenceNumber: 'REF-123',
     previousReferenceNumber: 'OLD-REF',
     submittedAt: new Date()
@@ -35,7 +35,7 @@ describe('addSubmission', () => {
       ownerId: 'user1',
       sbi: '456',
       grantCode: 'example-grant',
-      grantVersion: 1
+      grantVersion: '1.0.0'
     })
 
     mockRequest = {
@@ -58,10 +58,45 @@ describe('addSubmission', () => {
     expect(mockDb.collection).toHaveBeenCalledWith('grant_application_submissions')
     expect(releaseApplicationLock).toHaveBeenCalledWith(mockDb, {
       grantCode: 'example-grant',
+      grantVersion: '1.0.0',
+      sbi: '456',
+      ownerId: 'user1'
+    })
+
+    expect(mockH.response).toHaveBeenCalledWith({ success: true, created: true })
+  })
+
+  it('should insert submission and release lock when grantVersion is an integer', async () => {
+    mockRequest.payload = { ...validPayload, grantVersion: 1 }
+    extractLockKeys.mockReturnValue({
+      ownerId: 'user1',
+      sbi: '456',
+      grantCode: 'example-grant',
+      grantVersion: 1
+    })
+
+    await addSubmission.handler(mockRequest, mockH)
+
+    expect(releaseApplicationLock).toHaveBeenCalledWith(mockDb, {
+      grantCode: 'example-grant',
       grantVersion: 1,
       sbi: '456',
       ownerId: 'user1'
     })
+
+    expect(mockH.response).toHaveBeenCalledWith({ success: true, created: true })
+  })
+
+  it('should not throw when grantVersion is integer in payload and string in token (same value)', async () => {
+    mockRequest.payload = { ...validPayload, grantVersion: 1 }
+    extractLockKeys.mockReturnValue({
+      ownerId: 'user1',
+      sbi: '456',
+      grantCode: 'example-grant',
+      grantVersion: '1'
+    })
+
+    await addSubmission.handler(mockRequest, mockH)
 
     expect(mockH.response).toHaveBeenCalledWith({ success: true, created: true })
   })
@@ -71,11 +106,24 @@ describe('addSubmission', () => {
       ownerId: 'user1',
       sbi: '999',
       grantCode: 'example-grant',
-      grantVersion: 1
+      grantVersion: '1.0.0'
     })
 
     await expect(addSubmission.handler(mockRequest, mockH)).rejects.toThrow(
       Boom.badRequest('SBI in payload does not match lock token')
+    )
+  })
+
+  it('should throw if grant version does not match lock token', async () => {
+    extractLockKeys.mockReturnValue({
+      ownerId: 'user1',
+      sbi: '456',
+      grantCode: 'example-grant',
+      grantVersion: '2.0.0'
+    })
+
+    await expect(addSubmission.handler(mockRequest, mockH)).rejects.toThrow(
+      Boom.badRequest('Grant version in payload does not match lock token')
     )
   })
 
@@ -109,7 +157,7 @@ describe('retrieveSubmissions', () => {
       query: {
         sbi: '456',
         grantCode: 'example-grant',
-        grantVersion: 1
+        grantVersion: '1.0.0'
       },
       db: mockDb
     }
@@ -124,6 +172,15 @@ describe('retrieveSubmissions', () => {
   })
 
   it('should retrieve submissions sorted by submittedAt desc', async () => {
+    await retrieveSubmissions.handler(mockRequest, mockH)
+
+    expect(mockDb.collection).toHaveBeenCalledWith('grant_application_submissions')
+    expect(mockH.response).toHaveBeenCalledWith([{ ref: '1' }])
+  })
+
+  it('should retrieve submissions when grantVersion is an integer', async () => {
+    mockRequest.query = { ...mockRequest.query, grantVersion: 1 }
+
     await retrieveSubmissions.handler(mockRequest, mockH)
 
     expect(mockDb.collection).toHaveBeenCalledWith('grant_application_submissions')

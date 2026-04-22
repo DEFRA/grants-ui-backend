@@ -59,7 +59,7 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
   const BASIC_PAYLOAD = {
     sbi: 'test-business',
     grantCode: 'test-grant',
-    grantVersion: 1,
+    grantVersion: '1.0.0',
     state: { step: 1, data: 'test' }
   }
   const TEST_CONTACT_ID = 'auth-test-user'
@@ -395,7 +395,7 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
       sbi: 'test-business',
       userId: 'test-user',
       grantCode: 'test-grant',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: { step: 1 }
     }
     it('should handle authentication when server logger is present', async () => {
@@ -449,7 +449,7 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
     const MINIMAL_PAYLOAD = {
       sbi: 'test-business',
       grantCode: 'test-grant',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: { step: 1 }
     }
     it('should handle base64 decode errors and log them', async () => {

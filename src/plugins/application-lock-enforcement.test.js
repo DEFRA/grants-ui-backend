@@ -4,7 +4,7 @@ import { enforceApplicationLock } from './application-lock-enforcement.js'
 import jwt from 'jsonwebtoken'
 import { config } from '../config.js'
 
-function createLockToken({ sub = 'user-1', sbi = '123456789', grantCode = 'EGWA', grantVersion = 1 } = {}) {
+function createLockToken({ sub = 'user-1', sbi = '123456789', grantCode = 'EGWA', grantVersion = '1.0.0' } = {}) {
   return jwt.sign(
     {
       sub,
@@ -82,7 +82,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
 
   test('401 when lock token has wrong audience', async () => {
     const badToken = jwt.sign(
-      { sub: 'user-1', sbi: '123456789', grantCode: 'EGWA', grantVersion: 1, typ: 'lock' },
+      { sub: 'user-1', sbi: '123456789', grantCode: 'EGWA', grantVersion: '1.0.0', typ: 'lock' },
       APPLICATION_LOCK_TOKEN_SECRET,
       {
         issuer: 'grants-ui',
@@ -103,7 +103,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
 
   test('rejects lock token with invalid grantVersion', async () => {
     const badToken = jwt.sign(
-      { sub: 'user-1', sbi: 'SBI-123', grantCode: 'EGWA', grantVersion: 'not-a-number', typ: 'lock' },
+      { sub: 'user-1', sbi: 'SBI-123', grantCode: 'EGWA', grantVersion: '', typ: 'lock' },
       APPLICATION_LOCK_TOKEN_SECRET,
       { issuer: 'grants-ui', audience: 'grants-backend' }
     )
@@ -123,7 +123,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
       sub: 'user-1',
       sbi: '123456789',
       grantCode: 'EGWA',
-      grantVersion: 2
+      grantVersion: '2.0.0'
     })
 
     const res = await server.inject({
@@ -143,12 +143,12 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
 
     await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',
-      grantVersion: 3,
+      grantVersion: '3.0.0',
       sbi: '123456789',
       ownerId: 'user-1'
     })
 
-    const token = createLockToken({ sub: 'user-2', sbi: '123456789', grantCode: 'EGWA', grantVersion: 3 })
+    const token = createLockToken({ sub: 'user-2', sbi: '123456789', grantCode: 'EGWA', grantVersion: '3.0.0' })
 
     const res = await server.inject({
       method: 'GET',
@@ -166,12 +166,12 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
 
     await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',
-      grantVersion: 4,
+      grantVersion: '4.0.0',
       sbi: '123456789',
       ownerId: 'user-1'
     })
 
-    const token = createLockToken({ sub: 'user-1', sbi: '123456789', grantCode: 'EGWA', grantVersion: 3 })
+    const token = createLockToken({ sub: 'user-1', sbi: '123456789', grantCode: 'EGWA', grantVersion: '4.0.0' })
 
     const res = await server.inject({
       method: 'GET',

@@ -8,7 +8,7 @@ const applicationLockReleaseSchema = Joi.object({
   sbi: Joi.string().required(),
   ownerId: Joi.string().required(),
   grantCode: Joi.string().required(),
-  grantVersion: Joi.string().required()
+  grantVersion: Joi.alternatives().try(Joi.number().integer(), Joi.string()).required()
 })
 
 export const applicationLockRelease = {
