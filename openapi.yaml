@@ -123,8 +123,7 @@ components:
         referenceNumber:
           type: string
         previousReferenceNumber:
-          type: string
-          nullable: true
+          type: ['string', 'null']
         submittedAt:
           type: string
           format: date-time
@@ -187,7 +186,7 @@ paths:
             example:
               sbi: '1234567890'
               grantCode: 'example-grant-with-auth'
-              grantVersion: 1
+              grantVersion: '1.0.0'
               state:
                 formField1: 'Answer'
       responses:
