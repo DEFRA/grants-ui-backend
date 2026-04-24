@@ -118,6 +118,57 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
     expect(res.result.message).toBe('Invalid grantVersion in lock token')
   })
 
+  test('rejects lock token with invalid lock token type', async () => {
+    const badToken = jwt.sign(
+      { sub: 'user-1', sbi: 'SBI-123', grantCode: 'EGWA', grantVersion: '1.0.0', typ: 'other' },
+      APPLICATION_LOCK_TOKEN_SECRET,
+      { issuer: 'grants-ui', audience: 'grants-backend' }
+    )
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/test',
+      headers: { 'x-application-lock-owner': badToken }
+    })
+
+    expect(res.statusCode).toBe(401)
+    expect(res.result.message).toBe('Invalid lock token type')
+  })
+
+  test('rejects lock token with invalid userId', async () => {
+    const badToken = jwt.sign(
+      { sub: '', sbi: 'SBI-123', grantCode: 'EGWA', grantVersion: '1.0.0', typ: 'lock' },
+      APPLICATION_LOCK_TOKEN_SECRET,
+      { issuer: 'grants-ui', audience: 'grants-backend' }
+    )
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/test',
+      headers: { 'x-application-lock-owner': badToken }
+    })
+
+    expect(res.statusCode).toBe(401)
+    expect(res.result.message).toBe('Missing user identity')
+  })
+
+  test('rejects lock token with invalid grant code', async () => {
+    const badToken = jwt.sign(
+      { sub: 'user-1', sbi: 'SBI-123', grantCode: '', grantVersion: '1.0.0', typ: 'lock' },
+      APPLICATION_LOCK_TOKEN_SECRET,
+      { issuer: 'grants-ui', audience: 'grants-backend' }
+    )
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/test',
+      headers: { 'x-application-lock-owner': badToken }
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.result.message).toBe('Missing grant code in lock token')
+  })
+
   test('allows access when lock can be acquired', async () => {
     const token = createLockToken({
       sub: 'user-1',

@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 
 const token = process.env.GRANTS_UI_BACKEND_AUTH_TOKEN
 const encryptionKey = process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY

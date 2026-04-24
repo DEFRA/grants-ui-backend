@@ -1,2 +1,1 @@
-import { secureContext } from './secure-context.js'
-export { secureContext }
+export { secureContext } from './secure-context.js'
