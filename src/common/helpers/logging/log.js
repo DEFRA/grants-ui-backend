@@ -1,5 +1,4 @@
 import { createLogger } from './logger.js'
-import { LogCodes } from './log-codes.js'
 
 const logger = createLogger()
 
@@ -33,4 +32,5 @@ const getLoggerOfType = (level) => {
   }[level]
 }
 
-export { log, logger, LogCodes }
+export { log, logger }
+export { LogCodes } from './log-codes.js'

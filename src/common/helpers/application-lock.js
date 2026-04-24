@@ -1,7 +1,10 @@
 import { config } from '../../config.js'
-import { log, LogCodes } from '../helpers/logging/log.js'
+import { log, LogCodes } from './logging/log.js'
 
 export const APPLICATION_LOCK_TTL_MS = config.get('applicationLock.ttlMs')
+
+const LOCKS_COLLECTION_NAME = 'grant-application-locks'
+const IGNORE_ELEVEN_THOUSAND = 11000
 
 /**
  * Acquires or refreshes an exclusive lock for an application for a given organisation.
@@ -23,7 +26,7 @@ export const APPLICATION_LOCK_TTL_MS = config.get('applicationLock.ttlMs')
 export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVersion, sbi, ownerId }) {
   const now = new Date()
   const expiresAt = new Date(now.getTime() + APPLICATION_LOCK_TTL_MS)
-  const collection = db.collection('grant-application-locks')
+  const collection = db.collection(LOCKS_COLLECTION_NAME)
 
   const sbiStr = String(sbi)
   const ownerIdStr = String(ownerId)
@@ -81,7 +84,7 @@ export async function acquireOrRefreshApplicationLock(db, { grantCode, grantVers
       stack: err.stack?.split('\n')[0]
     })
 
-    if (err.code === 11000) {
+    if (err.code === IGNORE_ELEVEN_THOUSAND) {
       return null
     }
     throw err
@@ -107,7 +110,7 @@ export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi,
   const grantVersionStr = typeof grantVersion === 'number' ? Number(grantVersion) : String(grantVersion ?? '1.0.0')
 
   try {
-    const result = await db.collection('grant-application-locks').deleteOne({
+    const result = await db.collection(LOCKS_COLLECTION_NAME).deleteOne({
       grantCode,
       grantVersion: grantVersionStr,
       sbi: sbiStr,
@@ -148,14 +151,14 @@ export async function releaseApplicationLock(db, { grantCode, grantVersion, sbi,
  * Releases all application locks held by the given user.
  *
  * @param {import('mongodb').Db} db
- * @param {number | string} params.ownerId - DefraID user ID
+ * @param {number | string} ownerId - DefraID user ID
  * @returns {Promise<number>} Number of locks released
  */
 export async function releaseAllApplicationLocksForOwner(db, { ownerId }) {
   const ownerIdStr = String(ownerId)
 
   try {
-    const result = await db.collection('grant-application-locks').deleteMany({
+    const result = await db.collection(LOCKS_COLLECTION_NAME).deleteMany({
       ownerId: ownerIdStr
     })
 

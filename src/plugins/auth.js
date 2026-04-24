@@ -1,5 +1,5 @@
 import Boom from '@hapi/boom'
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 import { config } from '../config.js'
 import { log, LogCodes } from '../common/helpers/logging/log.js'
 
