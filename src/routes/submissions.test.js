@@ -3,7 +3,8 @@ import { addSubmission, retrieveSubmissions } from './submissions.js'
 
 import { releaseApplicationLock } from '../common/helpers/application-lock.js'
 import { extractLockKeys } from '../plugins/application-lock-enforcement.js'
-import { log } from '../common/helpers/logging/log.js'
+import { log, LogCodes } from '../common/helpers/logging/log.js'
+import { expect } from '@jest/globals'
 
 jest.mock('../common/helpers/application-lock.js')
 jest.mock('../plugins/application-lock-enforcement.js')
@@ -135,6 +136,26 @@ describe('addSubmission', () => {
     expect(log).toHaveBeenCalled()
     expect(mockH.response).toHaveBeenCalledWith({ error: 'Failed to add submission' })
   })
+
+  it('should log and throw if submission schema invalid', async () => {
+    const invalidRequest = {
+      ...mockRequest,
+      extra_field_not_allowed: 'invalid'
+    }
+    const mockError = new Error('Validation failed')
+    expect(() => addSubmission.options.validate.failAction(invalidRequest, mockH, mockError)).toThrow(
+      'Validation failed'
+    )
+
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.SUBMISSIONS.SUBMISSIONS_ADD_FAILED,
+      expect.objectContaining({
+        errorName: mockError.name,
+        errorMessage: expect.stringContaining('POST /submissions, validation failed: Validation failed')
+      })
+    )
+    expect(mockH.response).not.toHaveBeenCalled()
+  })
 })
 
 describe('retrieveSubmissions', () => {
@@ -194,5 +215,25 @@ describe('retrieveSubmissions', () => {
 
     expect(log).toHaveBeenCalled()
     expect(mockH.response).toHaveBeenCalledWith({ error: 'Failed to retrieve submissions' })
+  })
+
+  it('should log and throw if retrieve submission schema invalid', async () => {
+    const invalidRequest = {
+      ...mockRequest
+    }
+    delete invalidRequest.query.sbi
+    const mockError = new Error('Validation failed')
+    expect(() => retrieveSubmissions.options.validate.failAction(invalidRequest, mockH, mockError)).toThrow(
+      'Validation failed'
+    )
+
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.SUBMISSIONS.SUBMISSIONS_RETRIEVE_FAILED,
+      expect.objectContaining({
+        errorName: mockError.name,
+        errorMessage: expect.stringContaining('GET /submissions, validation failed: Validation failed')
+      })
+    )
+    expect(mockH.response).not.toHaveBeenCalled()
   })
 })

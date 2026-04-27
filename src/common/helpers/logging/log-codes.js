@@ -9,7 +9,7 @@ export const LogCodes = {
     STATE_PAYLOAD_SIZE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
-        `Large payload approaching limit | size=${messageOptions.payloadSize} | threshold=${messageOptions.threshold} | max=${messageOptions.max} | path=${messageOptions.path}}`
+        `Large payload approaching limit | size=${messageOptions.payloadSize} | threshold=${messageOptions.threshold} | max=${messageOptions.max} | path=${messageOptions.path}`
     },
     STATE_DELETE_FAILED: {
       level: 'error',
@@ -24,7 +24,7 @@ export const LogCodes = {
     STATE_SAVE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
-        `Failed to retrieve application state | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+        `Failed to save application state | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     },
     STATE_PATCH_FAILED: {
       level: 'error',
@@ -41,7 +41,7 @@ export const LogCodes = {
     TOKEN_VERIFICATION_FAILURE: {
       level: 'error',
       messageFunc: (messageOptions) =>
-        `Server auth token invalid | errorName: ${messageOptions.errorName} | errorMessage: ${messageOptions.errorMessage} | stack: ${messageOptions.stack || 'N/A'} "`
+        `Server auth token invalid | errorName: ${messageOptions.errorName} | errorMessage: ${messageOptions.errorMessage} | stack: ${messageOptions.stack || 'N/A'}`
     },
     AUTH_DEBUG: {
       level: 'debug',
@@ -156,7 +156,7 @@ export const LogCodes = {
     SUBMISSIONS_PAYLOAD_SIZE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
-        `Large payload approaching limit | size=${messageOptions.payloadSize} | threshold=${messageOptions.threshold} | max=${messageOptions.max} | path=${messageOptions.path}}`
+        `Large payload approaching limit | size=${messageOptions.payloadSize} | threshold=${messageOptions.threshold} | max=${messageOptions.max} | path=${messageOptions.path}`
     },
     SUBMISSIONS_RETRIEVE_FAILED: {
       level: 'error',
@@ -180,7 +180,7 @@ export const validateLogCodes = (logCodes) => {
       }
 
       // Check if this is a leaf node (has level and messageFunc) or a nested node
-      if (typeof value === 'object' && value !== null) {
+      if (typeof value === 'object') {
         if ('level' in value || 'messageFunc' in value) {
           // This is a leaf node, check that it has both required properties
           if (!('level' in value && 'messageFunc' in value)) {
