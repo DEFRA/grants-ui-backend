@@ -19,12 +19,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Create Test Coverage Reports
+      - name: Set up node
         uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: |
+
+      - name: Create Test Coverage Reports
+        run: |
           npm ci
           npm test
 
