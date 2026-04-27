@@ -197,7 +197,7 @@ export const validateLogCodes = (logCodes) => {
           validateLogCodes({ [key]: value })
         }
       } else {
-        throw new Error(`Invalid log code definition for "${key}": unexpected value type`)
+        throw new TypeError(`Invalid log code definition for "${key}": unexpected value type`)
       }
     })
   })
