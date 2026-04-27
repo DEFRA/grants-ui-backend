@@ -20,7 +20,11 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Create Test Coverage Reports
-        run: |
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: |
           npm ci
           npm test
 
