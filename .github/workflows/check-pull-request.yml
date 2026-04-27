@@ -28,6 +28,8 @@ jobs:
       - name: Create Test Coverage Reports
         run: |
           npm ci
+          npm run format:check
+          npm run lint
           npm test
 
       - name: Upload coverage report
