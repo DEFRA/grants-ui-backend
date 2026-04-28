@@ -4,6 +4,7 @@ import { log, LogCodes } from '../common/helpers/logging/log.js'
 import { releaseApplicationLock } from '../common/helpers/application-lock.js'
 import { enforceApplicationLock, extractLockKeys } from '../plugins/application-lock-enforcement.js'
 import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
@@ -44,7 +45,7 @@ export const addSubmission = {
     },
     validate: {
       payload: addSubmissionSchema,
-      failAction: (request, h, err) => {
+      failAction: (request, _h, err) => {
         const { crn, sbi, grantCode, grantVersion, referenceNumber, previousReferenceNumber, submittedAt } =
           request.payload
         log(LogCodes.SUBMISSIONS.SUBMISSIONS_ADD_FAILED, {
@@ -103,9 +104,9 @@ export const addSubmission = {
         ownerId
       })
 
-      return h.response({ success: true, created: true }).code(201)
+      return h.response({ success: true, created: true }).code(StatusCodes.CREATED)
     } catch (err) {
-      const isMongoError = err.name && err.name.startsWith('Mongo')
+      const isMongoError = err.name?.startsWith('Mongo')
 
       log(LogCodes.SUBMISSIONS.SUBMISSIONS_ADD_FAILED, {
         crn,
@@ -123,7 +124,7 @@ export const addSubmission = {
         stack: err.stack?.split('\n')[0]
       })
 
-      return h.response({ error: 'Failed to add submission' }).code(500)
+      return h.response({ error: 'Failed to add submission' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
 }
@@ -135,7 +136,7 @@ export const retrieveSubmissions = {
     auth: 'bearer',
     validate: {
       query: retrieveSubmissionsSchema,
-      failAction: (request, h, err) => {
+      failAction: (request, _h, err) => {
         const { crn, sbi, grantCode, grantVersion, referenceNumber } = request.query
         log(LogCodes.SUBMISSIONS.SUBMISSIONS_RETRIEVE_FAILED, {
           crn,
@@ -175,7 +176,7 @@ export const retrieveSubmissions = {
         .sort({ submittedAt: -1 })
         .toArray()
 
-      return h.response(documents).code(200)
+      return h.response(documents).code(StatusCodes.OK)
     } catch (err) {
       const isMongoError = err?.name?.startsWith('Mongo')
 
@@ -193,7 +194,7 @@ export const retrieveSubmissions = {
         stack: err.stack?.split('\n')[0]
       })
 
-      return h.response({ error: 'Failed to retrieve submissions' }).code(500)
+      return h.response({ error: 'Failed to retrieve submissions' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
 }

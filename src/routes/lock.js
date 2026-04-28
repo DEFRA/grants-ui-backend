@@ -3,6 +3,7 @@ import { log, LogCodes } from '../common/helpers/logging/log.js'
 import { releaseAllApplicationLocksForOwner, releaseApplicationLock } from '../common/helpers/application-lock.js'
 import Boom from '@hapi/boom'
 import { verifyOwnerLockReleaseToken } from '../common/helpers/lock/lock-token.js'
+import { StatusCodes } from 'http-status-codes'
 
 const applicationLockReleaseSchema = Joi.object({
   sbi: Joi.string().required(),
@@ -18,7 +19,7 @@ export const applicationLockRelease = {
     auth: 'bearer',
     validate: {
       query: applicationLockReleaseSchema,
-      failAction: (request, h, err) => {
+      failAction: (request, _h, err) => {
         const { sbi, ownerId, grantCode, grantVersion } = request.query
 
         log(LogCodes.APPLICATION_LOCK.RELEASE_FAILED, {
@@ -51,9 +52,9 @@ export const applicationLockRelease = {
         ownerId
       })
 
-      return h.response({ success: true, released }).code(200)
-    } catch (err) {
-      return h.response({ error: 'Failed to release application lock' }).code(500)
+      return h.response({ success: true, released }).code(StatusCodes.OK)
+    } catch (_err) {
+      return h.response({ error: 'Failed to release application lock' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
 }
@@ -77,9 +78,9 @@ export const applicationLocksRelease = {
 
     try {
       const deletedCount = await releaseAllApplicationLocksForOwner(db, { ownerId })
-      return h.response({ success: true, deletedCount }).code(200)
-    } catch (err) {
-      return h.response({ error: 'Failed to release application locks' }).code(500)
+      return h.response({ success: true, deletedCount }).code(StatusCodes.OK)
+    } catch (_err) {
+      return h.response({ error: 'Failed to release application locks' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
 }

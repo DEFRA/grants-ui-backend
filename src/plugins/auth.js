@@ -3,6 +3,7 @@ import crypto from 'node:crypto'
 import { config } from '../config.js'
 import { log, LogCodes } from '../common/helpers/logging/log.js'
 
+const EXPECTED_TOKEN_PARTS = 3
 /**
  * Decrypts an encrypted bearer token using AES-256-GCM
  * @param {string} encryptedToken - Token in format: iv:authTag:encryptedData (base64)
@@ -19,7 +20,9 @@ function decryptToken(encryptedToken) {
 
   try {
     const parts = encryptedToken.split(':')
-    if (parts.length !== 3) throw new Error('Malformed encrypted token')
+    if (parts.length !== EXPECTED_TOKEN_PARTS) {
+      throw new Error('Malformed encrypted token')
+    }
 
     const [ivB64, authTagB64, encryptedData] = encryptedToken.split(':')
     if (!ivB64 || !authTagB64 || !encryptedData) {
@@ -87,7 +90,7 @@ function validateAuthToken(authHeader) {
       return { isValid: false, error: 'Invalid bearer token' }
     }
   } catch (error) {
-    return { isValid: false, error: 'Invalid encrypted token' }
+    return { isValid: false, error: `Invalid encrypted token - ${error.message}` }
   }
 
   return { isValid: true }
@@ -97,7 +100,7 @@ const auth = {
   plugin: {
     name: 'auth',
     register: (server, _options) => {
-      server.auth.scheme('bearer', (server, options) => {
+      server.auth.scheme('bearer', (_server, _opts) => {
         return {
           authenticate: (request, h) => {
             const authHeader = request.headers.authorization
