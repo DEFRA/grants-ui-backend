@@ -66,6 +66,7 @@ describe('Provider contract: grants-ui-backend', () => {
       },
       publishVerificationResult: process.env.PACT_PUBLISH_VERIFICATION === 'true',
       providerVersion: process.env.SERVICE_VERSION ?? '1.0.0',
+      providerVersionBranch: process.env.GITHUB_REF_NAME ?? 'main',
       failIfNoPactsFound: false,
       logLevel: 'warn'
     })
