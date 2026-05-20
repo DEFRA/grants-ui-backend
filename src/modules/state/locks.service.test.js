@@ -3,7 +3,7 @@ import {
   acquireOrRefreshApplicationLock,
   releaseApplicationLock,
   releaseAllApplicationLocksForOwner
-} from './application-lock'
+} from './locks.service'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 
 jest.mock('~/src/common/helpers/logging/log.js', () => ({

@@ -1,8 +1,8 @@
 import Boom from '@hapi/boom'
-import { acquireOrRefreshApplicationLock } from '../common/helpers/application-lock.js'
-import { verifyLockToken } from '../common/helpers/lock/lock-token.js'
-import { LogCodes } from '../common/helpers/logging/log-codes.js'
-import { log } from '../common/helpers/logging/log.js'
+import { acquireOrRefreshApplicationLock } from './locks.service.js'
+import { verifyLockToken } from './lock-token.js'
+import { LogCodes } from '../../common/helpers/logging/log-codes.js'
+import { log } from '../../common/helpers/logging/log.js'
 
 /**
  * Extracts lock-scoping identifiers from the application lock token header.

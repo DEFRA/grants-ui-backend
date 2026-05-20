@@ -1,8 +1,7 @@
-import { applicationLockRelease, applicationLocksRelease } from './lock.js'
+import { applicationLockRelease, applicationLocksRelease } from './locks.routes.js'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
-import { releaseApplicationLock } from '~/src/common/helpers/application-lock.js'
-import { verifyOwnerLockReleaseToken } from '../common/helpers/lock/lock-token.js'
-import { releaseAllApplicationLocksForOwner } from '../common/helpers/application-lock.js'
+import { releaseApplicationLock, releaseAllApplicationLocksForOwner } from './locks.service.js'
+import { verifyOwnerLockReleaseToken } from './lock-token.js'
 
 jest.mock('~/src/common/helpers/logging/log.js', () => ({
   log: jest.fn(),
@@ -12,11 +11,11 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
     }
   }
 }))
-jest.mock('~/src/common/helpers/application-lock.js', () => ({
+jest.mock('./locks.service.js', () => ({
   releaseApplicationLock: jest.fn(),
   releaseAllApplicationLocksForOwner: jest.fn()
 }))
-jest.mock('../common/helpers/lock/lock-token.js', () => ({
+jest.mock('./lock-token.js', () => ({
   verifyOwnerLockReleaseToken: jest.fn()
 }))
 

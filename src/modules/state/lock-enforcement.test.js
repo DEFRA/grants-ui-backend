@@ -1,8 +1,12 @@
-import { TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY, APPLICATION_LOCK_TOKEN_SECRET } from '../test-helpers/auth-constants.js'
-import { acquireOrRefreshApplicationLock } from '../common/helpers/application-lock.js'
-import { enforceApplicationLock } from './application-lock-enforcement.js'
+import {
+  TEST_AUTH_TOKEN,
+  TEST_ENCRYPTION_KEY,
+  APPLICATION_LOCK_TOKEN_SECRET
+} from '../../test-helpers/auth-constants.js'
+import { acquireOrRefreshApplicationLock } from './locks.service.js'
+import { enforceApplicationLock } from './lock-enforcement.js'
 import jwt from 'jsonwebtoken'
-import { config } from '../config.js'
+import { config } from '../../config.js'
 
 function createLockToken({ sub = 'user-1', sbi = '123456789', grantCode = 'EGWA', grantVersion = '1.0.0' } = {}) {
   return jwt.sign(
@@ -29,7 +33,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
     process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
     process.env.APPLICATION_LOCK_TOKEN_SECRET = APPLICATION_LOCK_TOKEN_SECRET
     config.set('applicationLock.secret', process.env.APPLICATION_LOCK_TOKEN_SECRET)
-    const { createServer } = await import('../server.js')
+    const { createServer } = await import('../../server.js')
     server = await createServer()
     await server.initialize()
 

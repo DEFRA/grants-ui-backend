@@ -1,14 +1,14 @@
 import Boom from '@hapi/boom'
-import { addSubmission, retrieveSubmissions } from './submissions.js'
+import { addSubmission, retrieveSubmissions } from './submissions.routes.js'
 
-import { releaseApplicationLock } from '../common/helpers/application-lock.js'
-import { extractLockKeys } from '../plugins/application-lock-enforcement.js'
-import { log, LogCodes } from '../common/helpers/logging/log.js'
+import { releaseApplicationLock } from './locks.service.js'
+import { extractLockKeys } from './lock-enforcement.js'
+import { log, LogCodes } from '../../common/helpers/logging/log.js'
 import { expect } from '@jest/globals'
 
-jest.mock('../common/helpers/application-lock.js')
-jest.mock('../plugins/application-lock-enforcement.js')
-jest.mock('../common/helpers/logging/log.js')
+jest.mock('./locks.service.js')
+jest.mock('./lock-enforcement.js')
+jest.mock('../../common/helpers/logging/log.js')
 
 describe('addSubmission', () => {
   let mockDb

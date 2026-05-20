@@ -1,8 +1,8 @@
 import { MongoClient } from 'mongodb'
-import { stateDelete, statePatch, stateRetrieve, stateSave } from './state.js'
+import { stateDelete, statePatch, stateRetrieve, stateSave } from './state.routes.js'
 import { logIfApproachingPayloadLimit } from '~/src/common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
-import { enforceApplicationLock } from '../plugins/application-lock-enforcement.js'
+import { enforceApplicationLock } from './lock-enforcement.js'
 
 jest.mock('~/src/common/helpers/logging/log-if-approaching-payload-limit.js', () => ({
   logIfApproachingPayloadLimit: jest.fn()

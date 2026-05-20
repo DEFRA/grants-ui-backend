@@ -1,5 +1,5 @@
 import { config } from '../../config.js'
-import { log, LogCodes } from './logging/log.js'
+import { log, LogCodes } from '../../common/helpers/logging/log.js'
 
 export const APPLICATION_LOCK_TTL_MS = config.get('applicationLock.ttlMs')
 

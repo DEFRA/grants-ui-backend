@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken'
 import { verifyLockToken, verifyOwnerLockReleaseToken } from './lock-token.js'
-import { config } from '../../../config.js'
+import { config } from '../../config.js'
 import { Boom } from '@hapi/boom'
 
-jest.mock('../../../config.js', () => ({
+jest.mock('../../config.js', () => ({
   config: {
     get: jest.fn()
   }
