@@ -2,6 +2,8 @@ import convict from 'convict'
 import convictFormatWithValidator from 'convict-format-with-validator'
 
 import { convictValidateMongoUri } from './common/helpers/convict/validate-mongo-uri.js'
+import { mongoStateSchema } from './common/helpers/convict/mongo-state-schema.js'
+import { mongoConfigSchema } from './common/helpers/convict/mongo-config-schema.js'
 
 convict.addFormat(convictValidateMongoUri)
 convict.addFormats(convictFormatWithValidator)
@@ -70,38 +72,6 @@ const config = convict({
         : ['req', 'res', 'responseTime']
     }
   },
-  mongo: {
-    uri: {
-      doc: 'URI for mongodb',
-      format: String,
-      default: 'mongodb://127.0.0.1:27017',
-      env: 'MONGO_URI'
-    },
-    databaseName: {
-      doc: 'Database name for mongodb',
-      format: String,
-      default: 'grants-ui-backend',
-      env: 'MONGO_DATABASE'
-    },
-    maxPoolSize: {
-      doc: 'Max connection pool size',
-      format: Number,
-      default: 25,
-      env: 'MONGO_MAX_POOL_SIZE'
-    },
-    minPoolSize: {
-      doc: 'Min connection pool size',
-      format: Number,
-      default: 5,
-      env: 'MONGO_MIN_POOL_SIZE'
-    },
-    maxIdleTimeMS: {
-      doc: 'Max idle time for connections in the pool (ms)',
-      format: Number,
-      default: 60_000,
-      env: 'MONGO_MAX_IDLE_TIME_MS'
-    }
-  },
   httpProxy: {
     doc: 'HTTP Proxy URL',
     format: String,
@@ -145,6 +115,8 @@ const config = convict({
       sensitive: true
     }
   },
+  mongoState: mongoStateSchema,
+  mongoConfig: mongoConfigSchema,
   applicationLock: {
     secret: {
       doc: 'Secret used to verify application lock tokens',

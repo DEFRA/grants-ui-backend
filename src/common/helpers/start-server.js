@@ -9,7 +9,7 @@ async function startServer() {
 
   try {
     server = await createServer()
-    await migrateApplicantToAdditionalAnswers(server.db, server.logger)
+    await migrateApplicantToAdditionalAnswers(server.stateDb, server.logger)
     await server.start()
 
     server.logger.info('Server started successfully')

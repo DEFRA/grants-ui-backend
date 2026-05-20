@@ -28,7 +28,7 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
 }))
 
 async function seedApplicationLock(server, { sbi, grantCode, grantVersion, ownerId }) {
-  await server.db.collection('grant-application-locks').insertOne({
+  await server.stateDb.collection('grant-application-locks').insertOne({
     grantCode,
     grantVersion,
     sbi,

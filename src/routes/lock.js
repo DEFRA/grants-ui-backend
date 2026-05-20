@@ -42,7 +42,7 @@ export const applicationLockRelease = {
 
   handler: async (request, h) => {
     const { sbi, ownerId, grantCode, grantVersion } = request.query
-    const db = request.db
+    const db = request.stateDb
 
     try {
       const released = await releaseApplicationLock(db, {
@@ -67,7 +67,7 @@ export const applicationLocksRelease = {
   },
 
   handler: async (request, h) => {
-    const db = request.db
+    const db = request.stateDb
 
     const lockToken = request.headers['x-application-lock-release']
     if (!lockToken) {

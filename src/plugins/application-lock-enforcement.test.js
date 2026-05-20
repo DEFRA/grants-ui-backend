@@ -51,8 +51,8 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   })
 
   afterEach(async () => {
-    await server.db.collection('grant-application-locks').deleteMany({})
-    await server.db.collection('grant_application_submissions').deleteMany({})
+    await server.stateDb.collection('grant-application-locks').deleteMany({})
+    await server.stateDb.collection('grant_application_submissions').deleteMany({})
   })
 
   afterAll(async () => {
@@ -190,7 +190,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   })
 
   test('blocks access when lock is owned by another user', async () => {
-    const db = server.db
+    const db = server.stateDb
 
     await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',
@@ -213,7 +213,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   })
 
   test('allows same user to refresh their own lock', async () => {
-    const db = server.db
+    const db = server.stateDb
 
     await acquireOrRefreshApplicationLock(db, {
       grantCode: 'EGWA',

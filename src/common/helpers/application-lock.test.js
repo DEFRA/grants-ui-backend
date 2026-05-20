@@ -37,11 +37,11 @@ describe('application locks', () => {
 
   afterEach(async () => {
     jest.clearAllMocks()
-    await server.db.collection('grant-application-locks').deleteMany({})
+    await server.stateDb.collection('grant-application-locks').deleteMany({})
   })
 
   test('acquire and release lock', async () => {
-    const db = server.db
+    const db = server.stateDb
 
     const params = {
       grantCode: 'EGWA',
@@ -81,7 +81,7 @@ describe('application locks', () => {
   })
 
   test('expired lock can be taken over by another user', async () => {
-    const db = server.db
+    const db = server.stateDb
     const now = new Date()
 
     await db.collection('grant-application-locks').insertOne({
@@ -105,7 +105,7 @@ describe('application locks', () => {
   })
 
   test('same user can reacquire their own lock (re-entrant)', async () => {
-    const db = server.db
+    const db = server.stateDb
 
     const params = { grantCode: 'EGWA', grantVersion: '1.0.0', sbi: '106', ownerId: 'user-1' }
 
@@ -192,7 +192,7 @@ describe('application locks', () => {
   })
 
   test('releaseAllApplicationLocksForOwner deletes all locks and logs', async () => {
-    const db = server.db
+    const db = server.stateDb
 
     await db.collection('grant-application-locks').deleteMany({ ownerId: 'user-1' })
     await db.collection('grant-application-locks').insertMany([

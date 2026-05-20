@@ -92,7 +92,7 @@ export const addSubmission = {
       throw Boom.badRequest('Grant version in payload does not match lock token')
     }
 
-    const db = request.db
+    const db = request.stateDb
 
     try {
       await db.collection('grant_application_submissions').insertOne(request.payload)
@@ -158,7 +158,7 @@ export const retrieveSubmissions = {
   handler: async (request, h) => {
     const { crn, sbi, grantCode, grantVersion, referenceNumber } = request.query
 
-    const db = request.db
+    const db = request.stateDb
 
     // Build filter object, excluding undefined values
     const filter = {
