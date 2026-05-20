@@ -83,7 +83,7 @@ export const stateSave = {
 
     const { sbi, grantCode, grantVersion, state } = request.payload
 
-    const db = request.db
+    const db = request.stateDb
 
     const updateDoc = {
       $set: {
@@ -156,7 +156,7 @@ export const stateRetrieve = {
   handler: async (request, h) => {
     const { sbi, grantCode, grantVersion } = request.query
 
-    const db = request.db
+    const db = request.stateDb
 
     try {
       const document = await db.collection(GRANT_APPLICATION_STATE_COLLECTION).findOne({ sbi, grantCode, grantVersion })
@@ -214,7 +214,7 @@ export const stateDelete = {
   handler: async (request, h) => {
     const { sbi, grantCode, grantVersion } = request.query
 
-    const db = request.db
+    const db = request.stateDb
 
     try {
       const doc = await db.collection(GRANT_APPLICATION_STATE_COLLECTION).findOne({ sbi, grantCode, grantVersion })
@@ -282,7 +282,7 @@ export const statePatch = {
     const { applicationStatus } = request.payload.state
 
     try {
-      const document = await request.db.collection(GRANT_APPLICATION_STATE_COLLECTION).findOneAndUpdate(
+      const document = await request.stateDb.collection(GRANT_APPLICATION_STATE_COLLECTION).findOneAndUpdate(
         { sbi, grantCode, grantVersion },
         {
           $set: {

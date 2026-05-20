@@ -1,14 +1,13 @@
 import { MongoClient, ReadPreference } from 'mongodb'
 
-import { config } from '../../config.js'
-
-const mongoConfig = config.get('mongo')
-
 export const mongoDb = {
   plugin: {
     name: 'mongodb',
     version: '1.0.0',
+    multiple: true,
     register: async function (server, options) {
+      const decorationKey = options.decorationKey
+
       server.logger.info('Setting up MongoDb')
 
       const client = await MongoClient.connect(options.mongoUri, {
@@ -34,14 +33,14 @@ export const mongoDb = {
 
       server.logger.info(`MongoDb connected to ${databaseName}`)
 
-      const indexCreation = createIndexes(db).catch((err) => {
+      const indexCreation = options.createIndexes(db).catch((err) => {
         server.logger.error(err, 'Index creation failed')
       })
-      server.decorate('server', 'mongoIndexesReady', indexCreation)
+      server.decorate('server', `${decorationKey}MongoIndexesReady`, indexCreation)
 
-      server.decorate('server', 'mongoClient', client)
-      server.decorate('server', 'db', db)
-      server.decorate('request', 'db', () => db, { apply: true })
+      server.decorate('server', `${decorationKey}MongoClient`, client)
+      server.decorate('server', `${decorationKey}Db`, db)
+      server.decorate('request', `${decorationKey}Db`, () => db, { apply: true })
 
       server.events.on('stop', async () => {
         server.logger.info('Closing Mongo client')
@@ -52,17 +51,10 @@ export const mongoDb = {
         }
       })
     }
-  },
-  options: {
-    mongoUri: mongoConfig.uri,
-    databaseName: mongoConfig.databaseName,
-    maxPoolSize: mongoConfig.maxPoolSize,
-    minPoolSize: mongoConfig.minPoolSize,
-    maxIdleTimeMS: mongoConfig.maxIdleTimeMS
   }
 }
 
-async function createIndexes(db) {
+export async function createStateIndexes(db) {
   await db.collection('grant-application-locks').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
   await db
     .collection('grant-application-locks')

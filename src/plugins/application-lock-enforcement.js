@@ -115,7 +115,7 @@ export function extractLockKeys(request) {
 export async function enforceApplicationLock(request, h) {
   const { ownerId, sbi, grantCode, grantVersion } = extractLockKeys(request)
 
-  const db = request.db
+  const db = request.stateDb
 
   const lock = await acquireOrRefreshApplicationLock(db, {
     grantCode,

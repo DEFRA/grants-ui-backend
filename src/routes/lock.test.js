@@ -36,7 +36,7 @@ const createMockRequest = (overrides = {}) => ({
     grantCode: 'GRANT1',
     grantVersion: '1'
   },
-  db: {},
+  stateDb: {},
   ...overrides
 })
 
@@ -53,7 +53,7 @@ describe('applicationLockRelease route', () => {
 
     const result = await applicationLockRelease.handler(request, h)
 
-    expect(releaseApplicationLock).toHaveBeenCalledWith(request.db, {
+    expect(releaseApplicationLock).toHaveBeenCalledWith(request.stateDb, {
       sbi: '123456789',
       grantCode: 'GRANT1',
       grantVersion: '1',
@@ -148,7 +148,7 @@ describe('applicationLocksRelease route', () => {
     headers: {
       'x-application-lock-release': 'valid-token'
     },
-    db: {},
+    stateDb: {},
     ...overrides
   })
 
@@ -162,7 +162,7 @@ describe('applicationLocksRelease route', () => {
     const result = await applicationLocksRelease.handler(request, h)
 
     expect(verifyOwnerLockReleaseToken).toHaveBeenCalledWith('valid-token')
-    expect(releaseAllApplicationLocksForOwner).toHaveBeenCalledWith(request.db, { ownerId: 'user-123' })
+    expect(releaseAllApplicationLocksForOwner).toHaveBeenCalledWith(request.stateDb, { ownerId: 'user-123' })
 
     expect(h.response).toHaveBeenCalledWith({
       success: true,

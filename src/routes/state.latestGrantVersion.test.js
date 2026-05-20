@@ -32,7 +32,7 @@ describe('State integration tests for grantVersion filtering', () => {
 
     mockRequest = {
       server: { logger: { error: jest.fn() } },
-      db,
+      stateDb: db,
       query: { ...baseQuery }
     }
   })

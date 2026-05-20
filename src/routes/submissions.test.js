@@ -41,7 +41,7 @@ describe('addSubmission', () => {
 
     mockRequest = {
       payload: validPayload,
-      db: mockDb
+      stateDb: mockDb
     }
 
     mockH = {
@@ -180,7 +180,7 @@ describe('retrieveSubmissions', () => {
         grantCode: 'example-grant',
         grantVersion: '1.0.0'
       },
-      db: mockDb
+      stateDb: mockDb
     }
 
     mockH = {

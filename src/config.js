@@ -145,6 +145,38 @@ const config = convict({
       sensitive: true
     }
   },
+  mongoConfig: {
+    uri: {
+      doc: 'URI for grants-config mongodb',
+      format: String,
+      default: 'mongodb://127.0.0.1:27017',
+      env: 'MONGO_CONFIG_URI'
+    },
+    databaseName: {
+      doc: 'Database name for grants-config mongodb',
+      format: String,
+      default: 'grants-ui-config',
+      env: 'MONGO_CONFIG_DATABASE'
+    },
+    maxPoolSize: {
+      doc: 'Max connection pool size',
+      format: Number,
+      default: 25,
+      env: 'MONGO_CONFIG_MAX_POOL_SIZE'
+    },
+    minPoolSize: {
+      doc: 'Min connection pool size',
+      format: Number,
+      default: 5,
+      env: 'MONGO_CONFIG_MIN_POOL_SIZE'
+    },
+    maxIdleTimeMS: {
+      doc: 'Max idle time for connections in the pool (ms)',
+      format: Number,
+      default: 60_000,
+      env: 'MONGO_CONFIG_MAX_IDLE_TIME_MS'
+    }
+  },
   applicationLock: {
     secret: {
       doc: 'Secret used to verify application lock tokens',

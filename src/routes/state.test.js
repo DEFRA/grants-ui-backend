@@ -69,7 +69,7 @@ describe('State', () => {
 
     mockRequest = {
       server: mockServer,
-      db
+      stateDb: db
     }
   })
 
