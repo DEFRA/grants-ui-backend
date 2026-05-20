@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals'
-import { APPLICATION_LOCK_TTL_MS } from './common/helpers/application-lock.js'
+import { APPLICATION_LOCK_TTL_MS } from './modules/state/locks.service.js'
 
 describe('#config', () => {
   let originalEnv

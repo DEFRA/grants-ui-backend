@@ -1,7 +1,7 @@
 import { health } from '../routes/health.js'
-import { applicationLockRelease, applicationLocksRelease } from '../routes/lock.js'
-import { stateSave, stateRetrieve, stateDelete, statePatch } from '../routes/state.js'
-import { addSubmission, retrieveSubmissions } from '../routes/submissions.js'
+import { applicationLockRelease, applicationLocksRelease } from '../modules/state/locks.routes.js'
+import { stateSave, stateRetrieve, stateDelete, statePatch } from '../modules/state/state.routes.js'
+import { addSubmission, retrieveSubmissions } from '../modules/state/submissions.routes.js'
 
 const router = {
   plugin: {

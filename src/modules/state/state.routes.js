@@ -1,48 +1,13 @@
-import Joi from 'joi'
-import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit.js'
-import { log, LogCodes } from '../common/helpers/logging/log.js'
-import { enforceApplicationLock } from '../plugins/application-lock-enforcement.js'
+import { logIfApproachingPayloadLimit } from '../../common/helpers/logging/log-if-approaching-payload-limit.js'
+import { log, LogCodes } from '../../common/helpers/logging/log.js'
+import { enforceApplicationLock } from './lock-enforcement.js'
 import { StatusCodes } from 'http-status-codes'
+import { stateSaveSchema, stateRetrieveSchema, patchParamsSchema, patchSchema } from './state.schema.js'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
 const GRANT_APPLICATION_STATE_COLLECTION = 'grant-application-state'
 const STATE_NOT_FOUND = 'State not found'
-
-const grantVersionSchema = Joi.alternatives().try(Joi.number().integer(), Joi.string()).default(1)
-
-const stateSaveSchema = Joi.object({
-  sbi: Joi.string().required(),
-  grantCode: Joi.string().required(),
-  grantVersion: grantVersionSchema,
-  state: Joi.object().unknown(true).required().messages({
-    'object.base': '"state" must be an object'
-  })
-})
-  .required()
-  .unknown(false) // Disallow unknown top-level fields
-
-const stateRetrieveSchema = Joi.object({
-  sbi: Joi.string().required(),
-  grantCode: Joi.string().required(),
-  grantVersion: grantVersionSchema
-})
-
-const patchParamsSchema = Joi.object({
-  sbi: Joi.string().required(),
-  grantCode: Joi.string().required(),
-  grantVersion: grantVersionSchema
-})
-
-const patchSchema = Joi.object({
-  state: Joi.object({
-    applicationStatus: Joi.string().required()
-  })
-    .required()
-    .unknown(false) // Disallow any other state.* fields
-})
-  .required()
-  .unknown(false) // Disallow unknown top-level fields
 
 export const stateSave = {
   method: 'POST',

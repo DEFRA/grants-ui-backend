@@ -1,5 +1,5 @@
 import Boom from '@hapi/boom'
-import { config } from '../../../config.js'
+import { config } from '../../config.js'
 import jwt from 'jsonwebtoken'
 
 /**

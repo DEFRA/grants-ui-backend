@@ -1,16 +1,9 @@
-import Joi from 'joi'
-import { log, LogCodes } from '../common/helpers/logging/log.js'
-import { releaseAllApplicationLocksForOwner, releaseApplicationLock } from '../common/helpers/application-lock.js'
+import { log, LogCodes } from '../../common/helpers/logging/log.js'
+import { releaseAllApplicationLocksForOwner, releaseApplicationLock } from './locks.service.js'
 import Boom from '@hapi/boom'
-import { verifyOwnerLockReleaseToken } from '../common/helpers/lock/lock-token.js'
+import { verifyOwnerLockReleaseToken } from './lock-token.js'
 import { StatusCodes } from 'http-status-codes'
-
-const applicationLockReleaseSchema = Joi.object({
-  sbi: Joi.string().required(),
-  ownerId: Joi.string().required(),
-  grantCode: Joi.string().required(),
-  grantVersion: Joi.alternatives().try(Joi.number().integer(), Joi.string()).required()
-})
+import { applicationLockReleaseSchema } from './state.schema.js'
 
 export const applicationLockRelease = {
   method: 'DELETE',

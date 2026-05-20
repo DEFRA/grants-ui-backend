@@ -1,35 +1,13 @@
-import Joi from 'joi'
-import { logIfApproachingPayloadLimit } from '../common/helpers/logging/log-if-approaching-payload-limit.js'
-import { log, LogCodes } from '../common/helpers/logging/log.js'
-import { releaseApplicationLock } from '../common/helpers/application-lock.js'
-import { enforceApplicationLock, extractLockKeys } from '../plugins/application-lock-enforcement.js'
+import { logIfApproachingPayloadLimit } from '../../common/helpers/logging/log-if-approaching-payload-limit.js'
+import { log, LogCodes } from '../../common/helpers/logging/log.js'
+import { releaseApplicationLock } from './locks.service.js'
+import { enforceApplicationLock, extractLockKeys } from './lock-enforcement.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import { addSubmissionSchema, retrieveSubmissionsSchema } from './state.schema.js'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
-
-const grantVersionSchema = Joi.alternatives().try(Joi.number().integer(), Joi.string())
-
-const addSubmissionSchema = Joi.object({
-  crn: Joi.string().required(),
-  sbi: Joi.string().required(),
-  grantCode: Joi.string().required(),
-  grantVersion: grantVersionSchema.required(),
-  referenceNumber: Joi.string().required(),
-  previousReferenceNumber: Joi.string().allow(null),
-  submittedAt: Joi.date().required()
-})
-  .required()
-  .unknown(false) // Disallow unknown top-level fields
-
-const retrieveSubmissionsSchema = Joi.object({
-  crn: Joi.string(),
-  sbi: Joi.string().required(),
-  grantCode: Joi.string().required(),
-  grantVersion: grantVersionSchema,
-  referenceNumber: Joi.string()
-})
 
 export const addSubmission = {
   method: 'POST',
