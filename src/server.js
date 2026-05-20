@@ -57,11 +57,11 @@ async function createServer() {
       plugin: mongoDb.plugin,
       options: {
         decorationKey: 'state',
-        mongoUri: config.get('mongo.uri'),
-        databaseName: config.get('mongo.databaseName'),
-        maxPoolSize: config.get('mongo.maxPoolSize'),
-        minPoolSize: config.get('mongo.minPoolSize'),
-        maxIdleTimeMS: config.get('mongo.maxIdleTimeMS'),
+        mongoUri: config.get('mongoState.uri'),
+        databaseName: config.get('mongoState.databaseName'),
+        maxPoolSize: config.get('mongoState.maxPoolSize'),
+        minPoolSize: config.get('mongoState.minPoolSize'),
+        maxIdleTimeMS: config.get('mongoState.maxIdleTimeMS'),
         createIndexes: createStateIndexes
       }
     },
