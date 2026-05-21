@@ -1,6 +1,7 @@
 /**
  * Config module — MongoDB data access.
  */
+import { FORM_DEFINITION_STATUS } from './config.constants.js'
 
 const COLLECTION = 'form-definitions'
 
@@ -28,7 +29,7 @@ export async function createConfigIndexes(db) {
 export async function resolveLatestVersion(db, grantCode) {
   return db
     .collection(COLLECTION)
-    .find({ grantCode, status: 'live' })
+    .find({ grantCode, status: FORM_DEFINITION_STATUS.ACTIVE })
     .sort({ major: -1, minor: -1, patch: -1 })
     .limit(1)
     .next()
@@ -44,7 +45,7 @@ export async function resolveLatestVersion(db, grantCode) {
 export async function resolveLatestVersionWithinMajor(db, grantCode, pinnedMajor) {
   return db
     .collection(COLLECTION)
-    .find({ grantCode, status: 'live', major: pinnedMajor })
+    .find({ grantCode, status: FORM_DEFINITION_STATUS.ACTIVE, major: pinnedMajor })
     .sort({ minor: -1, patch: -1 })
     .limit(1)
     .next()

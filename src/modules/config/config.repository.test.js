@@ -1,5 +1,6 @@
 import { MongoClient } from 'mongodb'
 import { createServer } from '../../server.js'
+import { FORM_DEFINITION_STATUS } from './config.constants.js'
 import {
   createConfigIndexes,
   resolveLatestVersion,
@@ -17,7 +18,7 @@ const makeDefinition = (overrides = {}) => ({
   minor: 0,
   patch: 0,
   definition: { pages: [] },
-  status: 'live',
+  status: FORM_DEFINITION_STATUS.ACTIVE,
   updatedAt: new Date('2024-01-01T00:00:00.000Z'),
   ...overrides
 })
@@ -82,8 +83,8 @@ describe('config.repository', () => {
       await db
         .collection(COLLECTION)
         .insertMany([
-          makeDefinition({ major: 1, minor: 0, patch: 0, status: 'live' }),
-          makeDefinition({ major: 2, minor: 0, patch: 0, status: 'draft' })
+          makeDefinition({ major: 1, minor: 0, patch: 0, status: FORM_DEFINITION_STATUS.ACTIVE }),
+          makeDefinition({ major: 2, minor: 0, patch: 0, status: FORM_DEFINITION_STATUS.DRAFT })
         ])
 
       const result = await resolveLatestVersion(db, 'farm-payments')
@@ -92,7 +93,7 @@ describe('config.repository', () => {
     })
 
     test('returns null when no live documents exist', async () => {
-      await db.collection(COLLECTION).insertOne(makeDefinition({ status: 'draft' }))
+      await db.collection(COLLECTION).insertOne(makeDefinition({ status: FORM_DEFINITION_STATUS.DRAFT }))
 
       const result = await resolveLatestVersion(db, 'farm-payments')
 
@@ -134,8 +135,8 @@ describe('config.repository', () => {
       await db
         .collection(COLLECTION)
         .insertMany([
-          makeDefinition({ major: 1, minor: 1, patch: 0, status: 'live' }),
-          makeDefinition({ major: 1, minor: 2, patch: 0, status: 'draft' })
+          makeDefinition({ major: 1, minor: 1, patch: 0, status: FORM_DEFINITION_STATUS.ACTIVE }),
+          makeDefinition({ major: 1, minor: 2, patch: 0, status: FORM_DEFINITION_STATUS.DRAFT })
         ])
 
       const result = await resolveLatestVersionWithinMajor(db, 'farm-payments', 1)
@@ -185,11 +186,13 @@ describe('config.repository', () => {
     })
 
     test('returns draft documents (no status filter)', async () => {
-      await db.collection(COLLECTION).insertOne(makeDefinition({ major: 1, minor: 0, patch: 0, status: 'draft' }))
+      await db
+        .collection(COLLECTION)
+        .insertOne(makeDefinition({ major: 1, minor: 0, patch: 0, status: FORM_DEFINITION_STATUS.DRAFT }))
 
       const result = await getDefinition(db, 'farm-payments', 1, 0, 0)
 
-      expect(result).toMatchObject({ status: 'draft' })
+      expect(result).toMatchObject({ status: FORM_DEFINITION_STATUS.DRAFT })
     })
   })
 })

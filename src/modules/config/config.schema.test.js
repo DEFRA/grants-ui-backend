@@ -4,6 +4,7 @@ import {
   resolveLatestVersionWithinMajorSchema,
   getDefinitionSchema
 } from './config.schema.js'
+import { FORM_DEFINITION_STATUS } from './config.constants.js'
 
 const validFormDefinition = {
   grantCode: 'farm-payments',
@@ -13,7 +14,7 @@ const validFormDefinition = {
   minor: 2,
   patch: 3,
   definition: { pages: [] },
-  status: 'live',
+  status: FORM_DEFINITION_STATUS.ACTIVE,
   updatedAt: new Date('2024-01-01T00:00:00.000Z')
 }
 
@@ -24,7 +25,7 @@ describe('formDefinitionSchema', () => {
   })
 
   test('accepts status "draft"', () => {
-    const { error } = formDefinitionSchema.validate({ ...validFormDefinition, status: 'draft' })
+    const { error } = formDefinitionSchema.validate({ ...validFormDefinition, status: FORM_DEFINITION_STATUS.DRAFT })
     expect(error).toBeUndefined()
   })
 
