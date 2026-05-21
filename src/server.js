@@ -4,7 +4,9 @@ import { config } from './config.js'
 import { router } from './plugins/router.js'
 import { auth } from './plugins/auth.js'
 import { requestLogger } from './common/helpers/logging/request-logger.js'
-import { mongoDb, createStateIndexes } from './common/helpers/mongodb.js'
+import { mongoDb } from './common/helpers/mongodb.js'
+import { createStateIndexes } from './modules/state/state.repository.js'
+import { createConfigIndexes } from './modules/config/config.repository.js'
 import { failAction } from './common/helpers/fail-action.js'
 import { secureContext } from './common/helpers/secure-context/index.js'
 import { pulse } from './common/helpers/pulse.js'
@@ -74,7 +76,7 @@ async function createServer() {
         maxPoolSize: config.get('mongoConfig.maxPoolSize'),
         minPoolSize: config.get('mongoConfig.minPoolSize'),
         maxIdleTimeMS: config.get('mongoConfig.maxIdleTimeMS'),
-        createIndexes: async () => {}
+        createIndexes: createConfigIndexes
       }
     },
     auth,
