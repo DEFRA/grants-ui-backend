@@ -58,12 +58,12 @@ jobs:
               "body": {
                 "event_type": "pact_published",
                 "client_payload": {
-                  "pact_url": "${pactbroker.pactUrl}",
-                  "consumer": "${pactbroker.consumerName}",
-                  "provider": "${pactbroker.providerName}",
-                  "sha": "${pactbroker.providerVersionNumber}",
-                  "branch": "${pactbroker.providerVersionBranch}",
-                  "message": "Verify changed pact for ${pactbroker.consumerName} version ${pactbroker.consumerVersionNumber} branch ${pactbroker.consumerVersionBranch} by ${pactbroker.providerVersionNumber} (${pactbroker.providerVersionDescriptions})"
+                  "pact_url": "\${pactbroker.pactUrl}",
+                  "consumer": "\${pactbroker.consumerName}",
+                  "provider": "\${pactbroker.providerName}",
+                  "sha": "\${pactbroker.providerVersionNumber}",
+                  "branch": "\${pactbroker.providerVersionBranch}",
+                  "message": "Verify changed pact for \${pactbroker.consumerName} version \${pactbroker.consumerVersionNumber} branch \${pactbroker.consumerVersionBranch} by \${pactbroker.providerVersionNumber} (\${pactbroker.providerVersionDescriptions})"
                 }
               }
             },
