@@ -5,8 +5,8 @@ import { router } from './plugins/router.js'
 import { auth } from './plugins/auth.js'
 import { requestLogger } from './common/helpers/logging/request-logger.js'
 import { mongoDb } from './common/helpers/mongodb.js'
-import { createStateIndexes } from './modules/state/state.repository.js'
-import { createConfigIndexes } from './modules/config/config.repository.js'
+import { createStateIndexes, initStateRepository } from './modules/state/state.repository.js'
+import { createConfigIndexes, initConfigRepository } from './modules/config/config.repository.js'
 import { failAction } from './common/helpers/fail-action.js'
 import { secureContext } from './common/helpers/secure-context/index.js'
 import { pulse } from './common/helpers/pulse.js'
@@ -83,6 +83,11 @@ async function createServer() {
     applicationLockPlugin,
     router
   ])
+
+  // Repositories are initialised after plugin registration so that
+  // server.stateDb / server.configDb decorations are available.
+  initStateRepository(server.stateDb)
+  initConfigRepository(server.configDb)
 
   return server
 }

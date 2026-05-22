@@ -40,7 +40,6 @@ export const mongoDb = {
 
       server.decorate('server', `${decorationKey}MongoClient`, client)
       server.decorate('server', `${decorationKey}Db`, db)
-      server.decorate('request', `${decorationKey}Db`, () => db, { apply: true })
 
       server.events.on('stop', async () => {
         server.logger.info('Closing Mongo client')

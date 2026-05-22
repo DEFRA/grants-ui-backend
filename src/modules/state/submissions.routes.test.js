@@ -1,17 +1,20 @@
 import Boom from '@hapi/boom'
 import { addSubmission, retrieveSubmissions } from './submissions.routes.js'
 
-import { releaseApplicationLock } from './locks.service.js'
+import { releaseApplicationLock, insertSubmission, findSubmissions } from './state.service.js'
 import { extractLockKeys } from './lock-enforcement.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
 import { expect } from '@jest/globals'
 
-jest.mock('./locks.service.js')
+jest.mock('./state.service.js', () => ({
+  releaseApplicationLock: jest.fn(),
+  insertSubmission: jest.fn(),
+  findSubmissions: jest.fn()
+}))
 jest.mock('./lock-enforcement.js')
 jest.mock('../../common/helpers/logging/log.js')
 
 describe('addSubmission', () => {
-  let mockDb
   let mockRequest
   let mockH
 
@@ -26,11 +29,7 @@ describe('addSubmission', () => {
   }
 
   beforeEach(() => {
-    mockDb = {
-      collection: jest.fn().mockReturnValue({
-        insertOne: jest.fn().mockResolvedValue({ acknowledged: true })
-      })
-    }
+    insertSubmission.mockResolvedValue({ acknowledged: true })
 
     extractLockKeys.mockReturnValue({
       ownerId: 'user1',
@@ -40,8 +39,7 @@ describe('addSubmission', () => {
     })
 
     mockRequest = {
-      payload: validPayload,
-      stateDb: mockDb
+      payload: validPayload
     }
 
     mockH = {
@@ -54,10 +52,13 @@ describe('addSubmission', () => {
   })
 
   it('should insert submission and release lock', async () => {
+    insertSubmission.mockResolvedValue({ acknowledged: true })
+    extractLockKeys.mockReturnValue({ ownerId: 'user1', sbi: '456', grantCode: 'example-grant', grantVersion: '1.0.0' })
+
     await addSubmission.handler(mockRequest, mockH)
 
-    expect(mockDb.collection).toHaveBeenCalledWith('grant_application_submissions')
-    expect(releaseApplicationLock).toHaveBeenCalledWith(mockDb, {
+    expect(insertSubmission).toHaveBeenCalledWith(validPayload)
+    expect(releaseApplicationLock).toHaveBeenCalledWith({
       grantCode: 'example-grant',
       grantVersion: '1.0.0',
       sbi: '456',
@@ -68,7 +69,8 @@ describe('addSubmission', () => {
   })
 
   it('should insert submission and release lock when grantVersion is an integer', async () => {
-    mockRequest.payload = { ...validPayload, grantVersion: 1 }
+    mockRequest = { payload: { ...validPayload, grantVersion: 1 } }
+    insertSubmission.mockResolvedValue({ acknowledged: true })
     extractLockKeys.mockReturnValue({
       ownerId: 'user1',
       sbi: '456',
@@ -78,7 +80,7 @@ describe('addSubmission', () => {
 
     await addSubmission.handler(mockRequest, mockH)
 
-    expect(releaseApplicationLock).toHaveBeenCalledWith(mockDb, {
+    expect(releaseApplicationLock).toHaveBeenCalledWith({
       grantCode: 'example-grant',
       grantVersion: 1,
       sbi: '456',
@@ -129,7 +131,8 @@ describe('addSubmission', () => {
   })
 
   it('should return 500 if Mongo insert fails', async () => {
-    mockDb.collection().insertOne.mockRejectedValue(new Error('Mongo fail'))
+    insertSubmission.mockRejectedValue(new Error('Mongo fail'))
+    extractLockKeys.mockReturnValue({ ownerId: 'user1', sbi: '456', grantCode: 'example-grant', grantVersion: '1.0.0' })
 
     await addSubmission.handler(mockRequest, mockH)
 
@@ -159,28 +162,18 @@ describe('addSubmission', () => {
 })
 
 describe('retrieveSubmissions', () => {
-  let mockDb
   let mockRequest
   let mockH
 
   beforeEach(() => {
-    mockDb = {
-      collection: jest.fn().mockReturnValue({
-        find: jest.fn().mockReturnValue({
-          sort: jest.fn().mockReturnValue({
-            toArray: jest.fn().mockResolvedValue([{ ref: '1' }])
-          })
-        })
-      })
-    }
+    findSubmissions.mockResolvedValue([{ ref: '1' }])
 
     mockRequest = {
       query: {
         sbi: '456',
         grantCode: 'example-grant',
         grantVersion: '1.0.0'
-      },
-      stateDb: mockDb
+      }
     }
 
     mockH = {
@@ -193,23 +186,25 @@ describe('retrieveSubmissions', () => {
   })
 
   it('should retrieve submissions sorted by submittedAt desc', async () => {
+    findSubmissions.mockResolvedValue([{ ref: '1' }])
+
     await retrieveSubmissions.handler(mockRequest, mockH)
 
-    expect(mockDb.collection).toHaveBeenCalledWith('grant_application_submissions')
+    expect(findSubmissions).toHaveBeenCalledWith(expect.objectContaining({ sbi: '456', grantCode: 'example-grant' }))
     expect(mockH.response).toHaveBeenCalledWith([{ ref: '1' }])
   })
 
   it('should retrieve submissions when grantVersion is an integer', async () => {
     mockRequest.query = { ...mockRequest.query, grantVersion: 1 }
+    findSubmissions.mockResolvedValue([{ ref: '1' }])
 
     await retrieveSubmissions.handler(mockRequest, mockH)
 
-    expect(mockDb.collection).toHaveBeenCalledWith('grant_application_submissions')
     expect(mockH.response).toHaveBeenCalledWith([{ ref: '1' }])
   })
 
   it('should return 500 on Mongo failure', async () => {
-    mockDb.collection().find().sort().toArray.mockRejectedValue(new Error('Mongo fail'))
+    findSubmissions.mockRejectedValue(new Error('Mongo fail'))
 
     await retrieveSubmissions.handler(mockRequest, mockH)
 

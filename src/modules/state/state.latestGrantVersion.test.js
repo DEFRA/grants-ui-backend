@@ -1,5 +1,6 @@
 import { stateRetrieve, stateDelete } from './state.routes.js'
 import { MongoClient } from 'mongodb'
+import { initStateRepository } from './state.repository.js'
 
 describe('State integration tests for grantVersion filtering', () => {
   let connection
@@ -15,6 +16,7 @@ describe('State integration tests for grantVersion filtering', () => {
   beforeAll(async () => {
     connection = await MongoClient.connect(process.env.MONGO_URI)
     db = connection.db('grants-ui-backend')
+    initStateRepository(db)
 
     mockH = {
       response: jest.fn().mockReturnThis(),
@@ -32,7 +34,6 @@ describe('State integration tests for grantVersion filtering', () => {
 
     mockRequest = {
       server: { logger: { error: jest.fn() } },
-      stateDb: db,
       query: { ...baseQuery }
     }
   })

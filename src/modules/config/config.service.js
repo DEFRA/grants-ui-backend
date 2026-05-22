@@ -1,5 +1,10 @@
 /**
- * Config module — business logic
+ * Config service — business logic layer between routes and the repository.
+ * Business rules (e.g. resolving the correct form definition version to serve based on application state) go here.
+ */
+
+/**
+ * @typedef {import('./config.repository.js').FormDefinition} FormDefinition
  */
 
 import {
@@ -11,33 +16,33 @@ import {
 /**
  * Returns the latest live FormDefinition for a grant.
  *
- * @param {import('mongodb').Db} db
  * @param {string} grantCode
+ * @returns {Promise<FormDefinition|null>}
  */
-export function resolveLatestVersion(db, grantCode) {
-  return repoResolveLatestVersion(db, grantCode)
+export function resolveLatestVersion(grantCode) {
+  return repoResolveLatestVersion(grantCode)
 }
 
 /**
  * Returns the latest live FormDefinition within a pinned major version.
  *
- * @param {import('mongodb').Db} db
  * @param {string} grantCode
  * @param {number} pinnedMajor
+ * @returns {Promise<FormDefinition|null>}
  */
-export function resolveLatestVersionWithinMajor(db, grantCode, pinnedMajor) {
-  return repoResolveLatestVersionWithinMajor(db, grantCode, pinnedMajor)
+export function resolveLatestVersionWithinMajor(grantCode, pinnedMajor) {
+  return repoResolveLatestVersionWithinMajor(grantCode, pinnedMajor)
 }
 
 /**
  * Returns the FormDefinition for an exact semver version.
  *
- * @param {import('mongodb').Db} db
  * @param {string} grantCode
  * @param {number} major
  * @param {number} minor
  * @param {number} patch
+ * @returns {Promise<FormDefinition|null>}
  */
-export function getDefinition(db, grantCode, major, minor, patch) {
-  return repoGetDefinition(db, grantCode, major, minor, patch)
+export function getDefinition(grantCode, major, minor, patch) {
+  return repoGetDefinition(grantCode, major, minor, patch)
 }

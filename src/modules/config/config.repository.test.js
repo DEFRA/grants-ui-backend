@@ -3,6 +3,7 @@ import { createServer } from '../../server.js'
 import { FORM_DEFINITION_STATUS } from './config.constants.js'
 import {
   createConfigIndexes,
+  initConfigRepository,
   resolveLatestVersion,
   resolveLatestVersionWithinMajor,
   getDefinition
@@ -31,6 +32,7 @@ describe('config.repository', () => {
     connection = await MongoClient.connect(process.env.MONGO_URI)
     db = connection.db('grants-ui-config-test')
     await createConfigIndexes(db)
+    initConfigRepository(db)
   })
 
   afterAll(async () => {
@@ -74,7 +76,7 @@ describe('config.repository', () => {
           makeDefinition({ major: 2, minor: 1, patch: 0 })
         ])
 
-      const result = await resolveLatestVersion(db, 'farm-payments')
+      const result = await resolveLatestVersion('farm-payments')
 
       expect(result).toMatchObject({ major: 2, minor: 3, patch: 1 })
     })
@@ -87,7 +89,7 @@ describe('config.repository', () => {
           makeDefinition({ major: 2, minor: 0, patch: 0, status: FORM_DEFINITION_STATUS.DRAFT })
         ])
 
-      const result = await resolveLatestVersion(db, 'farm-payments')
+      const result = await resolveLatestVersion('farm-payments')
 
       expect(result).toMatchObject({ major: 1, minor: 0, patch: 0 })
     })
@@ -95,13 +97,13 @@ describe('config.repository', () => {
     test('returns null when no live documents exist', async () => {
       await db.collection(COLLECTION).insertOne(makeDefinition({ status: FORM_DEFINITION_STATUS.DRAFT }))
 
-      const result = await resolveLatestVersion(db, 'farm-payments')
+      const result = await resolveLatestVersion('farm-payments')
 
       expect(result).toBeNull()
     })
 
     test('returns null when grantCode does not exist', async () => {
-      const result = await resolveLatestVersion(db, 'unknown-grant')
+      const result = await resolveLatestVersion('unknown-grant')
 
       expect(result).toBeNull()
     })
@@ -109,7 +111,7 @@ describe('config.repository', () => {
     test('does not return documents for a different grantCode', async () => {
       await db.collection(COLLECTION).insertOne(makeDefinition({ grantCode: 'other-grant' }))
 
-      const result = await resolveLatestVersion(db, 'farm-payments')
+      const result = await resolveLatestVersion('farm-payments')
 
       expect(result).toBeNull()
     })
@@ -126,7 +128,7 @@ describe('config.repository', () => {
           makeDefinition({ major: 2, minor: 0, patch: 0 })
         ])
 
-      const result = await resolveLatestVersionWithinMajor(db, 'farm-payments', 1)
+      const result = await resolveLatestVersionWithinMajor('farm-payments', 1)
 
       expect(result).toMatchObject({ major: 1, minor: 2, patch: 5 })
     })
@@ -139,7 +141,7 @@ describe('config.repository', () => {
           makeDefinition({ major: 1, minor: 2, patch: 0, status: FORM_DEFINITION_STATUS.DRAFT })
         ])
 
-      const result = await resolveLatestVersionWithinMajor(db, 'farm-payments', 1)
+      const result = await resolveLatestVersionWithinMajor('farm-payments', 1)
 
       expect(result).toMatchObject({ minor: 1, patch: 0 })
     })
@@ -147,7 +149,7 @@ describe('config.repository', () => {
     test('returns null when no live documents exist for the pinned major', async () => {
       await db.collection(COLLECTION).insertOne(makeDefinition({ major: 2, minor: 0, patch: 0 }))
 
-      const result = await resolveLatestVersionWithinMajor(db, 'farm-payments', 1)
+      const result = await resolveLatestVersionWithinMajor('farm-payments', 1)
 
       expect(result).toBeNull()
     })
@@ -162,7 +164,7 @@ describe('config.repository', () => {
           makeDefinition({ major: 1, minor: 2, patch: 3 })
         ])
 
-      const result = await getDefinition(db, 'farm-payments', 1, 2, 3)
+      const result = await getDefinition('farm-payments', 1, 2, 3)
 
       expect(result).toMatchObject({ major: 1, minor: 2, patch: 3 })
     })
@@ -170,7 +172,7 @@ describe('config.repository', () => {
     test('returns null when the exact version does not exist', async () => {
       await db.collection(COLLECTION).insertOne(makeDefinition({ major: 1, minor: 0, patch: 0 }))
 
-      const result = await getDefinition(db, 'farm-payments', 9, 9, 9)
+      const result = await getDefinition('farm-payments', 9, 9, 9)
 
       expect(result).toBeNull()
     })
@@ -180,7 +182,7 @@ describe('config.repository', () => {
         .collection(COLLECTION)
         .insertOne(makeDefinition({ grantCode: 'other-grant', major: 1, minor: 0, patch: 0 }))
 
-      const result = await getDefinition(db, 'farm-payments', 1, 0, 0)
+      const result = await getDefinition('farm-payments', 1, 0, 0)
 
       expect(result).toBeNull()
     })
@@ -190,7 +192,7 @@ describe('config.repository', () => {
         .collection(COLLECTION)
         .insertOne(makeDefinition({ major: 1, minor: 0, patch: 0, status: FORM_DEFINITION_STATUS.DRAFT }))
 
-      const result = await getDefinition(db, 'farm-payments', 1, 0, 0)
+      const result = await getDefinition('farm-payments', 1, 0, 0)
 
       expect(result).toMatchObject({ status: FORM_DEFINITION_STATUS.DRAFT })
     })
