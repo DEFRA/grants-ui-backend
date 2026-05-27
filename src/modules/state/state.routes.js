@@ -3,10 +3,15 @@ import { log, LogCodes } from '../../common/helpers/logging/log.js'
 import { enforceApplicationLock } from './lock-enforcement.js'
 import { StatusCodes } from 'http-status-codes'
 import { stateSaveSchema, stateRetrieveSchema, patchParamsSchema, patchSchema } from './state.schema.js'
+import {
+  saveApplicationState,
+  getApplicationState,
+  deleteApplicationState,
+  patchApplicationState
+} from './state.service.js'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
-const GRANT_APPLICATION_STATE_COLLECTION = 'grant-application-state'
 const STATE_NOT_FOUND = 'State not found'
 
 export const stateSave = {
@@ -48,46 +53,15 @@ export const stateSave = {
 
     const { sbi, grantCode, grantVersion, state } = request.payload
 
-    const db = request.stateDb
-
-    const updateDoc = {
-      $set: {
-        state: {
-          ...state,
-          ...(state?.submittedAt ? { submittedAt: new Date(state.submittedAt) } : {})
-        }
-      },
-      $currentDate: { updatedAt: true },
-      $setOnInsert: { createdAt: new Date() }
-    }
-
     try {
-      const result = await db
-        .collection(GRANT_APPLICATION_STATE_COLLECTION)
-        .updateOne({ sbi, grantCode, grantVersion }, updateDoc, {
-          upsert: true
-        })
+      const result = await saveApplicationState({ sbi, grantCode, grantVersion, state })
 
       if (result.upsertedCount > 0) {
         return h.response({ success: true, created: true }).code(StatusCodes.CREATED)
       }
 
       return h.response({ success: true, updated: true }).code(StatusCodes.OK)
-    } catch (err) {
-      const isMongoError = err.name?.startsWith('Mongo')
-
-      log(LogCodes.STATE.STATE_SAVE_FAILED, {
-        sbi,
-        grantCode,
-        grantVersion,
-        errorName: err.name,
-        errorMessage: err.message,
-        errorReason: err.reason,
-        errorCode: err.code,
-        isMongoError,
-        stack: err.stack?.split('\n')[0]
-      })
-
+    } catch (_err) {
       return h.response({ error: 'Failed to save application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
@@ -121,31 +95,15 @@ export const stateRetrieve = {
   handler: async (request, h) => {
     const { sbi, grantCode, grantVersion } = request.query
 
-    const db = request.stateDb
-
     try {
-      const document = await db.collection(GRANT_APPLICATION_STATE_COLLECTION).findOne({ sbi, grantCode, grantVersion })
+      const document = await getApplicationState({ sbi, grantCode, grantVersion })
 
       if (!document) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
       }
 
       return h.response(document.state).code(StatusCodes.OK)
-    } catch (err) {
-      const isMongoError = err?.name?.startsWith('Mongo')
-
-      log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
-        sbi,
-        grantCode,
-        grantVersion,
-        errorName: err.name,
-        errorMessage: err.message,
-        errorReason: err.reason,
-        errorCode: err.code,
-        isMongoError,
-        stack: err.stack?.split('\n')[0]
-      })
-
+    } catch (_err) {
       return h.response({ error: 'Failed to retrieve application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
@@ -179,32 +137,15 @@ export const stateDelete = {
   handler: async (request, h) => {
     const { sbi, grantCode, grantVersion } = request.query
 
-    const db = request.stateDb
-
     try {
-      const doc = await db.collection(GRANT_APPLICATION_STATE_COLLECTION).findOne({ sbi, grantCode, grantVersion })
+      const doc = await deleteApplicationState({ sbi, grantCode, grantVersion })
 
       if (!doc) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
       }
 
-      await db.collection(GRANT_APPLICATION_STATE_COLLECTION).deleteOne({ _id: doc._id })
-
       return h.response({ success: true, deleted: true }).code(StatusCodes.OK)
-    } catch (err) {
-      const isMongoError = err?.name?.startsWith('Mongo')
-
-      log(LogCodes.STATE.STATE_DELETE_FAILED, {
-        sbi,
-        grantCode,
-        grantVersion,
-        errorName: err.name,
-        errorMessage: err.message,
-        errorReason: err.reason,
-        errorCode: err.code,
-        isMongoError,
-        stack: err.stack?.split('\n')[0]
-      })
+    } catch (_err) {
       return h.response({ error: 'Failed to delete application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
@@ -247,36 +188,14 @@ export const statePatch = {
     const { applicationStatus } = request.payload.state
 
     try {
-      const document = await request.stateDb.collection(GRANT_APPLICATION_STATE_COLLECTION).findOneAndUpdate(
-        { sbi, grantCode, grantVersion },
-        {
-          $set: {
-            'state.applicationStatus': applicationStatus,
-            updatedAt: new Date()
-          }
-        },
-        { returnDocument: 'after', upsert: false }
-      )
+      const document = await patchApplicationState({ sbi, grantCode, grantVersion, applicationStatus })
 
       if (!document) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
       }
 
       return h.response({ success: true, patched: true }).code(StatusCodes.OK)
-    } catch (err) {
-      const isMongoError = err?.name?.startsWith('Mongo')
-
-      log(LogCodes.STATE.STATE_PATCH_FAILED, {
-        sbi,
-        grantCode,
-        grantVersion,
-        errorName: err.name,
-        errorMessage: err.message,
-        errorReason: err.reason,
-        errorCode: err.code,
-        isMongoError,
-        stack: err.stack?.split('\n')[0]
-      })
+    } catch (_err) {
       return h.response({ error: 'Failed to patch application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }

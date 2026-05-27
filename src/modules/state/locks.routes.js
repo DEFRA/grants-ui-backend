@@ -1,5 +1,5 @@
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
-import { releaseAllApplicationLocksForOwner, releaseApplicationLock } from './locks.service.js'
+import { releaseAllApplicationLocksForOwner, releaseApplicationLock } from './state.service.js'
 import Boom from '@hapi/boom'
 import { verifyOwnerLockReleaseToken } from './lock-token.js'
 import { StatusCodes } from 'http-status-codes'
@@ -35,10 +35,9 @@ export const applicationLockRelease = {
 
   handler: async (request, h) => {
     const { sbi, ownerId, grantCode, grantVersion } = request.query
-    const db = request.stateDb
 
     try {
-      const released = await releaseApplicationLock(db, {
+      const released = await releaseApplicationLock({
         sbi,
         grantCode,
         grantVersion,
@@ -60,8 +59,6 @@ export const applicationLocksRelease = {
   },
 
   handler: async (request, h) => {
-    const db = request.stateDb
-
     const lockToken = request.headers['x-application-lock-release']
     if (!lockToken) {
       throw Boom.unauthorized('Missing lock token')
@@ -70,7 +67,7 @@ export const applicationLocksRelease = {
     const { ownerId } = verifyOwnerLockReleaseToken(lockToken)
 
     try {
-      const deletedCount = await releaseAllApplicationLocksForOwner(db, { ownerId })
+      const deletedCount = await releaseAllApplicationLocksForOwner({ ownerId })
       return h.response({ success: true, deletedCount }).code(StatusCodes.OK)
     } catch (_err) {
       return h.response({ error: 'Failed to release application locks' }).code(StatusCodes.INTERNAL_SERVER_ERROR)

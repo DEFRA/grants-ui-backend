@@ -1,6 +1,6 @@
 import { logIfApproachingPayloadLimit } from '../../common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
-import { releaseApplicationLock } from './locks.service.js'
+import { releaseApplicationLock, insertSubmission, findSubmissions } from './state.service.js'
 import { enforceApplicationLock, extractLockKeys } from './lock-enforcement.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
@@ -70,12 +70,10 @@ export const addSubmission = {
       throw Boom.badRequest('Grant version in payload does not match lock token')
     }
 
-    const db = request.stateDb
-
     try {
-      await db.collection('grant_application_submissions').insertOne(request.payload)
+      await insertSubmission(request.payload)
 
-      await releaseApplicationLock(db, {
+      await releaseApplicationLock({
         grantCode,
         grantVersion,
         sbi,
@@ -136,8 +134,6 @@ export const retrieveSubmissions = {
   handler: async (request, h) => {
     const { crn, sbi, grantCode, grantVersion, referenceNumber } = request.query
 
-    const db = request.stateDb
-
     // Build filter object, excluding undefined values
     const filter = {
       sbi,
@@ -148,11 +144,7 @@ export const retrieveSubmissions = {
     }
 
     try {
-      const documents = await db
-        .collection('grant_application_submissions')
-        .find(filter)
-        .sort({ submittedAt: -1 })
-        .toArray()
+      const documents = await findSubmissions(filter)
 
       return h.response(documents).code(StatusCodes.OK)
     } catch (err) {

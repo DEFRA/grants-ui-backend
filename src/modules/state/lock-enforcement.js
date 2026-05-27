@@ -1,5 +1,5 @@
 import Boom from '@hapi/boom'
-import { acquireOrRefreshApplicationLock } from './locks.service.js'
+import { acquireOrRefreshApplicationLock } from './state.service.js'
 import { verifyLockToken } from './lock-token.js'
 import { LogCodes } from '../../common/helpers/logging/log-codes.js'
 import { log } from '../../common/helpers/logging/log.js'
@@ -115,9 +115,7 @@ export function extractLockKeys(request) {
 export async function enforceApplicationLock(request, h) {
   const { ownerId, sbi, grantCode, grantVersion } = extractLockKeys(request)
 
-  const db = request.stateDb
-
-  const lock = await acquireOrRefreshApplicationLock(db, {
+  const lock = await acquireOrRefreshApplicationLock({
     grantCode,
     grantVersion,
     sbi,

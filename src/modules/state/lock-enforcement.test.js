@@ -3,7 +3,7 @@ import {
   TEST_ENCRYPTION_KEY,
   APPLICATION_LOCK_TOKEN_SECRET
 } from '../../test-helpers/auth-constants.js'
-import { acquireOrRefreshApplicationLock } from './locks.service.js'
+import { acquireOrRefreshApplicationLock } from './state.service.js'
 import { enforceApplicationLock } from './lock-enforcement.js'
 import jwt from 'jsonwebtoken'
 import { config } from '../../config.js'
@@ -194,9 +194,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   })
 
   test('blocks access when lock is owned by another user', async () => {
-    const db = server.stateDb
-
-    await acquireOrRefreshApplicationLock(db, {
+    await acquireOrRefreshApplicationLock({
       grantCode: 'EGWA',
       grantVersion: '3.0.0',
       sbi: '123456789',
@@ -217,9 +215,7 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   })
 
   test('allows same user to refresh their own lock', async () => {
-    const db = server.stateDb
-
-    await acquireOrRefreshApplicationLock(db, {
+    await acquireOrRefreshApplicationLock({
       grantCode: 'EGWA',
       grantVersion: '4.0.0',
       sbi: '123456789',

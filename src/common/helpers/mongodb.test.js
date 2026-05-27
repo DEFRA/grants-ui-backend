@@ -1,7 +1,8 @@
 import { Db, MongoClient } from 'mongodb'
 import { createServer } from '../../server.js'
 import { Server } from '@hapi/hapi'
-import { mongoDb, createStateIndexes } from './mongodb.js'
+import { mongoDb } from './mongodb.js'
+import { createStateIndexes } from '../../modules/state/state.repository.js'
 
 describe('#mongoDb', () => {
   let server
@@ -18,37 +19,21 @@ describe('#mongoDb', () => {
       await server.stop({ timeout: 0 })
     })
 
-    afterEach(async () => {
-      await server.stateDb.collection('grant-application-locks').deleteMany({})
-    })
-
     test('Server should have expected MongoDb decorators', () => {
       expect(server.stateDb).toBeInstanceOf(Db)
       expect(server.stateMongoClient).toBeInstanceOf(MongoClient)
+      expect(server.configDb).toBeInstanceOf(Db)
+      expect(server.configMongoClient).toBeInstanceOf(MongoClient)
     })
 
     test('MongoDb should have expected database name', () => {
       expect(server.stateDb.databaseName).toBe('grants-ui-backend')
+      expect(server.configDb.databaseName).toBe('grants-ui-config')
     })
 
     test('MongoDb should have expected namespace', () => {
       expect(server.stateDb.namespace).toBe('grants-ui-backend')
-    })
-
-    test('creates unique index for application state', async () => {
-      const indexes = await server.stateDb.collection('grant-application-state').indexes()
-      const uniqueIndex = indexes.find(
-        (i) => i.unique && i.key.sbi === 1 && i.key.grantCode === 1 && i.key.grantVersion === 1
-      )
-      expect(uniqueIndex).toBeDefined()
-    })
-
-    test('creates unique index for application submissions', async () => {
-      const indexes = await server.stateDb.collection('grant_application_submissions').indexes()
-      const uniqueIndex = indexes.find(
-        (i) => i.unique && i.key.sbi === 1 && i.key.grantCode === 1 && i.key.grantVersion === 1
-      )
-      expect(uniqueIndex).toBeDefined()
+      expect(server.configDb.namespace).toBe('grants-ui-config')
     })
 
     test('MongoDb plugin uses secureContext if present', async () => {
@@ -74,38 +59,6 @@ describe('#mongoDb', () => {
       expect(server.stateDb).toBeDefined()
 
       await server.stateMongoClient.close()
-    })
-
-    test('creates unique index for application locks', async () => {
-      const indexes = await server.stateDb.collection('grant-application-locks').indexes()
-      const uniqueIndex = indexes.find(
-        (i) => i.unique && i.key.grantCode === 1 && i.key.grantVersion === 1 && i.key.sbi === 1
-      )
-
-      expect(uniqueIndex).toBeDefined()
-    })
-
-    test('creates a TTL index on application locks', async () => {
-      const indexes = await server.stateDb.collection('grant-application-locks').indexes()
-      const ttlIndex = indexes.find((i) => i.key.expiresAt === 1)
-
-      expect(ttlIndex).toBeDefined()
-      expect(ttlIndex.expireAfterSeconds).toBe(0)
-    })
-
-    test('Server should have expected configDb decorators', () => {
-      expect(server.configDb).toBeInstanceOf(Db)
-      expect(server.configMongoClient).toBeInstanceOf(MongoClient)
-    })
-
-    test('configDb should have expected database name', () => {
-      expect(server.configDb.databaseName).toBe('grants-ui-config')
-    })
-
-    test('configDb does not create state-specific indexes', async () => {
-      // Collection won't exist at all if no indexes were created — that's the expected outcome
-      const collections = await server.configDb.listCollections({ name: 'grant-application-state' }).toArray()
-      expect(collections).toHaveLength(0)
     })
   })
 

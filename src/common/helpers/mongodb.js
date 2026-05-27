@@ -40,7 +40,6 @@ export const mongoDb = {
 
       server.decorate('server', `${decorationKey}MongoClient`, client)
       server.decorate('server', `${decorationKey}Db`, db)
-      server.decorate('request', `${decorationKey}Db`, () => db, { apply: true })
 
       server.events.on('stop', async () => {
         server.logger.info('Closing Mongo client')
@@ -52,19 +51,4 @@ export const mongoDb = {
       })
     }
   }
-}
-
-export async function createStateIndexes(db) {
-  await db.collection('grant-application-locks').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
-  await db
-    .collection('grant-application-locks')
-    .createIndex({ grantCode: 1, grantVersion: 1, sbi: 1 }, { unique: true })
-
-  await db
-    .collection('grant-application-state')
-    .createIndex({ sbi: 1, grantCode: 1, grantVersion: 1 }, { unique: true })
-
-  await db
-    .collection('grant_application_submissions')
-    .createIndex({ sbi: 1, grantCode: 1, grantVersion: 1, referenceNumber: 1 }, { unique: true })
 }

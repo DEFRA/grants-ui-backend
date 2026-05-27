@@ -1,0 +1,417 @@
+/**
+ * State module — MongoDB data access.
+ */
+
+/**
+ * @typedef {Object} ApplicationLock
+ * @property {import('mongodb').ObjectId} _id
+ * @property {string} grantCode
+ * @property {string} grantVersion
+ * @property {string} sbi
+ * @property {string} ownerId
+ * @property {Date} lockedAt
+ * @property {Date} expiresAt
+ */
+
+/**
+ * @typedef {Object} ApplicationState
+ * @property {import('mongodb').ObjectId} _id
+ * @property {string} sbi
+ * @property {string} grantCode
+ * @property {string} grantVersion
+ * @property {Record<string, unknown>} state
+ * @property {Date} createdAt
+ * @property {Date} updatedAt
+ */
+
+/**
+ * @typedef {Object} Submission
+ * @property {import('mongodb').ObjectId} _id
+ * @property {string} sbi
+ * @property {string} grantCode
+ * @property {string} grantVersion
+ * @property {string} referenceNumber
+ * @property {Date} [submittedAt]
+ */
+
+import { config } from '../../config.js'
+import { log, LogCodes } from '../../common/helpers/logging/log.js'
+
+const LOCKS_COLLECTION = 'grant-application-locks'
+const STATE_COLLECTION = 'grant-application-state'
+const SUBMISSIONS_COLLECTION = 'grant_application_submissions'
+const IGNORE_ELEVEN_THOUSAND = 11000
+
+export const APPLICATION_LOCK_TTL_MS = config.get('applicationLock.ttlMs')
+
+/** @type {import('mongodb').Db} */
+let stateDb
+
+/**
+ * Initialises the repository with the state database instance.
+ *
+ * Called once at startup in `server.js` after the mongoDb plugin has registered.
+ *
+ * @param {import('mongodb').Db} db
+ */
+export function initStateRepository(db) {
+  stateDb = db
+}
+
+/**
+ * Creates the indexes required by the state module.
+ *
+ * Called by the `mongoDb` plugin on startup via `options.createIndexes`.
+ *
+ * @param {import('mongodb').Db} db
+ */
+export async function createStateIndexes(db) {
+  await db.collection(LOCKS_COLLECTION).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+  await db.collection(LOCKS_COLLECTION).createIndex({ grantCode: 1, grantVersion: 1, sbi: 1 }, { unique: true })
+
+  await db.collection(STATE_COLLECTION).createIndex({ sbi: 1, grantCode: 1, grantVersion: 1 }, { unique: true })
+
+  await db
+    .collection(SUBMISSIONS_COLLECTION)
+    .createIndex({ sbi: 1, grantCode: 1, grantVersion: 1, referenceNumber: 1 }, { unique: true })
+}
+
+/**
+ * Acquires or refreshes an exclusive lock for an application for a given organisation.
+ *
+ * Lock acquisition rules:
+ *  - Only one user from the same organisation may hold a lock for a given application at a time
+ *  - Expired locks may be taken over
+ *  - The same user may re-acquire (refresh) their own lock
+ *  - If another active user holds the lock, null is returned
+ *
+ * @param {{ grantCode: string, grantVersion: string, sbi: number|string, ownerId: number|string }} params
+ * @returns {Promise<ApplicationLock|null>}
+ */
+export async function acquireOrRefreshApplicationLock({ grantCode, grantVersion, sbi, ownerId }) {
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + APPLICATION_LOCK_TTL_MS)
+  const collection = stateDb.collection(LOCKS_COLLECTION)
+
+  const sbiStr = String(sbi)
+  const ownerIdStr = String(ownerId)
+  const grantVersionStr = typeof grantVersion === 'number' ? Number(grantVersion) : String(grantVersion ?? '1.0.0')
+
+  try {
+    const result = await collection.findOneAndUpdate(
+      {
+        grantCode,
+        grantVersion: grantVersionStr,
+        sbi: sbiStr,
+        $or: [
+          { expiresAt: { $lte: now } }, // expired
+          { ownerId: ownerIdStr } // re-entrant
+        ]
+      },
+      {
+        $set: {
+          grantCode,
+          grantVersion: grantVersionStr,
+          sbi: sbiStr,
+          ownerId: ownerIdStr,
+          lockedAt: now,
+          expiresAt
+        }
+      },
+      {
+        upsert: true,
+        returnDocument: 'after'
+      }
+    )
+
+    if (result) {
+      log(LogCodes.APPLICATION_LOCK.ACQUIRED, {
+        sbi: sbiStr,
+        ownerId: ownerIdStr,
+        grantCode,
+        grantVersion: grantVersionStr
+      })
+    }
+
+    return result ?? null
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.APPLICATION_LOCK.ACQUISITION_FAILED, {
+      sbi: sbiStr,
+      ownerId: ownerIdStr,
+      grantCode,
+      grantVersion: grantVersionStr,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+
+    if (err.code === IGNORE_ELEVEN_THOUSAND) {
+      return null
+    }
+    throw err
+  }
+}
+
+/**
+ * Releases an application lock held by the given user.
+ *
+ * @param {{ grantCode: string, grantVersion: string, sbi: number|string, ownerId: number|string }} params
+ * @returns {Promise<boolean>}
+ */
+export async function releaseApplicationLock({ grantCode, grantVersion, sbi, ownerId }) {
+  const sbiStr = String(sbi)
+  const ownerIdStr = String(ownerId)
+  const grantVersionStr = typeof grantVersion === 'number' ? Number(grantVersion) : String(grantVersion ?? '1.0.0')
+
+  try {
+    const result = await stateDb.collection(LOCKS_COLLECTION).deleteOne({
+      grantCode,
+      grantVersion: grantVersionStr,
+      sbi: sbiStr,
+      ownerId: ownerIdStr
+    })
+
+    const deleted = result.deletedCount === 1
+
+    if (deleted) {
+      log(LogCodes.APPLICATION_LOCK.RELEASED, {
+        sbi: sbiStr,
+        ownerId: ownerIdStr,
+        grantCode,
+        grantVersion: grantVersionStr
+      })
+    }
+
+    return deleted
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.APPLICATION_LOCK.RELEASE_FAILED, {
+      sbi: sbiStr,
+      ownerId: ownerIdStr,
+      grantCode,
+      grantVersion: grantVersionStr,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Releases all application locks held by the given user.
+ *
+ * @param {{ ownerId: number|string }} params
+ * @returns {Promise<number>}
+ */
+export async function releaseAllApplicationLocksForOwner({ ownerId }) {
+  const ownerIdStr = String(ownerId)
+
+  try {
+    const result = await stateDb.collection(LOCKS_COLLECTION).deleteMany({
+      ownerId: ownerIdStr
+    })
+
+    if (result.deletedCount > 0) {
+      log(LogCodes.APPLICATION_LOCKS.RELEASED, {
+        ownerId,
+        releasedCount: result.deletedCount
+      })
+    }
+
+    return result.deletedCount ?? 0
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.APPLICATION_LOCKS.RELEASE_FAILED, {
+      ownerId: ownerIdStr,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Saves (upserts) application state.
+ *
+ * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown> }} params
+ * @returns {Promise<import('mongodb').UpdateResult>}
+ */
+export async function saveApplicationState({ sbi, grantCode, grantVersion, state }) {
+  const updateDoc = {
+    $set: {
+      state: {
+        ...state,
+        ...(state?.submittedAt ? { submittedAt: new Date(state.submittedAt) } : {})
+      }
+    },
+    $currentDate: { updatedAt: true },
+    $setOnInsert: { createdAt: new Date() }
+  }
+
+  try {
+    return await stateDb
+      .collection(STATE_COLLECTION)
+      .updateOne({ sbi, grantCode, grantVersion }, updateDoc, { upsert: true })
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.STATE.STATE_SAVE_FAILED, {
+      sbi,
+      grantCode,
+      grantVersion,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Retrieves application state.
+ *
+ * @param {{ sbi: string, grantCode: string, grantVersion: string }} params
+ * @returns {Promise<ApplicationState|null>}
+ */
+export async function getApplicationState({ sbi, grantCode, grantVersion }) {
+  try {
+    return await stateDb.collection(STATE_COLLECTION).findOne({ sbi, grantCode, grantVersion })
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
+      sbi,
+      grantCode,
+      grantVersion,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Deletes application state.
+ *
+ * @param {{ sbi: string, grantCode: string, grantVersion: string }} params
+ * @returns {Promise<ApplicationState|null>} The deleted document, or null if not found
+ */
+export async function deleteApplicationState({ sbi, grantCode, grantVersion }) {
+  try {
+    return await stateDb.collection(STATE_COLLECTION).findOneAndDelete({ sbi, grantCode, grantVersion })
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.STATE.STATE_DELETE_FAILED, {
+      sbi,
+      grantCode,
+      grantVersion,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Patches application state (updates applicationStatus field).
+ *
+ * @param {{ sbi: string, grantCode: string, grantVersion: string, applicationStatus: string }} params
+ * @returns {Promise<ApplicationState|null>} Updated document, or null if not found
+ */
+export async function patchApplicationState({ sbi, grantCode, grantVersion, applicationStatus }) {
+  try {
+    return await stateDb.collection(STATE_COLLECTION).findOneAndUpdate(
+      { sbi, grantCode, grantVersion },
+      {
+        $set: {
+          'state.applicationStatus': applicationStatus
+        },
+        $currentDate: { updatedAt: true }
+      },
+      { returnDocument: 'after', upsert: false }
+    )
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.STATE.STATE_PATCH_FAILED, {
+      sbi,
+      grantCode,
+      grantVersion,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Inserts a submission record.
+ *
+ * @param {Omit<Submission, '_id'>} submission
+ * @returns {Promise<import('mongodb').InsertOneResult>}
+ */
+export async function insertSubmission(submission) {
+  try {
+    return await stateDb.collection(SUBMISSIONS_COLLECTION).insertOne(submission)
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.SUBMISSIONS.SUBMISSIONS_ADD_FAILED, {
+      ...submission,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Retrieves submission records matching the given filter.
+ *
+ * @param {Partial<Submission>} filter
+ * @returns {Promise<Submission[]>}
+ */
+export async function findSubmissions(filter) {
+  try {
+    return await stateDb.collection(SUBMISSIONS_COLLECTION).find(filter).sort({ submittedAt: -1 }).toArray()
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.SUBMISSIONS.SUBMISSIONS_RETRIEVE_FAILED, {
+      ...filter,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}

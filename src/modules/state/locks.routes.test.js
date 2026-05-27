@@ -1,6 +1,6 @@
 import { applicationLockRelease, applicationLocksRelease } from './locks.routes.js'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
-import { releaseApplicationLock, releaseAllApplicationLocksForOwner } from './locks.service.js'
+import { releaseApplicationLock, releaseAllApplicationLocksForOwner } from './state.service.js'
 import { verifyOwnerLockReleaseToken } from './lock-token.js'
 
 jest.mock('~/src/common/helpers/logging/log.js', () => ({
@@ -11,7 +11,7 @@ jest.mock('~/src/common/helpers/logging/log.js', () => ({
     }
   }
 }))
-jest.mock('./locks.service.js', () => ({
+jest.mock('./state.service.js', () => ({
   releaseApplicationLock: jest.fn(),
   releaseAllApplicationLocksForOwner: jest.fn()
 }))
@@ -35,7 +35,6 @@ const createMockRequest = (overrides = {}) => ({
     grantCode: 'GRANT1',
     grantVersion: '1'
   },
-  stateDb: {},
   ...overrides
 })
 
@@ -52,7 +51,7 @@ describe('applicationLockRelease route', () => {
 
     const result = await applicationLockRelease.handler(request, h)
 
-    expect(releaseApplicationLock).toHaveBeenCalledWith(request.stateDb, {
+    expect(releaseApplicationLock).toHaveBeenCalledWith({
       sbi: '123456789',
       grantCode: 'GRANT1',
       grantVersion: '1',
@@ -147,7 +146,6 @@ describe('applicationLocksRelease route', () => {
     headers: {
       'x-application-lock-release': 'valid-token'
     },
-    stateDb: {},
     ...overrides
   })
 
@@ -161,7 +159,7 @@ describe('applicationLocksRelease route', () => {
     const result = await applicationLocksRelease.handler(request, h)
 
     expect(verifyOwnerLockReleaseToken).toHaveBeenCalledWith('valid-token')
-    expect(releaseAllApplicationLocksForOwner).toHaveBeenCalledWith(request.stateDb, { ownerId: 'user-123' })
+    expect(releaseAllApplicationLocksForOwner).toHaveBeenCalledWith({ ownerId: 'user-123' })
 
     expect(h.response).toHaveBeenCalledWith({
       success: true,
