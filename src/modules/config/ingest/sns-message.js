@@ -19,35 +19,81 @@
  * @returns {{ attributes: Record<string, string>, manifest: string[] }}
  */
 export function parseSnsMessage(body, sqsAttributes) {
-  let envelope
-  try {
-    envelope = JSON.parse(body)
-  } catch (err) {
-    throw new Error(`SQS message body is not valid JSON: ${err.message}`)
-  }
+  const envelope = parseJsonBody(body)
 
   // Default SNS delivery: SNS envelope inside SQS body
-  if (envelope && typeof envelope === 'object' && envelope.Type === 'Notification') {
-    const attributes = {}
-    const rawAttrs = envelope.MessageAttributes ?? {}
-    for (const [key, value] of Object.entries(rawAttrs)) {
-      attributes[key] = value?.Value ?? value?.StringValue ?? ''
-    }
-
-    let manifest
-    try {
-      manifest = JSON.parse(envelope.Message)
-    } catch {
-      manifest = envelope.Message
-    }
-
-    return { attributes, manifest }
+  if (isSnsNotification(envelope)) {
+    return parseSnsEnvelope(envelope)
   }
 
   // Raw message delivery: body is the payload, attributes from SQS itself
+  return { attributes: extractSqsAttributes(sqsAttributes), manifest: envelope }
+}
+
+/**
+ * Parses a JSON string, throwing a descriptive error if parsing fails.
+ *
+ * @param {string} body - raw JSON string
+ * @returns {unknown}
+ */
+function parseJsonBody(body) {
+  try {
+    return JSON.parse(body)
+  } catch (err) {
+    throw new Error(`SQS message body is not valid JSON: ${err.message}`)
+  }
+}
+
+/**
+ * Returns true if the parsed envelope looks like an SNS Notification object.
+ *
+ * @param {unknown} envelope
+ * @returns {boolean}
+ */
+function isSnsNotification(envelope) {
+  return envelope && typeof envelope === 'object' && envelope.Type === 'Notification'
+}
+
+/**
+ * Extracts the manifest and normalised attributes from an SNS envelope.
+ *
+ * @param {{ Message: string, MessageAttributes?: Record<string, unknown> }} envelope
+ * @returns {{ attributes: Record<string, string>, manifest: unknown }}
+ */
+function parseSnsEnvelope(envelope) {
+  let manifest
+  try {
+    manifest = JSON.parse(envelope.Message)
+  } catch {
+    manifest = envelope.Message
+  }
+  return { attributes: extractSnsAttributes(envelope.MessageAttributes), manifest }
+}
+
+/**
+ * Normalises SNS MessageAttributes into a flat `{ key: value }` map.
+ *
+ * @param {Record<string, { Value?: string, StringValue?: string }> | undefined} messageAttributes
+ * @returns {Record<string, string>}
+ */
+function extractSnsAttributes(messageAttributes) {
+  const attributes = {}
+  for (const [key, value] of Object.entries(messageAttributes ?? {})) {
+    attributes[key] = value?.Value ?? value?.StringValue ?? ''
+  }
+  return attributes
+}
+
+/**
+ * Normalises SQS MessageAttributes into a flat `{ key: value }` map.
+ *
+ * @param {Record<string, { StringValue?: string, stringValue?: string }> | undefined} sqsAttributes
+ * @returns {Record<string, string>}
+ */
+function extractSqsAttributes(sqsAttributes) {
   const attributes = {}
   for (const [key, value] of Object.entries(sqsAttributes ?? {})) {
     attributes[key] = value?.StringValue ?? value?.stringValue ?? ''
   }
-  return { attributes, manifest: envelope }
+  return attributes
 }

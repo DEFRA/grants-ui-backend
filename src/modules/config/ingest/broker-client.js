@@ -39,13 +39,28 @@ function buildAuthHeader() {
 }
 
 /**
+ * Removes any trailing slash characters from the given URL without using a
+ * backtracking-prone regular expression.
+ *
+ * @param {string} url
+ * @returns {string}
+ */
+function stripTrailingSlashes(url) {
+  let end = url.length
+  while (end > 0 && url.charCodeAt(end - 1) === 47 /* '/' */) {
+    end--
+  }
+  return url.slice(0, end)
+}
+
+/**
  * Performs a GET against the broker and returns the parsed JSON body.
  *
  * @param {string} pathAndQuery
  * @returns {Promise<unknown>}
  */
 async function brokerGet(pathAndQuery) {
-  const baseUrl = config.get('configBroker.baseUrl').replace(/\/+$/, '')
+  const baseUrl = stripTrailingSlashes(config.get('configBroker.baseUrl'))
   const url = `${baseUrl}${pathAndQuery}`
 
   const controller = new AbortController()

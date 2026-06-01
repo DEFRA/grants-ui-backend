@@ -23,15 +23,15 @@ export async function ingestVersion({ grantCode, version, bucket, status, manife
     throw new Error(`No manifest provided for ${grantCode}@${version}`)
   }
 
-  const path = manifest.find((path) => path.endsWith(`${grantCode}.yaml`))
-  if (!path) {
+  const grantDefinitionPath = manifest.find((path) => path.endsWith(`${grantCode}.yaml`))
+  if (!grantDefinitionPath) {
     throw new Error(`Manifest for ${grantCode}@${version} contains no entry matching ${grantCode}.yaml`)
   }
 
-  const definition = await getYamlObject(bucket, path)
+  const definition = await getYamlObject(bucket, grantDefinitionPath)
   const formDefinition = buildFormDefinition({ grantCode, version, status, definition, updatedAt })
 
   await upsertDefinition(formDefinition)
 
-  log(LogCodes.CONFIG.INGEST_UPSERTED, { grantCode, version, status: formDefinition.status, path })
+  log(LogCodes.CONFIG.INGEST_UPSERTED, { grantCode, version, status: formDefinition.status, grantDefinitionPath })
 }

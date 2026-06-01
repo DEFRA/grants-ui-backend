@@ -172,8 +172,8 @@ export const LogCodes = {
   CONFIG: {
     INGEST_UPSERTED: {
       level: 'info',
-      messageFunc: ({ grantCode, version, status, path }) =>
-        `Upserted form definition | grantCode=${grantCode} | version=${version} | status=${status} | path=${path}`
+      messageFunc: ({ grantCode, version, status, grantDefinitionPath }) =>
+        `Upserted form definition | grantCode=${grantCode} | version=${version} | status=${status} | path=${grantDefinitionPath}`
     },
     STARTUP_PULL_START: {
       level: 'info',

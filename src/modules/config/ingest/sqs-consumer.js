@@ -11,10 +11,14 @@ import { log, LogCodes } from '../../../common/helpers/logging/log.js'
  * @property {Record<string, { StringValue?: string }>} [MessageAttributes]
  */
 
+const POLL_RETRY_DELAY_MS = 5_000
+
 let sqsClient
 
 function getSqsClient() {
-  if (sqsClient) return sqsClient
+  if (sqsClient) {
+    return sqsClient
+  }
   const endpointUrl = config.get('aws.endpointUrl')
   sqsClient = new SQSClient({
     region: config.get('aws.region'),
@@ -113,7 +117,7 @@ export const sqsConsumerPlugin = {
             errorMessage: err.message,
             stack: err.stack
           })
-          await new Promise((resolve) => setTimeout(resolve, 5_000))
+          await new Promise((resolve) => setTimeout(resolve, POLL_RETRY_DELAY_MS))
         }
       }
     }

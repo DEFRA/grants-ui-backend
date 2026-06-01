@@ -9,7 +9,9 @@ let s3Client
  * @returns {S3Client}
  */
 export function getS3Client() {
-  if (s3Client) return s3Client
+  if (s3Client) {
+    return s3Client
+  }
 
   const endpointUrl = config.get('aws.endpointUrl')
 

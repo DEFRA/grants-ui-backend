@@ -60,7 +60,7 @@ describe('ingestVersion', () => {
       expect.objectContaining({
         grantCode: 'farm-payments',
         version: '1.2.3',
-        path: 'some/prefix/farm-payments.yaml'
+        grantDefinitionPath: 'some/prefix/farm-payments.yaml'
       })
     )
   })
