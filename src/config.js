@@ -117,11 +117,80 @@ const config = convict({
   },
   mongoState: mongoStateSchema,
   mongoConfig: mongoConfigSchema,
+  configBroker: {
+    baseUrl: {
+      doc: 'Base URL of the grants-config-broker API',
+      format: String,
+      default: '',
+      env: 'CONFIG_BROKER_BASE_URL'
+    },
+    authToken: {
+      doc: 'Plain bearer token expected by the grants-config-broker',
+      format: String,
+      default: '',
+      env: 'GRANTS_CONFIG_BROKER_AUTH_TOKEN',
+      sensitive: true
+    },
+    encryptionKey: {
+      doc: 'AES-256-GCM key used to encrypt the broker bearer token',
+      format: String,
+      default: '',
+      env: 'GRANTS_CONFIG_BROKER_ENCRYPTION_KEY',
+      sensitive: true
+    },
+    requestTimeoutMs: {
+      doc: 'HTTP timeout for broker requests',
+      format: Number,
+      default: 15_000,
+      env: 'CONFIG_BROKER_REQUEST_TIMEOUT_MS'
+    }
+  },
+  aws: {
+    region: {
+      doc: 'AWS region',
+      format: String,
+      default: 'eu-west-2',
+      env: 'AWS_REGION'
+    },
+    endpointUrl: {
+      doc: 'AWS endpoint URL override (used for LocalStack)',
+      format: String,
+      nullable: true,
+      default: '',
+      env: 'AWS_ENDPOINT_URL'
+    }
+  },
+  configIngest: {
+    sqsQueueUrl: {
+      doc: 'SQS queue URL subscribed to the config-broker SNS topic',
+      format: String,
+      default: '',
+      env: 'CONFIG_INGEST_SQS_QUEUE_URL'
+    },
+    sqsWaitTimeSeconds: {
+      doc: 'SQS long-poll wait time in seconds',
+      format: Number,
+      default: 20,
+      env: 'CONFIG_INGEST_SQS_WAIT_TIME_SECONDS'
+    },
+    sqsMaxMessages: {
+      doc: 'Maximum SQS messages per poll',
+      format: Number,
+      default: 10,
+      env: 'CONFIG_INGEST_SQS_MAX_MESSAGES'
+    },
+    sqsVisibilityTimeoutSeconds: {
+      doc: 'SQS visibility timeout per poll batch',
+      format: Number,
+      default: 30,
+      env: 'CONFIG_INGEST_SQS_VISIBILITY_TIMEOUT_SECONDS'
+    }
+  },
   applicationLock: {
     secret: {
       doc: 'Secret used to verify application lock tokens',
       format: String,
-      default: 'default-lock-token-secret',
+      default: '',
       env: 'APPLICATION_LOCK_TOKEN_SECRET',
       sensitive: true
     },

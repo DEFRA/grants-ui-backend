@@ -16,26 +16,10 @@ import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 import jwt from 'jsonwebtoken'
 
 // Mock log
-jest.mock('~/src/common/helpers/logging/log.js', () => ({
-  log: jest.fn(),
-  LogCodes: {
-    STATE: {
-      STATE_PAYLOAD_SIZE: { level: 'info', messageFunc: jest.fn() },
-      STATE_PAYLOAD_SIZE_FAILED: { level: 'error', messageFunc: jest.fn() }
-    },
-    AUTH: {
-      TOKEN_VERIFICATION_SUCCESS: { level: 'info', messageFunc: jest.fn() },
-      TOKEN_VERIFICATION_FAILURE: { level: 'error', messageFunc: jest.fn() }
-    },
-    APPLICATION_LOCK: {
-      ACQUIRED: { level: 'debug', messageFunc: jest.fn() },
-      REFRESHED: { level: 'debug', messageFunc: jest.fn() },
-      RELEASED: { level: 'info', messageFunc: jest.fn() },
-      ACQUISITION_FAILED: { level: 'error', messageFunc: jest.fn() },
-      RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
-    }
-  }
-}))
+jest.mock('~/src/common/helpers/logging/log.js', () => {
+  const { LogCodes } = jest.requireActual('~/src/common/helpers/logging/log-codes.js')
+  return { log: jest.fn(), LogCodes }
+})
 
 const encryptToken = (token, encryptionKey) => {
   const iv = crypto.randomBytes(12)

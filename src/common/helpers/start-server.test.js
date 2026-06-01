@@ -21,6 +21,15 @@ jest.mock('./logging/logger.js', () => ({
     error: (...args) => mockLoggerError(...args)
   })
 }))
+jest.mock('../../modules/config/ingest/startup-pull.js', () => ({
+  runStartupPull: jest.fn().mockResolvedValue(undefined)
+}))
+jest.mock('../../modules/config/ingest/sqs-consumer.js', () => ({
+  sqsConsumerPlugin: {
+    name: 'config-sqs-consumer',
+    register: jest.fn()
+  }
+}))
 
 describe('#startServer', () => {
   const PROCESS_ENV = process.env

@@ -1,0 +1,32 @@
+# grants-config-broker.http
+# HTTP client requests for the Grants Config Broker API.
+#
+# Before making requests, run `npm run generate:env` to populate
+# http-client.private.env.json with the required tokens for the local environment.
+
+### --- Variables ---
+
+@grantCode = example-grant-with-auth
+@grantVersion = 1.0.1
+
+### --- Grants ---
+
+### Get all grant versions (including drafts)
+# @name GetAllGrants
+GET {{configBrokerBaseUrl}}/api/allGrants?draft=include
+Authorization: Bearer {{configBrokerAuthToken}}
+x-api-key: {{xApiKey}}
+
+
+### Get a specific grant version
+# @name GetVersion
+GET {{configBrokerBaseUrl}}/api/version?grant={{grantCode}}&version={{grantVersion}}
+Authorization: Bearer {{configBrokerAuthToken}}
+x-api-key: {{xApiKey}}
+
+
+### Get Latest Grant Version
+# @name GetLatestVersion
+GET {{configBrokerBaseUrl}}/api/latestVersion?grant={{grantCode}}
+Authorization: Bearer {{configBrokerAuthToken}}
+x-api-key: {{xApiKey}}

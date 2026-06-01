@@ -19,17 +19,10 @@ jest.mock('./state.service.js', () => ({
 jest.mock('~/src/common/helpers/logging/log-if-approaching-payload-limit.js', () => ({
   logIfApproachingPayloadLimit: jest.fn()
 }))
-jest.mock('~/src/common/helpers/logging/log.js', () => ({
-  log: jest.fn(),
-  LogCodes: {
-    STATE: {
-      STATE_SAVE_FAILED: { level: 'error', messageFunc: jest.fn() },
-      STATE_RETRIEVE_FAILED: { level: 'error', messageFunc: jest.fn() },
-      STATE_DELETE_FAILED: { level: 'error', messageFunc: jest.fn() },
-      STATE_PATCH_FAILED: { level: 'error', messageFunc: jest.fn() }
-    }
-  }
-}))
+jest.mock('~/src/common/helpers/logging/log.js', () => {
+  const { LogCodes } = jest.requireActual('~/src/common/helpers/logging/log-codes.js')
+  return { log: jest.fn(), LogCodes }
+})
 
 describe('State', () => {
   const defaultQuery = {

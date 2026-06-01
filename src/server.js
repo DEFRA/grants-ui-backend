@@ -13,6 +13,7 @@ import { pulse } from './common/helpers/pulse.js'
 import { requestTracing } from './common/helpers/request-tracing.js'
 import { setupProxy } from './common/helpers/proxy/setup-proxy.js'
 import { applicationLockPlugin } from './modules/state/lock-enforcement.js'
+import { sqsConsumerPlugin } from './modules/config/ingest/sqs-consumer.js'
 
 async function createServer() {
   setupProxy()
@@ -81,6 +82,7 @@ async function createServer() {
     },
     auth,
     applicationLockPlugin,
+    sqsConsumerPlugin,
     router
   ])
 

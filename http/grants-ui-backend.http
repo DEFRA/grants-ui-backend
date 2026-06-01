@@ -1,0 +1,105 @@
+# grants-ui-backend.http
+# HTTP client requests for the Grants UI Backend API.
+#
+# Before making requests, run `npm run generate:env` to populate
+# http-client.private.env.json with the required tokens for the local environment.
+
+### --- Variables ---
+
+# These variables are used to generate the lock tokens stored in http-client.private.env.json.
+# If any of these values are changed, the corresponding tokens must be regenerated and updated in the private env JSON.
+@grantCode = example-grant-with-auth
+@grantVersion = 1.0.1
+@sbi = 1234567891
+@userId = test-user-2
+
+### Health check
+# @name healthCheck
+GET {{backendBaseUrl}}/health
+
+
+### --- State ---
+
+### Save / update application state
+# @name saveState
+POST {{backendBaseUrl}}/state
+Authorization: Bearer {{backendAuthToken}}
+x-application-lock-owner: {{applicationLockOwnerToken}}
+Content-Type: application/json
+
+{
+  "sbi": "{{sbi}}",
+  "grantCode": "{{grantCode}}",
+  "grantVersion": "{{grantVersion}}",
+  "state": {
+    "currentPage": "/start",
+    "answers": {}
+  }
+}
+
+
+### Retrieve application state
+# @name getState
+GET {{backendBaseUrl}}/state?sbi={{sbi}}&grantCode={{grantCode}}&grantVersion={{grantVersion}}
+Authorization: Bearer {{backendAuthToken}}
+x-application-lock-owner: {{applicationLockOwnerToken}}
+
+
+### Delete application state
+# @name deleteState
+DELETE {{backendBaseUrl}}/state?sbi={{sbi}}&grantCode={{grantCode}}&grantVersion={{grantVersion}}
+Authorization: Bearer {{backendAuthToken}}
+x-application-lock-owner: {{applicationLockOwnerToken}}
+
+
+### Patch application state (update applicationStatus)
+# @name patchState
+PATCH {{backendBaseUrl}}/state/{{sbi}}/{{grantCode}}/{{grantVersion}}
+Authorization: Bearer {{backendAuthToken}}
+x-application-lock-owner: {{applicationLockOwnerToken}}
+Content-Type: application/json
+
+{
+  "state": {
+    "applicationStatus": "submitted"
+  }
+}
+
+
+### --- Submissions ---
+
+### Add submission
+# @name addSubmission
+POST {{backendBaseUrl}}/submissions
+Authorization: Bearer {{backendAuthToken}}
+Content-Type: application/json
+
+{
+  "sbi": "{{sbi}}",
+  "crn": "1234567890",
+  "grantCode": "{{grantCode}}",
+  "grantVersion": "{{grantVersion}}",
+  "referenceNumber": "REF-001",
+  "submittedAt": "2024-01-01T00:00:00.000Z"
+}
+
+
+### Retrieve submissions
+# @name getSubmissions
+GET {{backendBaseUrl}}/submissions?sbi={{sbi}}&grantCode={{grantCode}}
+Authorization: Bearer {{backendAuthToken}}
+
+
+### --- Release lock ---
+
+### Release a specific application lock (admin)
+# @name releaseApplicationLock
+DELETE {{backendBaseUrl}}/admin/application-lock?sbi={{sbi}}&grantCode={{grantCode}}&grantVersion={{grantVersion}}&ownerId={{userId}}
+Authorization: Bearer {{backendAuthToken}}
+
+
+### Release all application locks for an owner
+# @name releaseAllApplicationLocks
+DELETE {{backendBaseUrl}}/application-locks
+Authorization: Bearer {{backendAuthToken}}
+x-application-lock-release: {{applicationLockReleaseToken}}

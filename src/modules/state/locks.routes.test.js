@@ -3,14 +3,10 @@ import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 import { releaseApplicationLock, releaseAllApplicationLocksForOwner } from './state.service.js'
 import { verifyOwnerLockReleaseToken } from './lock-token.js'
 
-jest.mock('~/src/common/helpers/logging/log.js', () => ({
-  log: jest.fn(),
-  LogCodes: {
-    APPLICATION_LOCK: {
-      RELEASE_FAILED: { level: 'error', messageFunc: jest.fn() }
-    }
-  }
-}))
+jest.mock('~/src/common/helpers/logging/log.js', () => {
+  const { LogCodes } = jest.requireActual('~/src/common/helpers/logging/log-codes.js')
+  return { log: jest.fn(), LogCodes }
+})
 jest.mock('./state.service.js', () => ({
   releaseApplicationLock: jest.fn(),
   releaseAllApplicationLocksForOwner: jest.fn()

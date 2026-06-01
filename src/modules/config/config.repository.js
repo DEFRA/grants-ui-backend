@@ -4,12 +4,16 @@
 
 /**
  * @typedef {Object} FormDefinition
- * @property {import('mongodb').ObjectId} _id
+ * @property {import('mongodb').ObjectId} [_id]
  * @property {string} grantCode
+ * @property {string} id
+ * @property {string} title
  * @property {number} major
  * @property {number} minor
  * @property {number} patch
+ * @property {string} status
  * @property {Record<string, unknown>} definition
+ * @property {Date} updatedAt
  */
 
 import { FORM_DEFINITION_STATUS } from './config.constants.js'
@@ -76,6 +80,23 @@ export async function resolveLatestVersionWithinMajor(grantCode, pinnedMajor) {
     .sort({ minor: -1, patch: -1 })
     .limit(1)
     .next()
+}
+
+/**
+ * Upserts a form definition keyed on (grantCode, major, minor, patch).
+ *
+ * @param {Omit<FormDefinition, '_id'>} formDefinition
+ * @returns {Promise<import('mongodb').UpdateResult>}
+ */
+export async function upsertDefinition(formDefinition) {
+  const { grantCode, major, minor, patch, ...rest } = formDefinition
+  return configDb.collection(COLLECTION).updateOne(
+    { grantCode, major, minor, patch },
+    {
+      $set: { ...rest, grantCode, major, minor, patch }
+    },
+    { upsert: true }
+  )
 }
 
 /**

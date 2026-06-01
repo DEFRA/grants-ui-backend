@@ -29,6 +29,22 @@ TRACING_HEADER=x-cdp-request-id
 GRANTS_UI_BACKEND_AUTH_TOKEN=  # 64-char alphanumeric string (no capitals). Generate: openssl rand -hex 32
 GRANTS_UI_BACKEND_ENCRYPTION_KEY=  # 64-char alphanumeric string. Generate: openssl rand -hex 32
 
+# Grants Config Broker — source of form definitions
+CONFIG_BROKER_BASE_URL=http://localhost:3012
+GRANTS_CONFIG_BROKER_AUTH_TOKEN=config-broker-auth-token
+GRANTS_CONFIG_BROKER_ENCRYPTION_KEY=config-broker-encryption-key
+CONFIG_BROKER_REQUEST_TIMEOUT_MS=15000
+
+# AWS / LocalStack (used by config module SQS + S3)
+AWS_REGION=eu-west-2
+AWS_ENDPOINT_URL=http://localhost:4566
+
+# SQS consumer for grants-config-broker SNS notifications
+CONFIG_INGEST_SQS_QUEUE_URL=http://localhost:4566/000000000000/grants_ui_backend__sqs__config_updates
+CONFIG_INGEST_SQS_WAIT_TIME_SECONDS=20
+CONFIG_INGEST_SQS_MAX_MESSAGES=10
+CONFIG_INGEST_SQS_VISIBILITY_TIMEOUT_SECONDS=30
+
 # Application lock configuration
 APPLICATION_LOCK_TOKEN_SECRET=  # 64-char hex string. Generate: openssl rand -hex 32. Must match value used by frontend/client
 APPLICATION_LOCK_TTL_MS=14400000  # Lock timeout in milliseconds (default: 4 hours)

@@ -13,32 +13,24 @@ import jwt from 'jsonwebtoken'
  * Then run: node generateLockHeader.js
  */
 
-// Load configuration from environment variables
-const secret = process.env.APPLICATION_LOCK_TOKEN_SECRET
-const userId = process.env.USER_ID
-const sbi = process.env.SBI
-const grantCode = process.env.GRANT_CODE
-const grantVersion = process.env.GRANT_VERSION ? Number(process.env.GRANT_VERSION) : 1
-
-if (!secret || !userId || !sbi || !grantCode) {
-  console.error('Missing required environment variables!')
-  process.exit(1)
-}
-
-// Mint the JWT lock token
-const token = jwt.sign(
-  {
-    sub: userId,
-    sbi,
-    grantCode,
-    grantVersion,
-    typ: 'lock'
-  },
-  secret,
-  {
+export function generateLockOwnerToken(secret, userId, sbi, grantCode, grantVersion) {
+  return jwt.sign({ sub: userId, sbi, grantCode, grantVersion, typ: 'lock' }, secret, {
     audience: 'grants-backend',
     issuer: 'grants-ui'
-  }
-)
+  })
+}
 
-console.log('x-application-lock-owner:', token)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const secret = process.env.APPLICATION_LOCK_TOKEN_SECRET
+  const userId = process.env.USER_ID
+  const sbi = process.env.SBI
+  const grantCode = process.env.GRANT_CODE
+  const grantVersion = process.env.GRANT_VERSION
+
+  if (!secret || !userId || !sbi || !grantCode || !grantVersion) {
+    console.error('Missing required environment variables!')
+    process.exit(1)
+  }
+
+  console.log('x-application-lock-owner:', generateLockOwnerToken(secret, userId, sbi, grantCode, grantVersion))
+}

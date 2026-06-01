@@ -168,6 +168,59 @@ export const LogCodes = {
       messageFunc: (messageOptions) =>
         `Failed to add submission | crn=${messageOptions.crn} | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | referenceNumber=${messageOptions.referenceNumber} | previousReferenceNumber=${messageOptions.previousReferenceNumber} | submittedAt=${messageOptions.submittedAt} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     }
+  },
+  CONFIG: {
+    INGEST_UPSERTED: {
+      level: 'info',
+      messageFunc: ({ grantCode, version, status, path }) =>
+        `Upserted form definition | grantCode=${grantCode} | version=${version} | status=${status} | path=${path}`
+    },
+    STARTUP_PULL_START: {
+      level: 'info',
+      messageFunc: () => `Starting broker startup pull`
+    },
+    STARTUP_PULL_SKIP: {
+      level: 'debug',
+      messageFunc: ({ grantCode, version, status }) =>
+        `Skipping already-ingested grant version | grantCode=${grantCode} | version=${version} | status=${status}`
+    },
+    STARTUP_PULL_VERSION_FAILED: {
+      level: 'error',
+      messageFunc: ({ grantCode, version, errorName, errorMessage, stack }) =>
+        `Failed to ingest grant version during startup pull | grantCode=${grantCode} | version=${version} | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
+    },
+    STARTUP_PULL_COMPLETE: {
+      level: 'info',
+      messageFunc: ({ total, upserted, failed }) =>
+        `Broker startup pull complete | total=${total} | upserted=${upserted} | failed=${failed}`
+    },
+    SQS_MESSAGE_FAILED: {
+      level: 'error',
+      messageFunc: ({ errorName, errorMessage, stack }) =>
+        `Failed to process SQS message; leaving for redelivery | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
+    },
+    SQS_POLL_FAILED: {
+      level: 'error',
+      messageFunc: ({ errorName, errorMessage, stack }) =>
+        `SQS poll cycle failed; backing off 5s | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
+    },
+    SQS_QUEUE_URL_MISSING: {
+      level: 'warn',
+      messageFunc: () => `CONFIG_INGEST_SQS_QUEUE_URL is not set; SQS consumer will not start`
+    },
+    SQS_CONSUMER_START: {
+      level: 'info',
+      messageFunc: ({ queueUrl }) => `Starting SQS consumer for config ingest | queueUrl=${queueUrl}`
+    },
+    SQS_CONSUMER_STOP: {
+      level: 'info',
+      messageFunc: () => `Stopping SQS consumer for config ingest`
+    },
+    SQS_CONSUMER_SHUTDOWN_ERROR: {
+      level: 'error',
+      messageFunc: ({ errorName, errorMessage, stack }) =>
+        `SQS consumer shutdown error | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
+    }
   }
 }
 
