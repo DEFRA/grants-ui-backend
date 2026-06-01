@@ -175,9 +175,15 @@ describe('config ingest: broker startup pull', () => {
     // example-grant-with-auth@1.0.1 (active) is served by the local broker and
     // pulled by runStartupPull() before the server reports "started successfully",
     // which the test harness waits for in setup.js.
+    // The startup pull is awaited before the server logs "Server started
+    // successfully" (which the harness waits for), so on success the document is
+    // already present on the first poll. We still allow a generous window to
+    // absorb replica-set read lag and the bounded broker-warmup retries in CI,
+    // rather than the previous 10s which intermittently expired before the
+    // grant was visible.
     const doc = await waitForDefinition(
       { grantCode: 'example-grant-with-auth', major: 1, minor: 0, patch: 1 },
-      { timeoutMs: 10_000 }
+      { timeoutMs: 30_000 }
     )
 
     expect(doc).not.toBeNull()
@@ -187,5 +193,7 @@ describe('config ingest: broker startup pull', () => {
       title: 'Example grant with auth',
       status: 'active'
     })
-  }, 30_000)
+    // Per-test timeout must exceed the 30s poll window above so the bounded
+    // poll can fully elapse instead of Jest aborting the test first.
+  }, 45_000)
 })

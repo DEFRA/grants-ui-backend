@@ -22,6 +22,7 @@ Core delivery platform Node.js Backend Template.
 - [Development helpers](#development-helpers)
   - [Structured logging](#structured-logging)
   - [Application state and frontend rehydration](#application-state-and-frontend-rehydration)
+  - [Config ingestion from grants-config-broker](#config-ingestion-from-grants-config-broker)
   - [Mongo configuration](#mongo-configuration)
   - [MongoDB Locks](#application-locking)
   - [Proxy](#proxy)
@@ -31,14 +32,19 @@ Core delivery platform Node.js Backend Template.
   - [Docker Compose](#docker-compose)
   - [Dependabot](#dependabot)
   - [SonarCloud](#sonarcloud)
-- [Postman Collection](#postman-collection)
+- [HTTP clients (recommended)](#http-clients-recommended)
+  - [Files](#files)
+  - [Environments](#environments)
+  - [Generating tokens](#generating-tokens)
+  - [Running requests](#running-requests)
+  - [Keeping the requests up to date](#keeping-the-requests-up-to-date)
+- [Postman Collection (deprecated)](#postman-collection-deprecated)
   - [Getting Started](#getting-started)
   - [Service-to-Service Authentication](#service-to-service-authentication)
   - [Lock-header](#generating-an-application-lock-header)
   - [Lock-release-header](#generating-an-application-lock-release-header)
   - [Usage](#usage)
   - [Keeping the Collection Updated](#keeping-the-collection-updated)
-- [Example Folder Structure](#example-folder-structure)
 - [Licence](#licence)
   - [About the licence](#about-the-licence)
 
@@ -71,13 +77,20 @@ nvm use
 
 ### Docker Compose (recommended)
 
-For a self-contained local environment (service plus MongoDB), use the provided Compose file:
+For a self-contained local environment, use the provided Compose file:
 
 ```bash
 docker compose up --build
 ```
 
-This builds the development image and starts the dependencies defined in `compose.yml`. The backend is available on <http://localhost:3001> by default. Stop the stack with:
+This builds the development image and starts the full local stack defined in `compose.yml`:
+
+- `grants-ui-backend` – this service
+- `grants-config-broker` – source of grant form definitions (pulls the `defradigital/grants-config-broker:latest` image)
+- `mongodb` – MongoDB running as a single-node replica set (`mongoRepl`), with a `mongo-ready` init container that waits for the replica set to be available
+- `localstack` – local AWS emulation (S3, SQS, SNS, Firehose) used by the config ingestion module
+
+The backend is available on <http://localhost:3001> by default. Stop the stack with:
 
 ```bash
 docker compose down
@@ -118,6 +131,25 @@ cp env.example.sh .env
 - `MONGO_MAX_POOL_SIZE` – maximum connection pool size (default: `25`)
 - `MONGO_MIN_POOL_SIZE` – minimum connection pool size (default: `5`)
 - `MONGO_MAX_IDLE_TIME_MS` – idle connection timeout in milliseconds (default: `60000`)
+
+**Grants config broker** (source of form definitions, see [Config ingestion from grants-config-broker](#config-ingestion-from-grants-config-broker)):
+
+- `CONFIG_BROKER_BASE_URL` – base URL of the grants-config-broker API
+- `GRANTS_CONFIG_BROKER_AUTH_TOKEN` – plain bearer token expected by the broker
+- `GRANTS_CONFIG_BROKER_ENCRYPTION_KEY` – AES-256-GCM key used to encrypt the broker bearer token
+- `CONFIG_BROKER_REQUEST_TIMEOUT_MS` – HTTP timeout for broker requests (default: `15000`)
+
+**AWS / LocalStack** (used by the config ingestion S3 + SQS clients):
+
+- `AWS_REGION` – AWS region (default: `eu-west-2`)
+- `AWS_ENDPOINT_URL` – AWS endpoint URL override (set to the LocalStack endpoint locally, e.g. `http://localhost:4566`)
+
+**SQS config ingestion** (consumer of grants-config-broker SNS notifications):
+
+- `CONFIG_INGEST_SQS_QUEUE_URL` – SQS queue URL subscribed to the config-broker SNS topic. When unset, the SQS consumer does not start.
+- `CONFIG_INGEST_SQS_WAIT_TIME_SECONDS` – SQS long-poll wait time in seconds (default: `20`)
+- `CONFIG_INGEST_SQS_MAX_MESSAGES` – maximum SQS messages per poll (default: `10`)
+- `CONFIG_INGEST_SQS_VISIBILITY_TIMEOUT_SECONDS` – SQS visibility timeout per poll batch (default: `30`)
 
 **Application lock configuration** (required for lock-protected routes):
 
@@ -192,6 +224,7 @@ npm run
 - `npm run generate:auth-header` – Generate Bearer token for API authentication
 - `npm run generate:lock-header` – Generate lock token for application lock-protected routes
 - `npm run generate:lock-release-header` – Generate lock release token for application lock release route
+- `npm run generate:env` – Generate local HTTP client JWT headers into `http/http-client.private.env.json` (no `.env` required)
 
 #### Update dependencies
 
@@ -237,6 +270,15 @@ Application logs follow the shared, code-driven format used by the Grants UI fro
 ### Application state and frontend rehydration
 
 Mongo documents written to the `grant-application-state` collection are rehydrated by the frontend during user journeys. Review the [frontend session rehydration documentation](https://github.com/DEFRA/grants-ui#session-rehydration) before modifying stored shapes or lifecycle expectations, and update the OpenAPI schema plus Postman collection accordingly.
+
+### Config ingestion from grants-config-broker
+
+Grant form definitions are sourced from the [grants-config-broker](https://github.com/DEFRA) and ingested into MongoDB (the `form-definitions` collection in the config database). Ingestion happens in two ways:
+
+- **Startup pull** – on boot the service fetches all grant versions from the broker (`GET /api/allGrants` via `CONFIG_BROKER_BASE_URL`) and ingests each one (`runStartupPull`).
+- **Ongoing updates** – the broker publishes change notifications to an SNS topic, which fans out to an SQS queue. The SQS consumer reads messages, fetches the corresponding YAML manifests from S3, transforms them, and upserts the definitions into Mongo.
+
+The SQS consumer only runs when `CONFIG_INGEST_SQS_QUEUE_URL` is set; if it is unset the consumer does not start (useful when only the startup pull is required). Locally, S3, SQS and SNS are emulated by LocalStack and the broker is provided by the Docker Compose stack — see [Docker Compose (recommended)](#docker-compose-recommended). The relevant environment variables are listed under [Environment configuration](#environment-configuration).
 
 ### Mongo configuration
 
@@ -410,7 +452,54 @@ Dependabot is configured for this repository in [.github/dependabot.yml](.github
 
 Instructions for setting up SonarCloud can be found in [sonar-project.properties](./sonar-project.properties)
 
-## Postman Collection
+## HTTP clients (recommended)
+
+HTTP clients are the **primary, recommended way to exercise and test every endpoint** in this project. The `http/` directory contains `.http` request files that work with the JetBrains HTTP client (built into IntelliJ/WebStorm) and the VS Code [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension. They are version-controlled alongside the code, cover both the backend and the grants-config-broker, and have their tokens populated automatically by a single npm script.
+
+### Files
+
+- `http/grants-ui-backend.http` – requests for this backend: health check, application `state` save/get/delete/patch, `submissions`, the admin application-lock release, and `DELETE /application-locks` (release all locks for an owner).
+- `http/grants-config-broker.http` – requests against the grants-config-broker: `GET /api/allGrants`, `GET /api/version`, and `GET /api/latestVersion`.
+- `http/http-client.env.json` – public, checked-in environment variables (`backendBaseUrl`, `configBrokerBaseUrl`) for the `local` and `dev` environments.
+- `http/http-client.private.env.json` – generated secrets/tokens (`backendAuthToken`, `applicationLockOwnerToken`, `applicationLockReleaseToken`, `configBrokerAuthToken`, etc.). This file is produced by `npm run generate:env` and must **not** be committed.
+
+### Environments
+
+`http/http-client.env.json` defines two environments:
+
+- `local` – points at `http://localhost:3001` (backend) and `http://localhost:3012` (config-broker), matching the [Docker Compose (recommended)](#docker-compose-recommended) stack.
+- `dev` – points at the deployed `dev` CDP environment.
+
+Select the environment in your editor when sending a request (for example, the environment dropdown in the JetBrains HTTP client or the env picker in the VS Code REST Client).
+
+### Generating tokens
+
+Before making requests for the `local` environment, generate the private tokens:
+
+```bash
+npm run generate:env
+```
+
+This runs `scripts/generatePrivateEnv.js`, which writes all required Bearer and lock tokens into `http/http-client.private.env.json`. It does **not** require a `.env` file — it derives the values it needs directly. Re-run it whenever the underlying secrets or the lock-scope variables (`grantCode`, `grantVersion`, `sbi`, `userId`) at the top of `grants-ui-backend.http` change.
+
+### Running requests
+
+1. Start the local stack (see [Docker Compose (recommended)](#docker-compose-recommended)) or run the backend with `npm run dev`.
+2. Run `npm run generate:env` to populate the private tokens.
+3. Open `http/grants-ui-backend.http` or `http/grants-config-broker.http`, select the `local` (or `dev`) environment, and send any request using the in-editor "run" gutter action.
+
+The `.http` files reference the public and private environment variables (e.g. `{{backendBaseUrl}}`, `{{backendAuthToken}}`, `{{applicationLockOwnerToken}}`), so no manual copy-pasting of tokens is needed.
+
+### Keeping the requests up to date
+
+The HTTP clients are the source of truth for manual API testing, so keep them current:
+
+- When you add or change an endpoint, **update the relevant `.http` file** (`grants-ui-backend.http` or `grants-config-broker.http`) so the request collection stays complete.
+- For backend API changes, also update [openapi.yaml](./openapi.yaml) so the specification and the HTTP clients stay in sync (see [OpenAPI Specification](#openapi-specification)).
+
+## Postman Collection (deprecated)
+
+> **Deprecated.** The Postman collection is retained for users who still rely on it, but it is **no longer the recommended way to test the API** — use the [HTTP clients](#http-clients-recommended) instead. The files under `postman/` should **not** be updated going forward; reflect any API changes in the `.http` clients and, for the backend, in [openapi.yaml](./openapi.yaml).
 
 The project includes a Postman collection to make it easier to test and interact with the API. This collection contains pre-configured requests for various endpoints and an environment file to manage variables like API URLs.
 
@@ -564,23 +653,7 @@ scripts/generateLockReleaseHeader.js
 
 ### Keeping the Collection Updated
 
-The Postman collection is maintained in the repository under the `/postman/` directory. If the API changes, the collection will be updated accordingly. Pull the latest changes from the repository to ensure you have the most up-to-date collection.
-
-### Example Folder Structure
-
-```
-
-project-root/
-├── postman/
-│ ├── grants-ui-backend.postman_collection.json
-│ ├── grants-ui-backend.local.postman_environment.json
-│ ├── grants-ui-backend.dev.postman_environment.json
-│ └── grants-ui-backend.test.postman_environment.json
-├── scripts/
-│ ├── generateAuthHeader.js
-│ ├── generateLockHeader.js
-│ └── generateLockReleaseHeader.js
-```
+The Postman collection under `/postman/` is **deprecated and no longer maintained**. It is not kept in step with API changes — those are reflected in the [HTTP clients](#http-clients-recommended) and, for the backend, in [openapi.yaml](./openapi.yaml). Do not edit the files under `/postman/`; prefer the HTTP clients for any new or updated requests.
 
 ## Licence
 
