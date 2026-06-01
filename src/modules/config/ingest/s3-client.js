@@ -40,5 +40,5 @@ export async function getYamlObject(bucket, key) {
  * Resets the cached S3 client. Test-only helper.
  */
 export function _resetS3ClientForTests() {
-  s3Client = undefined
+  s3Client = null
 }

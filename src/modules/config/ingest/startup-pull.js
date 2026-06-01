@@ -72,7 +72,7 @@ export async function runStartupPull() {
 
   const grants = await fetchAllGrants()
   if (!Array.isArray(grants)) {
-    throw new Error('Broker /api/allGrants did not return an array')
+    throw new TypeError('Broker /api/allGrants did not return an array')
   }
 
   let total = 0
@@ -87,6 +87,8 @@ export async function runStartupPull() {
         upserted += 1
       } else if (result === 'failed') {
         failed += 1
+      } else {
+        // skipped
       }
     }
   }

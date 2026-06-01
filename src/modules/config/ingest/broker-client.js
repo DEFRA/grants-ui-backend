@@ -38,6 +38,8 @@ function buildAuthHeader() {
   return headers
 }
 
+const SLASH_CHAR_CODE = 47 // '/'
+
 /**
  * Removes any trailing slash characters from the given URL without using a
  * backtracking-prone regular expression.
@@ -47,7 +49,7 @@ function buildAuthHeader() {
  */
 function stripTrailingSlashes(url) {
   let end = url.length
-  while (end > 0 && url.charCodeAt(end - 1) === 47 /* '/' */) {
+  while (end > 0 && url.codePointAt(end - 1) === SLASH_CHAR_CODE) {
     end--
   }
   return url.slice(0, end)
