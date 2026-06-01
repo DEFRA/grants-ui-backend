@@ -22,7 +22,7 @@ jest.mock('./logging/logger.js', () => ({
   })
 }))
 jest.mock('../../modules/config/ingest/startup-pull.js', () => ({
-  runStartupPull: jest.fn().mockResolvedValue({ total: 1, upserted: 1, failed: 0 })
+  runStartupPull: jest.fn().mockResolvedValue(undefined)
 }))
 jest.mock('../../modules/config/ingest/sqs-consumer.js', () => ({
   sqsConsumerPlugin: {
