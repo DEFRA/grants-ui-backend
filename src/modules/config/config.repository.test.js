@@ -6,7 +6,10 @@ import {
   initConfigRepository,
   resolveLatestVersion,
   resolveLatestVersionWithinMajor,
-  getDefinition
+  getDefinition,
+  getDefinitionStatuses,
+  updateDefinitionStatus,
+  definitionStatusKey
 } from './config.repository.js'
 
 const COLLECTION = 'form-definitions'
@@ -155,6 +158,64 @@ describe('config.repository', () => {
     })
   })
 
+  describe('updateDefinitionStatus', () => {
+    test('updates only the status and updatedAt of the matching version', async () => {
+      await db.collection(COLLECTION).insertOne(
+        makeDefinition({
+          major: 1,
+          minor: 0,
+          patch: 0,
+          status: FORM_DEFINITION_STATUS.DRAFT,
+          definition: { pages: ['unchanged'] }
+        })
+      )
+
+      await updateDefinitionStatus({
+        grantCode: 'farm-payments',
+        major: 1,
+        minor: 0,
+        patch: 0,
+        status: FORM_DEFINITION_STATUS.ACTIVE,
+        updatedAt: new Date('2024-05-05T00:00:00.000Z')
+      })
+
+      const result = await getDefinition('farm-payments', 1, 0, 0)
+
+      expect(result).toMatchObject({
+        status: FORM_DEFINITION_STATUS.ACTIVE,
+        updatedAt: new Date('2024-05-05T00:00:00.000Z'),
+        definition: { pages: ['unchanged'] }
+      })
+    })
+
+    test('does not modify updatedAt when it is not provided', async () => {
+      await db.collection(COLLECTION).insertOne(
+        makeDefinition({
+          major: 1,
+          minor: 0,
+          patch: 0,
+          status: FORM_DEFINITION_STATUS.DRAFT,
+          updatedAt: new Date('2024-01-01T00:00:00.000Z')
+        })
+      )
+
+      await updateDefinitionStatus({
+        grantCode: 'farm-payments',
+        major: 1,
+        minor: 0,
+        patch: 0,
+        status: FORM_DEFINITION_STATUS.ACTIVE
+      })
+
+      const result = await getDefinition('farm-payments', 1, 0, 0)
+
+      expect(result).toMatchObject({
+        status: FORM_DEFINITION_STATUS.ACTIVE,
+        updatedAt: new Date('2024-01-01T00:00:00.000Z')
+      })
+    })
+  })
+
   describe('getDefinition', () => {
     test('returns the document matching the exact semver', async () => {
       await db
@@ -195,6 +256,56 @@ describe('config.repository', () => {
       const result = await getDefinition('farm-payments', 1, 0, 0)
 
       expect(result).toMatchObject({ status: FORM_DEFINITION_STATUS.DRAFT })
+    })
+  })
+
+  describe('getDefinitionStatuses', () => {
+    test('returns an empty map when no grant codes are given', async () => {
+      const result = await getDefinitionStatuses([])
+
+      expect(result).toBeInstanceOf(Map)
+      expect(result.size).toBe(0)
+    })
+
+    test('maps every stored version status for the requested grants in one query', async () => {
+      await db.collection(COLLECTION).insertMany([
+        makeDefinition({
+          grantCode: 'farm-payments',
+          major: 1,
+          minor: 0,
+          patch: 0,
+          status: FORM_DEFINITION_STATUS.ACTIVE
+        }),
+        makeDefinition({
+          grantCode: 'farm-payments',
+          major: 2,
+          minor: 0,
+          patch: 0,
+          status: FORM_DEFINITION_STATUS.DRAFT
+        }),
+        makeDefinition({
+          grantCode: 'woodland',
+          major: 1,
+          minor: 1,
+          patch: 0,
+          status: FORM_DEFINITION_STATUS.ACTIVE
+        }),
+        makeDefinition({
+          grantCode: 'other-grant',
+          major: 5,
+          minor: 0,
+          patch: 0,
+          status: FORM_DEFINITION_STATUS.ACTIVE
+        })
+      ])
+
+      const result = await getDefinitionStatuses(['farm-payments', 'woodland'])
+
+      expect(result.size).toBe(3)
+      expect(result.get(definitionStatusKey('farm-payments', 1, 0, 0))).toBe(FORM_DEFINITION_STATUS.ACTIVE)
+      expect(result.get(definitionStatusKey('farm-payments', 2, 0, 0))).toBe(FORM_DEFINITION_STATUS.DRAFT)
+      expect(result.get(definitionStatusKey('woodland', 1, 1, 0))).toBe(FORM_DEFINITION_STATUS.ACTIVE)
+      expect(result.has(definitionStatusKey('other-grant', 5, 0, 0))).toBe(false)
     })
   })
 })

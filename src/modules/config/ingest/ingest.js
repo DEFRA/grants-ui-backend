@@ -23,7 +23,7 @@ export async function ingestVersion({ grantCode, version, bucket, status, manife
     throw new Error(`No manifest provided for ${grantCode}@${version}`)
   }
 
-  const grantDefinitionPath = manifest.find((path) => path.endsWith(`${grantCode}.yaml`))
+  const grantDefinitionPath = manifest.find((path) => path === `${grantCode}/${version}/${grantCode}.yaml`)
   if (!grantDefinitionPath) {
     throw new Error(`Manifest for ${grantCode}@${version} contains no entry matching ${grantCode}.yaml`)
   }

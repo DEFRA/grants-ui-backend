@@ -1,6 +1,6 @@
 import { fetchAllGrants, fetchVersion } from './broker-client.js'
 import { ingestVersion } from './ingest.js'
-import { getDefinition } from '../config.repository.js'
+import { definitionStatusKey, getDefinitionStatuses, updateDefinitionStatus } from '../config.repository.js'
 import { log, LogCodes } from '../../../common/helpers/logging/log.js'
 
 /**
@@ -8,18 +8,36 @@ import { log, LogCodes } from '../../../common/helpers/logging/log.js'
  *
  * @param {object} grant
  * @param {object} versionSummary
+ * @param {Map<string, string>} existingStatuses map of stored statuses keyed by {@link definitionStatusKey}
  * @returns {Promise<boolean>} true if the version was upserted, false if it was skipped
  */
-async function pullVersion(grant, versionSummary) {
+async function pullVersion(grant, versionSummary, existingStatuses) {
   const [major, minor, patch] = (versionSummary.version ?? '').split('.').map(Number)
-  const existing = await getDefinition(grant.grant, major, minor, patch)
-  if (existing?.status === versionSummary.status) {
+  const key = definitionStatusKey(grant.grant, major, minor, patch)
+  const versionExists = existingStatuses.has(key)
+  const existingStatus = existingStatuses.get(key)
+  if (existingStatus === versionSummary.status) {
     log(LogCodes.CONFIG.STARTUP_PULL_SKIP, {
       grantCode: grant.grant,
       version: versionSummary.version,
       status: versionSummary.status
     })
     return false
+  }
+
+  // The version is already stored but the broker reports a different status.
+  // Nothing else about the version can change, so update the status (and
+  // lastUpdated) in place rather than re-fetching the full version.
+  if (versionExists) {
+    await updateDefinitionStatus({
+      grantCode: grant.grant,
+      major,
+      minor,
+      patch,
+      status: versionSummary.status,
+      updatedAt: versionSummary.lastUpdated
+    })
+    return true
   }
 
   const fullVersion = await fetchVersion(grant.grant, versionSummary.version)
@@ -41,11 +59,12 @@ async function pullVersion(grant, versionSummary) {
  *
  * @param {object} grant
  * @param {object} versionSummary
+ * @param {Map<string, string>} existingStatuses map of stored statuses keyed by {@link definitionStatusKey}
  * @returns {Promise<'upserted' | 'skipped' | 'failed'>}
  */
-async function pullVersionSafely(grant, versionSummary) {
+async function pullVersionSafely(grant, versionSummary, existingStatuses) {
   try {
-    return (await pullVersion(grant, versionSummary)) ? 'upserted' : 'skipped'
+    return (await pullVersion(grant, versionSummary, existingStatuses)) ? 'upserted' : 'skipped'
   } catch (err) {
     log(LogCodes.CONFIG.STARTUP_PULL_VERSION_FAILED, {
       grantCode: grant.grant,
@@ -75,6 +94,10 @@ export async function runStartupPull() {
     throw new TypeError('Broker /api/allGrants did not return an array')
   }
 
+  // Batch-load the stored status of every version in a single query so we do
+  // not issue one Mongo round-trip per version while deciding what to pull.
+  const existingStatuses = await getDefinitionStatuses(grants.map((grant) => grant.grant))
+
   let total = 0
   let upserted = 0
   let failed = 0
@@ -82,7 +105,7 @@ export async function runStartupPull() {
   for (const grant of grants) {
     for (const versionSummary of grant.versions ?? []) {
       total += 1
-      const result = await pullVersionSafely(grant, versionSummary)
+      const result = await pullVersionSafely(grant, versionSummary, existingStatuses)
       if (result === 'upserted') {
         upserted += 1
       } else if (result === 'failed') {

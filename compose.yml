@@ -116,7 +116,7 @@ services:
       - localstack-data:/var/lib/localstack
       - ./localstack/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
     healthcheck:
-      test: ['CMD', 'curl', 'localhost:4566']
+      test: ['CMD', 'curl', '-f', 'http://localhost:4566/_localstack/health']
       interval: 5s
       start_period: 5s
       retries: 3

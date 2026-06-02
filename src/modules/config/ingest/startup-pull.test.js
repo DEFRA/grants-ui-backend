@@ -1,7 +1,7 @@
 import { runStartupPull } from './startup-pull.js'
 import { fetchAllGrants, fetchVersion } from './broker-client.js'
 import { ingestVersion } from './ingest.js'
-import { getDefinition } from '../config.repository.js'
+import { definitionStatusKey, getDefinitionStatuses, updateDefinitionStatus } from '../config.repository.js'
 import { FORM_DEFINITION_STATUS } from '../config.constants.js'
 import { log, LogCodes } from '../../../common/helpers/logging/log.js'
 
@@ -14,9 +14,10 @@ jest.mock('./ingest.js', () => ({
   ingestVersion: jest.fn()
 }))
 
-jest.mock('../config.repository.js', () => ({
-  getDefinition: jest.fn()
-}))
+jest.mock('../config.repository.js', () => {
+  const actual = jest.requireActual('../config.repository.js')
+  return { ...actual, getDefinitionStatuses: jest.fn(), updateDefinitionStatus: jest.fn() }
+})
 
 jest.mock('../../../common/helpers/logging/log.js', () => {
   const actual = jest.requireActual('../../../common/helpers/logging/log.js')
@@ -25,6 +26,7 @@ jest.mock('../../../common/helpers/logging/log.js', () => {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  getDefinitionStatuses.mockResolvedValue(new Map())
 })
 
 describe('runStartupPull', () => {
@@ -46,7 +48,7 @@ describe('runStartupPull', () => {
     fetchAllGrants.mockResolvedValue([
       { grant: 'farm-payments', versions: [{ version: '1.0.0', status: FORM_DEFINITION_STATUS.ACTIVE }] }
     ])
-    getDefinition.mockResolvedValue(null)
+    getDefinitionStatuses.mockResolvedValue(new Map())
     fetchVersion.mockResolvedValue({
       grant: 'farm-payments',
       version: '1.0.0',
@@ -58,7 +60,7 @@ describe('runStartupPull', () => {
 
     const result = await runStartupPull()
 
-    expect(getDefinition).toHaveBeenCalledWith('farm-payments', 1, 0, 0)
+    expect(getDefinitionStatuses).toHaveBeenCalledWith(['farm-payments'])
     expect(fetchVersion).toHaveBeenCalledWith('farm-payments', '1.0.0')
     expect(ingestVersion).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -76,7 +78,9 @@ describe('runStartupPull', () => {
     fetchAllGrants.mockResolvedValue([
       { grant: 'farm-payments', versions: [{ version: '1.0.0', status: FORM_DEFINITION_STATUS.ACTIVE }] }
     ])
-    getDefinition.mockResolvedValue({ status: FORM_DEFINITION_STATUS.ACTIVE })
+    getDefinitionStatuses.mockResolvedValue(
+      new Map([[definitionStatusKey('farm-payments', 1, 0, 0), FORM_DEFINITION_STATUS.ACTIVE]])
+    )
 
     const result = await runStartupPull()
 
@@ -85,22 +89,29 @@ describe('runStartupPull', () => {
     expect(result).toEqual({ total: 1, upserted: 0, failed: 0 })
   })
 
-  test('re-ingests an existing version whose status changed', async () => {
+  test('updates the status in place for an existing version whose status changed, without re-fetching', async () => {
     fetchAllGrants.mockResolvedValue([
-      { grant: 'farm-payments', versions: [{ version: '1.0.0', status: FORM_DEFINITION_STATUS.ACTIVE }] }
+      {
+        grant: 'farm-payments',
+        versions: [{ version: '1.0.0', status: FORM_DEFINITION_STATUS.ACTIVE, lastUpdated: '2024-02-02T00:00:00.000Z' }]
+      }
     ])
-    getDefinition.mockResolvedValue({ status: FORM_DEFINITION_STATUS.DRAFT })
-    fetchVersion.mockResolvedValue({
-      grant: 'farm-payments',
-      version: '1.0.0',
-      status: FORM_DEFINITION_STATUS.ACTIVE,
-      path: 'my-bucket',
-      manifest: ['farm-payments.yaml']
-    })
+    getDefinitionStatuses.mockResolvedValue(
+      new Map([[definitionStatusKey('farm-payments', 1, 0, 0), FORM_DEFINITION_STATUS.DRAFT]])
+    )
 
     const result = await runStartupPull()
 
-    expect(ingestVersion).toHaveBeenCalled()
+    expect(fetchVersion).not.toHaveBeenCalled()
+    expect(ingestVersion).not.toHaveBeenCalled()
+    expect(updateDefinitionStatus).toHaveBeenCalledWith({
+      grantCode: 'farm-payments',
+      major: 1,
+      minor: 0,
+      patch: 0,
+      status: FORM_DEFINITION_STATUS.ACTIVE,
+      updatedAt: '2024-02-02T00:00:00.000Z'
+    })
     expect(result).toEqual({ total: 1, upserted: 1, failed: 0 })
   })
 
@@ -114,7 +125,7 @@ describe('runStartupPull', () => {
         ]
       }
     ])
-    getDefinition.mockResolvedValue(null)
+    getDefinitionStatuses.mockResolvedValue(new Map())
     fetchVersion.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce({
       grant: 'farm-payments',
       version: '2.0.0',

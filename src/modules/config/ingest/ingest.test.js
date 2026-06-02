@@ -27,7 +27,7 @@ describe('ingestVersion', () => {
     version: '1.2.3',
     bucket: 'my-bucket',
     status: FORM_DEFINITION_STATUS.ACTIVE,
-    manifest: ['some/prefix/farm-payments.yaml', 'some/prefix/extra.yaml'],
+    manifest: ['farm-payments/1.2.3/farm-payments.yaml', 'some/prefix/extra.yaml'],
     updatedAt: '2024-01-01T00:00:00.000Z'
   })
 
@@ -36,7 +36,7 @@ describe('ingestVersion', () => {
 
     await ingestVersion(baseParams())
 
-    expect(getYamlObject).toHaveBeenCalledWith('my-bucket', 'some/prefix/farm-payments.yaml')
+    expect(getYamlObject).toHaveBeenCalledWith('my-bucket', 'farm-payments/1.2.3/farm-payments.yaml')
     expect(upsertDefinition).toHaveBeenCalledWith(
       expect.objectContaining({
         grantCode: 'farm-payments',
@@ -60,7 +60,7 @@ describe('ingestVersion', () => {
       expect.objectContaining({
         grantCode: 'farm-payments',
         version: '1.2.3',
-        grantDefinitionPath: 'some/prefix/farm-payments.yaml'
+        grantDefinitionPath: 'farm-payments/1.2.3/farm-payments.yaml'
       })
     )
   })
