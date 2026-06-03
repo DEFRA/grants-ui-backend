@@ -35,7 +35,7 @@ async function pullVersion(grant, versionSummary, existingStatuses) {
       minor,
       patch,
       status: versionSummary.status,
-      updatedAt: versionSummary.lastUpdated
+      updatedAt: new Date(versionSummary.lastUpdated)
     })
     return true
   }
@@ -47,7 +47,7 @@ async function pullVersion(grant, versionSummary, existingStatuses) {
     status: fullVersion.status,
     bucket: fullVersion.path,
     manifest: fullVersion.manifest,
-    updatedAt: fullVersion.lastUpdated
+    updatedAt: new Date(fullVersion.lastUpdated)
   })
   return true
 }

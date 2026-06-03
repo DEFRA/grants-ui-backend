@@ -112,7 +112,7 @@ export async function upsertDefinition(formDefinition) {
  * @param {number} params.minor
  * @param {number} params.patch
  * @param {string} params.status
- * @param {string|Date} [params.updatedAt]
+ * @param {Date} [params.updatedAt]
  * @returns {Promise<import('mongodb').UpdateResult>}
  */
 export async function updateDefinitionStatus({ grantCode, major, minor, patch, status, updatedAt }) {

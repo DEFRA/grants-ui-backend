@@ -68,7 +68,7 @@ describe('runStartupPull', () => {
         version: '1.0.0',
         bucket: 'my-bucket',
         manifest: ['farm-payments.yaml'],
-        updatedAt: '2024-01-01T00:00:00.000Z'
+        updatedAt: new Date('2024-01-01T00:00:00.000Z')
       })
     )
     expect(result).toEqual({ total: 1, upserted: 1, failed: 0 })
@@ -110,7 +110,7 @@ describe('runStartupPull', () => {
       minor: 0,
       patch: 0,
       status: FORM_DEFINITION_STATUS.ACTIVE,
-      updatedAt: '2024-02-02T00:00:00.000Z'
+      updatedAt: new Date('2024-02-02T00:00:00.000Z')
     })
     expect(result).toEqual({ total: 1, upserted: 1, failed: 0 })
   })

@@ -12,7 +12,7 @@ import { log, LogCodes } from '../../../common/helpers/logging/log.js'
  * @param {string} params.bucket - S3 bucket containing the manifest objects
  * @param {string} [params.status]
  * @param {string[]} params.manifest
- * @param {string|Date} [params.updatedAt]
+ * @param {Date} [params.updatedAt]
  * @returns {Promise<void>}
  */
 export async function ingestVersion({ grantCode, version, bucket, status, manifest, updatedAt }) {

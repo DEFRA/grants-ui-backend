@@ -41,7 +41,7 @@ export function coerceStatus(status) {
  * @param {string} params.version
  * @param {string} [params.status]
  * @param {Record<string, unknown>} params.definition
- * @param {string|Date} [params.updatedAt]
+ * @param {Date} [params.updatedAt]
  * @returns {import('../config.repository.js').FormDefinition}
  */
 export function buildFormDefinition({ grantCode, version, status, definition, updatedAt }) {
