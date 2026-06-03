@@ -17,15 +17,10 @@ import jwt from 'jsonwebtoken'
 
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 
-jest.mock('~/src/common/helpers/logging/log.js', () => ({
-  log: jest.fn(),
-  LogCodes: {
-    AUTH: {
-      TOKEN_VERIFICATION_SUCCESS: { level: 'info', messageFunc: jest.fn() },
-      TOKEN_VERIFICATION_FAILURE: { level: 'error', messageFunc: jest.fn() }
-    }
-  }
-}))
+jest.mock('~/src/common/helpers/logging/log.js', () => {
+  const { LogCodes } = jest.requireActual('~/src/common/helpers/logging/log-codes.js')
+  return { log: jest.fn(), LogCodes }
+})
 
 async function seedApplicationLock(server, { sbi, grantCode, grantVersion, ownerId }) {
   await server.stateDb.collection('grant-application-locks').insertOne({

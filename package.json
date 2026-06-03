@@ -18,6 +18,7 @@
     "docker:build": "docker build -t grants-ui-backend:local .",
     "format": "prettier --write \"**/*.{cjs,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{cjs,js,json,md}\"",
+    "generate:env": "node scripts/generatePrivateEnv.js",
     "generate:auth-header": "node scripts/generateAuthHeader.js",
     "generate:lock-header": "node scripts/generateLockHeader.js",
     "generate:lock-release-header": "node scripts/generateLockReleaseHeader.js",
@@ -40,6 +41,8 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1045.0",
+    "@aws-sdk/client-sqs": "3.1045.0",
     "@aws-sdk/credential-providers": "3.1045.0",
     "@defra/hapi-tracing": "1.30.0",
     "@elastic/ecs-pino-format": "1.5.0",
@@ -56,6 +59,7 @@
     "http-status-codes": "2.3.0",
     "https-proxy-agent": "7.0.6",
     "joi": "18.2.1",
+    "js-yaml": "4.1.1",
     "jsonwebtoken": "9.0.3",
     "mongodb": "7.2.0",
     "node-fetch": "3.3.2",
@@ -66,6 +70,7 @@
   },
   "overrides": {
     "protobufjs": "7.5.8",
+    "tmp": "0.2.6",
     "underscore": "1.13.8",
     "uuid": "14.0.0"
   },
@@ -74,6 +79,8 @@
     "@babel/preset-env": "7.29.5",
     "@pact-foundation/pact": "15.0.1",
     "@shelf/jest-mongodb": "6.0.2",
+    "@types/jest": "30.0.0",
+    "@types/node": "24.12.4",
     "autoprefixer": "10.5.0",
     "babel-jest": "30.4.1",
     "babel-plugin-module-resolver": "5.0.3",
