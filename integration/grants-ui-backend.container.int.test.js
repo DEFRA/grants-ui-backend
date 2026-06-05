@@ -195,7 +195,12 @@ describe('GET /state', () => {
     })
 
     expect(response.res.statusCode).toBe(200)
-    expect(response.payload).toEqual({ step: 'start' })
+    expect(response.payload).toMatchObject({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: 1,
+      state: { step: 'start' }
+    })
   })
 })
 
