@@ -260,13 +260,14 @@ describe('State', () => {
 
   describe('stateRetrieve', () => {
     test('should retrieve state document and return 200', async () => {
-      getApplicationState.mockResolvedValue({ state: { key: 'value' } })
+      const mockDocument = { grantVersion: '1.0.0', sbi: 'business123', grantCode: 'grant123', state: { key: 'value' } }
+      getApplicationState.mockResolvedValue(mockDocument)
       mockRequest.query = defaultQuery
 
       await stateRetrieve.handler(mockRequest, mockH)
 
       expect(getApplicationState).toHaveBeenCalledWith(defaultQuery)
-      expect(mockH.response).toHaveBeenCalledWith({ key: 'value' })
+      expect(mockH.response).toHaveBeenCalledWith(mockDocument)
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
