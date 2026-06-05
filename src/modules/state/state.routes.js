@@ -93,7 +93,7 @@ export const stateRetrieve = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode, grantVersion } = request.query
+    const { sbi, grantCode, grantVersion, document: fullDocument } = request.query
 
     try {
       const document = await getApplicationState({ sbi, grantCode, grantVersion })
@@ -102,7 +102,7 @@ export const stateRetrieve = {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
       }
 
-      return h.response(document.state).code(StatusCodes.OK)
+      return h.response(fullDocument ? document : document.state).code(StatusCodes.OK)
     } catch (_err) {
       return h.response({ error: 'Failed to retrieve application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
