@@ -1,4 +1,4 @@
-import { stateDelete, statePatch, stateRetrieve, stateDocumentRetrieve, stateSave } from './state.routes.js'
+import { stateDelete, statePatch, stateRetrieve, stateSave } from './state.routes.js'
 import { logIfApproachingPayloadLimit } from '~/src/common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 import { enforceApplicationLock } from './lock-enforcement.js'
@@ -72,10 +72,6 @@ describe('State', () => {
 
     test('statePatch route is protected by application lock', () => {
       expect(statePatch.options.pre[0].method).toBe(enforceApplicationLock)
-    })
-
-    test('stateDocumentRetrieve route is protected by application lock', () => {
-      expect(stateDocumentRetrieve.options.pre[0].method).toBe(enforceApplicationLock)
     })
   })
 
@@ -263,15 +259,27 @@ describe('State', () => {
   })
 
   describe('stateRetrieve', () => {
-    test('should retrieve state document and return 200', async () => {
+    test('should retrieve state and return 200 by default', async () => {
       const mockDocument = { grantVersion: '1.0.0', sbi: 'business123', grantCode: 'grant123', state: { key: 'value' } }
       getApplicationState.mockResolvedValue(mockDocument)
-      mockRequest.query = defaultQuery
+      mockRequest.query = { ...defaultQuery, document: false }
 
       await stateRetrieve.handler(mockRequest, mockH)
 
       expect(getApplicationState).toHaveBeenCalledWith(defaultQuery)
       expect(mockH.response).toHaveBeenCalledWith(mockDocument.state)
+      expect(mockH.code).toHaveBeenCalledWith(200)
+    })
+
+    test('should retrieve full document when document=true', async () => {
+      const mockDocument = { grantVersion: '1.0.0', sbi: 'business123', grantCode: 'grant123', state: { key: 'value' } }
+      getApplicationState.mockResolvedValue(mockDocument)
+      mockRequest.query = { ...defaultQuery, document: true }
+
+      await stateRetrieve.handler(mockRequest, mockH)
+
+      expect(getApplicationState).toHaveBeenCalledWith(defaultQuery)
+      expect(mockH.response).toHaveBeenCalledWith(mockDocument)
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
@@ -327,72 +335,6 @@ describe('State', () => {
           grantCode: invalidQuery.grantCode,
           errorName: mockError.name,
           errorMessage: `GET /state, validation failed: ${mockError.message}`,
-          errorReason: mockError.reason,
-          errorCode: mockError.code,
-          isMongoError: false,
-          stack: expect.stringContaining('ValidationError: Validation error')
-        })
-      )
-    })
-  })
-
-  describe('stateDocumentRetrieve', () => {
-    test('should retrieve full document and return 200', async () => {
-      const mockDocument = { grantVersion: '1.0.0', sbi: 'business123', grantCode: 'grant123', state: { key: 'value' } }
-      getApplicationState.mockResolvedValue(mockDocument)
-      mockRequest.query = defaultQuery
-
-      await stateDocumentRetrieve.handler(mockRequest, mockH)
-
-      expect(getApplicationState).toHaveBeenCalledWith(defaultQuery)
-      expect(mockH.response).toHaveBeenCalledWith(mockDocument)
-      expect(mockH.code).toHaveBeenCalledWith(200)
-    })
-
-    test('should return 404 when state document is not found', async () => {
-      mockRequest.query = defaultQuery
-      getApplicationState.mockResolvedValue(null)
-
-      await stateDocumentRetrieve.handler(mockRequest, mockH)
-
-      expect(mockH.response).toHaveBeenCalledWith({ error: 'State not found' })
-      expect(mockH.code).toHaveBeenCalledWith(404)
-    })
-
-    test('should handle database errors and return 500', async () => {
-      mockRequest.query = defaultQuery
-      const dbError = new Error('Database error')
-      dbError.name = 'MongoError'
-      dbError.code = 500
-      dbError.reason = 'Some reason'
-      getApplicationState.mockRejectedValue(dbError)
-
-      await stateDocumentRetrieve.handler(mockRequest, mockH)
-
-      expect(mockH.response).toHaveBeenCalledWith({ error: 'Failed to retrieve application state' })
-      expect(mockH.code).toHaveBeenCalledWith(500)
-    })
-
-    test('should validate query and throw error for invalid data', () => {
-      const invalidQuery = { grantCode: 'grant123' }
-
-      const mockValidationRequest = { server: mockServer, query: invalidQuery }
-
-      const mockError = new Error('Validation error')
-      mockError.name = 'ValidationError'
-      mockError.code = 404
-      mockError.reason = 'Some reason'
-
-      expect(() => stateDocumentRetrieve.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
-        'Validation error'
-      )
-      expect(log).toHaveBeenCalledWith(
-        LogCodes.STATE.STATE_RETRIEVE_FAILED,
-        expect.objectContaining({
-          sbi: invalidQuery.sbi,
-          grantCode: invalidQuery.grantCode,
-          errorName: mockError.name,
-          errorMessage: `GET /state-document, validation failed: ${mockError.message}`,
           errorReason: mockError.reason,
           errorCode: mockError.code,
           isMongoError: false,

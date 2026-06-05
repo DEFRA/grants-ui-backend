@@ -25,7 +25,8 @@ export const stateSaveSchema = Joi.object({
 export const stateRetrieveSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
-  grantVersion: grantVersion().default(1)
+  grantVersion: grantVersion().default(1),
+  document: Joi.boolean().default(false)
 })
 
 export const patchParamsSchema = Joi.object({

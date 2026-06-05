@@ -197,10 +197,8 @@ describe('GET /state', () => {
     expect(response.res.statusCode).toBe(200)
     expect(response.payload).toEqual({ step: 'start' })
   })
-})
 
-describe('GET /state-document', () => {
-  it('retrieves full document', async () => {
+  it('retrieves full document when document=true', async () => {
     const payload = {
       sbi: 'biz-1',
       grantCode: 'grant-1',
@@ -217,10 +215,11 @@ describe('GET /state-document', () => {
 
     const qs = new URLSearchParams({
       sbi: 'biz-1',
-      grantCode: 'grant-1'
+      grantCode: 'grant-1',
+      document: 'true'
     }).toString()
 
-    const response = await Wreck.get(`${apiUrl}/state-document?${qs}`, {
+    const response = await Wreck.get(`${apiUrl}/state?${qs}`, {
       json: true,
       headers: {
         authorization: createAuthHeader(),
