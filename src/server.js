@@ -5,8 +5,8 @@ import { router } from './plugins/router.js'
 import { auth } from './plugins/auth.js'
 import { requestLogger } from './common/helpers/logging/request-logger.js'
 import { mongoDb } from './common/helpers/mongodb.js'
-import { createStateIndexes, initStateRepository } from './modules/state/state.repository.js'
-import { createConfigIndexes, initConfigRepository } from './modules/config/config.repository.js'
+import { initStateRepository } from './modules/state/state.repository.js'
+import { initConfigRepository } from './modules/config/config.repository.js'
 import { failAction } from './common/helpers/fail-action.js'
 import { secureContext } from './common/helpers/secure-context/index.js'
 import { pulse } from './common/helpers/pulse.js'
@@ -64,8 +64,7 @@ async function createServer() {
         databaseName: config.get('mongoState.databaseName'),
         maxPoolSize: config.get('mongoState.maxPoolSize'),
         minPoolSize: config.get('mongoState.minPoolSize'),
-        maxIdleTimeMS: config.get('mongoState.maxIdleTimeMS'),
-        createIndexes: createStateIndexes
+        maxIdleTimeMS: config.get('mongoState.maxIdleTimeMS')
       }
     },
     {
@@ -76,8 +75,7 @@ async function createServer() {
         databaseName: config.get('mongoConfig.databaseName'),
         maxPoolSize: config.get('mongoConfig.maxPoolSize'),
         minPoolSize: config.get('mongoConfig.minPoolSize'),
-        maxIdleTimeMS: config.get('mongoConfig.maxIdleTimeMS'),
-        createIndexes: createConfigIndexes
+        maxIdleTimeMS: config.get('mongoConfig.maxIdleTimeMS')
       }
     },
     auth,

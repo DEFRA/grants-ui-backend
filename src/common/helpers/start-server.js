@@ -1,15 +1,22 @@
 import { config } from '../../config.js'
 import { createServer } from '../../server.js'
 import { createLogger } from './logging/logger.js'
-import { migrateApplicantToAdditionalAnswers } from '../../migrations/migrate-applicant-to-additional-answers.js'
 import { runStartupPull } from '../../modules/config/ingest/startup-pull.js'
+import { runMigrations } from './run-migrations.js'
+import stateMongoConfig from '../../../migrate-mongo-config.state.js'
+import configMongoConfig from '../../../migrate-mongo-config.config.js'
 
 async function startServer() {
   let server
 
   try {
     server = await createServer()
-    await migrateApplicantToAdditionalAnswers(server.stateDb, server.logger)
+
+    // Run migrations. Across multiple ECS instances, migrate-mongo's changelog
+    // lock (lockTtl > 0) lets exactly one instance apply pending migrations;
+    // the others back-off/poll until the lock clears, then start normally.
+    await runMigrations(server.stateDb, stateMongoConfig)
+    await runMigrations(server.configDb, configMongoConfig)
 
     // Best-effort startup pull from the config broker. If the broker is not yet
     // ready (e.g. cold start), we log and continue with the existing DB state;
@@ -29,6 +36,9 @@ async function startServer() {
     const logger = createLogger()
     logger.error('Server failed to start :(')
     logger.error(error)
+    // Fail the boot loudly so CDP/ECS health checks catch a broken instance
+    // instead of treating a failed migration as a healthy server.
+    throw error
   }
 
   return server

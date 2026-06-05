@@ -221,6 +221,20 @@ export const LogCodes = {
       messageFunc: ({ errorName, errorMessage, stack }) =>
         `SQS consumer shutdown error | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
     }
+  },
+  MIGRATIONS: {
+    APPLIED: {
+      level: 'info',
+      messageFunc: ({ db, count, files }) => `Applied migrations | db=${db} | count=${count} | files=${files}`
+    },
+    NONE_PENDING: {
+      level: 'debug',
+      messageFunc: ({ db }) => `No pending migrations | db=${db}`
+    },
+    LOCKED_RETRY: {
+      level: 'info',
+      messageFunc: ({ db, waitMs }) => `Migrations locked by another instance; retrying | db=${db} | waitMs=${waitMs}`
+    }
   }
 }
 

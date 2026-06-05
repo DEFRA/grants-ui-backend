@@ -36,7 +36,9 @@
     "start": "NODE_ENV=production node --use-strict .",
     "setup:husky": "node -e \"try { (await import('husky')).default() } catch (e) { if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e }\" --input-type module",
     "snyk-test": "snyk test",
-    "snyk-monitor": "snyk monitor"
+    "snyk-monitor": "snyk monitor",
+    "migrate:state:create": "migrate-mongo create --file migrate-mongo-config.state.js",
+    "migrate:config:create": "migrate-mongo create --file migrate-mongo-config.config.js"
   },
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
@@ -61,6 +63,7 @@
     "joi": "18.2.1",
     "js-yaml": "4.1.1",
     "jsonwebtoken": "9.0.3",
+    "migrate-mongo": "14.0.7",
     "mongodb": "7.2.0",
     "node-fetch": "3.3.2",
     "pino": "10.3.1",

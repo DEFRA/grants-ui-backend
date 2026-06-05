@@ -19,6 +19,10 @@
  * @property {string} sbi
  * @property {string} grantCode
  * @property {string} grantVersion
+ * @property {number} [pinnedMajor]
+ * @property {number} [major]
+ * @property {number} [minor]
+ * @property {number} [patch]
  * @property {Record<string, unknown>} state
  * @property {Date} createdAt
  * @property {Date} updatedAt
@@ -36,6 +40,7 @@
 
 import { config } from '../../config.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
+import { normaliseGrantVersion } from './grant-version.js'
 
 const LOCKS_COLLECTION = 'grant-application-locks'
 const STATE_COLLECTION = 'grant-application-state'
@@ -59,24 +64,6 @@ export function initStateRepository(db) {
 }
 
 /**
- * Creates the indexes required by the state module.
- *
- * Called by the `mongoDb` plugin on startup via `options.createIndexes`.
- *
- * @param {import('mongodb').Db} db
- */
-export async function createStateIndexes(db) {
-  await db.collection(LOCKS_COLLECTION).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
-  await db.collection(LOCKS_COLLECTION).createIndex({ grantCode: 1, grantVersion: 1, sbi: 1 }, { unique: true })
-
-  await db.collection(STATE_COLLECTION).createIndex({ sbi: 1, grantCode: 1, grantVersion: 1 }, { unique: true })
-
-  await db
-    .collection(SUBMISSIONS_COLLECTION)
-    .createIndex({ sbi: 1, grantCode: 1, grantVersion: 1, referenceNumber: 1 }, { unique: true })
-}
-
-/**
  * Acquires or refreshes an exclusive lock for an application for a given organisation.
  *
  * Lock acquisition rules:
@@ -95,7 +82,7 @@ export async function acquireOrRefreshApplicationLock({ grantCode, grantVersion,
 
   const sbiStr = String(sbi)
   const ownerIdStr = String(ownerId)
-  const grantVersionStr = typeof grantVersion === 'number' ? Number(grantVersion) : String(grantVersion ?? '1.0.0')
+  const { grantVersion: grantVersionStr } = normaliseGrantVersion(grantVersion)
 
   try {
     const result = await collection.findOneAndUpdate(
@@ -165,7 +152,7 @@ export async function acquireOrRefreshApplicationLock({ grantCode, grantVersion,
 export async function releaseApplicationLock({ grantCode, grantVersion, sbi, ownerId }) {
   const sbiStr = String(sbi)
   const ownerIdStr = String(ownerId)
-  const grantVersionStr = typeof grantVersion === 'number' ? Number(grantVersion) : String(grantVersion ?? '1.0.0')
+  const { grantVersion: grantVersionStr } = normaliseGrantVersion(grantVersion)
 
   try {
     const result = await stateDb.collection(LOCKS_COLLECTION).deleteOne({
@@ -249,6 +236,8 @@ export async function releaseAllApplicationLocksForOwner({ ownerId }) {
  * @returns {Promise<import('mongodb').UpdateResult>}
  */
 export async function saveApplicationState({ sbi, grantCode, grantVersion, state }) {
+  const { grantVersion: grantVersionStr, pinnedMajor, major, minor, patch } = normaliseGrantVersion(grantVersion)
+
   const updateDoc = {
     $set: {
       state: {
@@ -257,13 +246,13 @@ export async function saveApplicationState({ sbi, grantCode, grantVersion, state
       }
     },
     $currentDate: { updatedAt: true },
-    $setOnInsert: { createdAt: new Date() }
+    $setOnInsert: { createdAt: new Date(), pinnedMajor, major, minor, patch }
   }
 
   try {
     return await stateDb
       .collection(STATE_COLLECTION)
-      .updateOne({ sbi, grantCode, grantVersion }, updateDoc, { upsert: true })
+      .updateOne({ sbi, grantCode, grantVersion: grantVersionStr }, updateDoc, { upsert: true })
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
     log(LogCodes.STATE.STATE_SAVE_FAILED, {

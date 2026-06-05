@@ -10,18 +10,24 @@ ENDPOINT="--endpoint-url=http://localhost:4566"
 ACCOUNT_ID=000000000000
 
 TOPIC_NAME=gfr__sns___config_update
-QUEUE_NAME=grants_ui_backend__sqs__config_updates
+UPDATES_QUEUE_NAME=grants_ui_backend__sqs__config_updates
+INPUT_QUEUE_NAME=gfr__sqs___config_input
 
 # Config broker S3 bucket
 aws $ENDPOINT s3 mb s3://configs-bucket || true
+echo "Created S3 bucket"
+
+# Config broker input queue (polled by grants-config-broker)
+aws $ENDPOINT sqs create-queue --queue-name "$INPUT_QUEUE_NAME"
+echo "Created/located SQS queue: $INPUT_QUEUE_NAME"
 
 # SNS topic published to by grants-config-broker on form-definition changes
 TOPIC_ARN=$(aws $ENDPOINT sns create-topic --name "$TOPIC_NAME" --query TopicArn --output text)
 echo "Created/located SNS topic: $TOPIC_ARN"
 
 # SQS queue consumed by grants-ui-backend to ingest those changes
-QUEUE_URL=$(aws $ENDPOINT sqs create-queue --queue-name "$QUEUE_NAME" --query QueueUrl --output text)
-QUEUE_ARN="arn:aws:sqs:${AWS_REGION}:${ACCOUNT_ID}:${QUEUE_NAME}"
+QUEUE_URL=$(aws $ENDPOINT sqs create-queue --queue-name "$UPDATES_QUEUE_NAME" --query QueueUrl --output text)
+QUEUE_ARN="arn:aws:sqs:${AWS_REGION}:${ACCOUNT_ID}:${UPDATES_QUEUE_NAME}"
 echo "Created/located SQS queue: $QUEUE_URL ($QUEUE_ARN)"
 
 # Allow the SNS topic to deliver to the SQS queue
@@ -36,3 +42,4 @@ aws $ENDPOINT sns subscribe \
   --notification-endpoint "$QUEUE_ARN"
 
 echo "Subscribed $QUEUE_ARN to $TOPIC_ARN"
+

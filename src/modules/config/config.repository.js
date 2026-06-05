@@ -35,23 +35,6 @@ export function initConfigRepository(db) {
 }
 
 /**
- * Creates the indexes required by the config module.
- *
- * Called by the `mongoDb` plugin on startup via `options.createIndexes`.
- *
- * @param {import('mongodb').Db} db
- */
-export async function createConfigIndexes(db) {
-  // Compound index used by resolveLatestVersion and resolveLatestVersionWithinMajor
-  await db
-    .collection(COLLECTION)
-    .createIndex({ grantCode: 1, status: 1, major: -1, minor: -1, patch: -1 }, { unique: true })
-
-  // Exact-match index used by getDefinition
-  await db.collection(COLLECTION).createIndex({ grantCode: 1, major: 1, minor: 1, patch: 1 }, { unique: true })
-}
-
-/**
  * Returns the latest live version for a grant.
  *
  * @param {string} grantCode

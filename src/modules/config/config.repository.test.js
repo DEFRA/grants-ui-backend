@@ -2,7 +2,6 @@ import { MongoClient } from 'mongodb'
 import { createServer } from '../../server.js'
 import { FORM_DEFINITION_STATUS } from './config.constants.js'
 import {
-  createConfigIndexes,
   initConfigRepository,
   resolveLatestVersion,
   resolveLatestVersionWithinMajor,
@@ -11,6 +10,7 @@ import {
   updateDefinitionStatus,
   definitionStatusKey
 } from './config.repository.js'
+import { up as createConfigIndexes } from '~/migrations/config/20260603163943-create-indexes.js'
 
 const COLLECTION = 'form-definitions'
 
@@ -316,7 +316,6 @@ describe('config server integration', () => {
   beforeAll(async () => {
     server = await createServer()
     await server.initialize()
-    await server.configMongoIndexesReady
   }, 30_000)
 
   afterAll(async () => {
