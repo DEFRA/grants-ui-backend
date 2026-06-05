@@ -102,6 +102,48 @@ export const stateRetrieve = {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
       }
 
+      return h.response(document.state).code(StatusCodes.OK)
+    } catch (_err) {
+      return h.response({ error: 'Failed to retrieve application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
+    }
+  }
+}
+
+export const stateDocumentRetrieve = {
+  method: 'GET',
+  path: '/state-document',
+  options: {
+    auth: 'bearer',
+    pre: [{ method: enforceApplicationLock }],
+    validate: {
+      query: stateRetrieveSchema,
+      failAction: (request, _h, err) => {
+        const { sbi, grantCode, grantVersion } = request.query
+        log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
+          sbi,
+          grantCode,
+          grantVersion,
+          errorName: err.name,
+          errorMessage: `GET /state-document, validation failed: ${err.message}`,
+          errorReason: err.reason,
+          errorCode: err.code,
+          isMongoError: false,
+          stack: err.stack?.split('\n')[0]
+        })
+        throw err
+      }
+    }
+  },
+  handler: async (request, h) => {
+    const { sbi, grantCode, grantVersion } = request.query
+
+    try {
+      const document = await getApplicationState({ sbi, grantCode, grantVersion })
+
+      if (!document) {
+        return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
+      }
+
       return h.response(document).code(StatusCodes.OK)
     } catch (_err) {
       return h.response({ error: 'Failed to retrieve application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
