@@ -9,6 +9,7 @@
  */
 
 const SEMVER_RE = /^(\d+)\.(\d+)\.(\d+)$/
+const MAJOR_ONLY_RE = /^(\d+)$/
 const SAFE_DEFAULT_VERSION = '1.0.0'
 const SAFE_DEFAULT_MAJOR = 1
 
@@ -21,11 +22,11 @@ const SAFE_DEFAULT_MAJOR = 1
  */
 export function normaliseGrantVersion(raw) {
   if (typeof raw === 'string') {
-    const full = raw.match(SEMVER_RE)
+    const full = SEMVER_RE.exec(raw)
     if (full) {
       return decompose(raw, Number(full[1]), Number(full[2]), Number(full[3]))
     }
-    const majorOnly = raw.match(/^(\d+)$/)
+    const majorOnly = MAJOR_ONLY_RE.exec(raw)
     if (majorOnly) {
       const major = Number(majorOnly[1])
       return decompose(`${major}.0.0`, major, 0, 0)
