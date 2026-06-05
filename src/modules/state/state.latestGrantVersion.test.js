@@ -49,9 +49,7 @@ describe('State integration tests for grantVersion filtering', () => {
 
     await stateRetrieve.handler(mockRequest, mockH)
 
-    expect(mockH.response).toHaveBeenCalledWith(
-      expect.objectContaining({ grantVersion: '2.0.3', state: { version: '2.0.3' } })
-    )
+    expect(mockH.response).toHaveBeenCalledWith({ version: '2.0.3' })
     expect(mockH.code).toHaveBeenCalledWith(200)
   })
 
