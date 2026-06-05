@@ -197,6 +197,49 @@ describe('GET /state', () => {
     expect(response.res.statusCode).toBe(200)
     expect(response.payload).toEqual({ step: 'start' })
   })
+
+  it('retrieves full document when document=true', async () => {
+    const payload = {
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: 1,
+      state: { step: 'start' }
+    }
+    await db.collection('grant-application-state').insertMany([
+      {
+        ...payload,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ])
+
+    const qs = new URLSearchParams({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      document: 'true'
+    }).toString()
+
+    const response = await Wreck.get(`${apiUrl}/state?${qs}`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload).toMatchObject({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: 1,
+      state: { step: 'start' }
+    })
+  })
 })
 
 describe('DELETE /state', () => {
