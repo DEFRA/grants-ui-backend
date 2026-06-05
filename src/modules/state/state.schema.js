@@ -10,15 +10,26 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/
  * until it is updated to use semver as well. Coerce that single legacy value
  * to the `'1.0.0'` semver string so those requests keep working. Remove this
  * tolerance once grants-ui sends semver strings.
+ *
+ * @param {*} value - The raw grantVersion value (integer `1`, `'1'`, or a semver string)
+ * @returns {string|null} The normalised semver string, or `null` if not coercible
  */
-const coerceLegacyGrantVersion = (value, helpers) => {
+export const normalizeGrantVersion = (value) => {
   if (value === 1 || value === '1') {
     return '1.0.0'
   }
   if (typeof value === 'string' && SEMVER_RE.test(value)) {
     return value
   }
-  return helpers.error('string.pattern.base')
+  return null
+}
+
+const coerceLegacyGrantVersion = (value, helpers) => {
+  const normalized = normalizeGrantVersion(value)
+  if (normalized === null) {
+    return helpers.error('string.pattern.base')
+  }
+  return normalized
 }
 
 const grantVersion = () =>

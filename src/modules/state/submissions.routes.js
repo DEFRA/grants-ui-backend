@@ -4,7 +4,7 @@ import { releaseApplicationLock, insertSubmission, findSubmissions } from './sta
 import { enforceApplicationLock, extractLockKeys } from './lock-enforcement.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { addSubmissionSchema, retrieveSubmissionsSchema } from './state.schema.js'
+import { addSubmissionSchema, retrieveSubmissionsSchema, normalizeGrantVersion } from './state.schema.js'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
@@ -66,7 +66,7 @@ export const addSubmission = {
     if (tokenGrantCode !== grantCode) {
       throw Boom.badRequest('Grant code in payload does not match lock token')
     }
-    if (String(tokenGrantVersion) !== String(grantVersion)) {
+    if (normalizeGrantVersion(tokenGrantVersion) !== normalizeGrantVersion(grantVersion)) {
       throw Boom.badRequest('Grant version in payload does not match lock token')
     }
 

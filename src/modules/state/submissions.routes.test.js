@@ -104,6 +104,20 @@ describe('addSubmission', () => {
     expect(mockH.response).toHaveBeenCalledWith({ success: true, created: true })
   })
 
+  it('should not throw when token holds legacy integer grantVersion and payload holds semver string', async () => {
+    mockRequest.payload = { ...validPayload, grantVersion: '1.0.0' }
+    extractLockKeys.mockReturnValue({
+      ownerId: 'user1',
+      sbi: '456',
+      grantCode: 'example-grant',
+      grantVersion: 1
+    })
+
+    await addSubmission.handler(mockRequest, mockH)
+
+    expect(mockH.response).toHaveBeenCalledWith({ success: true, created: true })
+  })
+
   it('should throw if SBI does not match lock token', async () => {
     extractLockKeys.mockReturnValue({
       ownerId: 'user1',
