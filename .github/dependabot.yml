@@ -4,54 +4,24 @@ updates:
   # Update npm packages
   - package-ecosystem: npm
     directory: /
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
 
     # Group packages into shared PR
     groups:
-      build:
+      weekly-dependencies:
         patterns:
-          - '@babel/*'
-          - 'autoprefixer'
-          - 'babel-*'
-
-      lint:
-        patterns:
-          - 'neostandard'
-          - 'prettier'
-
-      logging:
-        patterns:
-          - '*-pino'
-          - '*-pino-format'
-          - 'pino'
-          - 'pino-*'
-
-      hapi:
-        patterns:
-          - '@defra/hapi-*'
-          - '@hapi/*'
-          - 'hapi-pulse'
-
-      test:
-        patterns:
-          - '@shelf/jest-*'
-          - 'babel-jest'
-          - 'jest'
-          - 'testcontainers'
-
-      tools:
-        patterns:
-          - 'husky'
-          - 'nodemon'
-          - 'npm-run-all'
-
-      types:
-        patterns:
-          - '@types/*'
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
     ignore:
       - dependency-name: 'eslint-*'
       - dependency-name: 'eslint'
+      - dependency-name: "@pact-foundation/pact"
+        versions: [">=16.0.0"]
 
     # Schedule run every Monday, local time
     schedule:
