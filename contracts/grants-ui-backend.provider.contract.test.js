@@ -57,7 +57,7 @@ describe('Provider contract: grants-ui-backend', () => {
           await server.db.collection('grant-application-locks').insertOne({
             sbi: '123456789',
             grantCode: 'example-grant-with-auth',
-            grantVersion: 1,
+            grantVersion: '1.0.0',
             ownerId: 'contract-test-user',
             lockedAt: new Date(),
             expiresAt: new Date(Date.now() + 60_000)

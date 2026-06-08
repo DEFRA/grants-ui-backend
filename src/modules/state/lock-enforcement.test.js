@@ -4,6 +4,7 @@ import {
   APPLICATION_LOCK_TOKEN_SECRET
 } from '../../test-helpers/auth-constants.js'
 import { acquireOrRefreshApplicationLock } from './state.service.js'
+import { up as createStateIndexes } from '~/migrations/state/20260603163943-create-indexes.js'
 import { enforceApplicationLock } from './lock-enforcement.js'
 import jwt from 'jsonwebtoken'
 import { config } from '../../config.js'
@@ -36,6 +37,9 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
     const { createServer } = await import('../../server.js')
     server = await createServer()
     await server.initialize()
+    // Indexes are owned by migrate-mongo migrations, so create them explicitly
+    // here for the unique-lock constraint under test.
+    await createStateIndexes(server.stateDb)
 
     server.route({
       method: 'GET',

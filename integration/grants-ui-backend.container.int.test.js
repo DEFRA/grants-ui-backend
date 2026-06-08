@@ -87,7 +87,7 @@ describe('POST /state', () => {
     const payload = {
       sbi: 'biz-1',
       grantCode: 'grant-1',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: { step: 'start' }
     }
 
@@ -111,7 +111,7 @@ describe('POST /state', () => {
     const doc = await db.collection('grant-application-state').findOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
-      grantVersion: 1
+      grantVersion: '1.0.0'
     })
     expect(doc.state).toEqual({ step: 'start' })
   })
@@ -120,7 +120,7 @@ describe('POST /state', () => {
     const payload = {
       sbi: 'biz-1',
       grantCode: 'grant-1',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: { step: 'start' }
     }
     await db.collection('grant-application-state').insertOne({
@@ -134,7 +134,7 @@ describe('POST /state', () => {
       payload: {
         sbi: 'biz-1',
         grantCode: 'grant-1',
-        grantVersion: 1,
+        grantVersion: '1.0.0',
         state: { step: 'middle' }
       },
       headers: {
@@ -154,9 +154,111 @@ describe('POST /state', () => {
     const doc = await db.collection('grant-application-state').findOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
-      grantVersion: 1
+      grantVersion: '1.0.0'
     })
     expect(doc.state).toEqual({ step: 'middle' })
+  })
+
+  it('persists a multi-part semver grantVersion', async () => {
+    const payload = {
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '2.3.4',
+      state: { step: 'start' }
+    }
+
+    const response = await Wreck.post(`${apiUrl}/state`, {
+      json: true,
+      payload,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(201)
+    expect(response.payload).toEqual({ success: true, created: true })
+
+    const doc = await db.collection('grant-application-state').findOne({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '2.3.4'
+    })
+    expect(doc.state).toEqual({ step: 'start' })
+    expect(doc.major).toBe(2)
+    expect(doc.minor).toBe(3)
+    expect(doc.patch).toBe(4)
+  })
+
+  it('coerces a legacy integer grantVersion to a semver string', async () => {
+    const payload = {
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: 1,
+      state: { step: 'start' }
+    }
+
+    const response = await Wreck.post(`${apiUrl}/state`, {
+      json: true,
+      payload,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(201)
+    expect(response.payload).toEqual({ success: true, created: true })
+
+    // The legacy integer is normalised to a semver string before persistence.
+    const doc = await db.collection('grant-application-state').findOne({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '1.0.0'
+    })
+    expect(doc).not.toBeNull()
+    expect(doc.state).toEqual({ step: 'start' })
+
+    const legacyDoc = await db.collection('grant-application-state').findOne({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: 1
+    })
+    expect(legacyDoc).toBeNull()
+  })
+
+  it('rejects a non-semver grantVersion with a 400', async () => {
+    const res = await Wreck.request('POST', `${apiUrl}/state`, {
+      json: true,
+      payload: {
+        sbi: 'biz-1',
+        grantCode: 'grant-1',
+        grantVersion: 'not-a-version',
+        state: { step: 'start' }
+      },
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: 'biz-1',
+          grantCode: 'grant-1',
+          grantVersion: '1.0.0'
+        })
+      },
+      throwOnError: false
+    })
+
+    expect(res.statusCode).toBe(400)
   })
 })
 
@@ -165,7 +267,7 @@ describe('GET /state', () => {
     const payload = {
       sbi: 'biz-1',
       grantCode: 'grant-1',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: { step: 'start' }
     }
     await db.collection('grant-application-state').insertMany([
@@ -202,7 +304,7 @@ describe('GET /state', () => {
     const payload = {
       sbi: 'biz-1',
       grantCode: 'grant-1',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: { step: 'start' }
     }
     await db.collection('grant-application-state').insertMany([
@@ -236,9 +338,82 @@ describe('GET /state', () => {
     expect(response.payload).toMatchObject({
       sbi: 'biz-1',
       grantCode: 'grant-1',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: { step: 'start' }
     })
+  })
+
+  it('retrieves state for an explicit multi-part semver grantVersion', async () => {
+    const payload = {
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '2.3.4',
+      state: { step: 'semver' }
+    }
+    await db.collection('grant-application-state').insertOne({
+      ...payload,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+
+    const qs = new URLSearchParams({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '2.3.4'
+    }).toString()
+
+    const response = await Wreck.get(`${apiUrl}/state?${qs}`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: payload.grantVersion
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload).toEqual({ step: 'semver' })
+  })
+
+  it('retrieves state when the legacy integer grantVersion query param is supplied', async () => {
+    const payload = {
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '1.0.0',
+      state: { step: 'legacy' }
+    }
+    await db.collection('grant-application-state').insertOne({
+      ...payload,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+
+    // Legacy callers may still send grantVersion=1; it is coerced to '1.0.0'.
+    const qs = new URLSearchParams({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '1'
+    }).toString()
+
+    const response = await Wreck.get(`${apiUrl}/state?${qs}`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi: payload.sbi,
+          grantCode: payload.grantCode,
+          grantVersion: 1
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload).toEqual({ step: 'legacy' })
   })
 })
 
@@ -247,7 +422,7 @@ describe('DELETE /state', () => {
     const payload = {
       sbi: 'biz-1',
       grantCode: 'grant-1',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: { step: 'start' }
     }
     await db.collection('grant-application-state').insertOne({
@@ -287,7 +462,7 @@ describe('PATCH /state/{sbi}/{grantCode}', () => {
     await db.collection('grant-application-state').insertOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       state: {
         applicationStatus: 'DRAFT'
       },
@@ -295,7 +470,7 @@ describe('PATCH /state/{sbi}/{grantCode}', () => {
       updatedAt: new Date()
     })
 
-    const response = await Wreck.patch(`${apiUrl}/state/biz-1/grant-1/1`, {
+    const response = await Wreck.patch(`${apiUrl}/state/biz-1/grant-1/1.0.0`, {
       json: true,
       payload: {
         state: {
@@ -308,7 +483,7 @@ describe('PATCH /state/{sbi}/{grantCode}', () => {
           sub: TEST_CONTACT_ID,
           sbi: 'biz-1',
           grantCode: 'grant-1',
-          grantVersion: 1
+          grantVersion: '1.0.0'
         })
       }
     })
@@ -330,7 +505,7 @@ describe('DELETE /admin/application-lock', () => {
     await db.collection('grant-application-locks').insertOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       ownerId: TEST_CONTACT_ID,
       lockedAt: new Date(),
       expiresAt: new Date(Date.now() + 60000)
@@ -340,7 +515,7 @@ describe('DELETE /admin/application-lock', () => {
       sbi: 'biz-1',
       ownerId: TEST_CONTACT_ID,
       grantCode: 'grant-1',
-      grantVersion: 1
+      grantVersion: '1.0.0'
     }).toString()
 
     const response = await Wreck.delete(`${apiUrl}/admin/application-lock?${qs}`, {
@@ -368,7 +543,7 @@ describe('DELETE /application-locks', () => {
       {
         sbi: 'biz-1',
         grantCode: 'grant-1',
-        grantVersion: 1,
+        grantVersion: '1.0.0',
         ownerId: TEST_CONTACT_ID,
         lockedAt: new Date(),
         expiresAt: new Date(Date.now() + 60000)
@@ -376,7 +551,7 @@ describe('DELETE /application-locks', () => {
       {
         sbi: 'biz-2',
         grantCode: 'grant-2',
-        grantVersion: 1,
+        grantVersion: '1.0.0',
         ownerId: TEST_CONTACT_ID,
         lockedAt: new Date(),
         expiresAt: new Date(Date.now() + 60000)
@@ -412,7 +587,7 @@ describe('GET /submissions', () => {
     const crn2 = crypto.randomUUID()
     const crn3 = crypto.randomUUID()
     const grantCode = 'test-grant'
-    const grantVersion = 1
+    const grantVersion = '1.0.0'
 
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
@@ -523,7 +698,7 @@ describe('POST /submissions', () => {
       sbi: 'biz-1',
       crn: crypto.randomUUID(),
       grantCode: 'test-grant',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       referenceNumber: crypto.randomUUID(),
       submittedAt: new Date().toISOString()
     }
@@ -551,7 +726,7 @@ describe('POST /submissions', () => {
       sbi: crypto.randomUUID(),
       crn: crypto.randomUUID(),
       grantCode: 'test-grant',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       referenceNumber: crypto.randomUUID(),
       submittedAt: new Date().toISOString()
     }
@@ -579,7 +754,7 @@ describe('POST /submissions', () => {
       sbi: crypto.randomUUID(),
       crn: crypto.randomUUID(),
       grantCode: 'test-grant',
-      grantVersion: 1,
+      grantVersion: '1.0.0',
       referenceNumber: crypto.randomUUID(),
       submittedAt: new Date().toISOString()
     }
@@ -644,7 +819,7 @@ describe('Observability', () => {
         payload: {
           sbi: 'trace-test',
           grantCode: 'trace-grant',
-          grantVersion: 1,
+          grantVersion: '1.0.0',
           state: {}
         },
         headers: {
@@ -654,7 +829,7 @@ describe('Observability', () => {
             sub: TEST_CONTACT_ID,
             sbi: 'trace-test',
             grantCode: 'trace-grant',
-            grantVersion: 1
+            grantVersion: '1.0.0'
           })
         }
       })

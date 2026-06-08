@@ -12,8 +12,6 @@ describe('server MongoDB setup', () => {
     const { createServer } = await import('./server.js')
     server = await createServer()
     await server.initialize()
-    await server.stateMongoIndexesReady
-    await server.configMongoIndexesReady
   })
 
   afterAll(async () => {

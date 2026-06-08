@@ -24,6 +24,8 @@ Core delivery platform Node.js Backend Template.
   - [Application state and frontend rehydration](#application-state-and-frontend-rehydration)
   - [Config ingestion from grants-config-broker](#config-ingestion-from-grants-config-broker)
   - [Mongo configuration](#mongo-configuration)
+  - [Database migrations](#database-migrations)
+  - [Grant version (semver)](#grant-version-semver)
   - [MongoDB Locks](#application-locking)
   - [Proxy](#proxy)
 - [Docker](#docker)
@@ -127,10 +129,11 @@ cp env.example.sh .env
 
 **Optional MongoDB configuration** (sensible defaults are provided):
 
-- `MONGO_DATABASE` – database name (default: `grants-ui-backend`)
-- `MONGO_MAX_POOL_SIZE` – maximum connection pool size (default: `25`)
-- `MONGO_MIN_POOL_SIZE` – minimum connection pool size (default: `5`)
-- `MONGO_MAX_IDLE_TIME_MS` – idle connection timeout in milliseconds (default: `60000`)
+- `MONGO_DATABASE` – state database name (default: `grants-ui-backend`)
+- `MONGO_CONFIG_DATABASE` – config database name (default: `grants-ui-config`)
+- `MONGO_MAX_POOL_SIZE` / `MONGO_CONFIG_MAX_POOL_SIZE` – maximum connection pool size (default: `25`)
+- `MONGO_MIN_POOL_SIZE` / `MONGO_CONFIG_MIN_POOL_SIZE` – minimum connection pool size (default: `5`)
+- `MONGO_MAX_IDLE_TIME_MS` / `MONGO_CONFIG_MAX_IDLE_TIME_MS` – idle connection timeout in milliseconds (default: `60000`)
 
 **Grants config broker** (source of form definitions, see [Config ingestion from grants-config-broker](#config-ingestion-from-grants-config-broker)):
 
@@ -282,22 +285,69 @@ The SQS consumer only runs when `CONFIG_INGEST_SQS_QUEUE_URL` is set; if it is u
 
 ### Mongo configuration
 
-The service’s MongoDB connection can be tuned via the following environment variables (see `src/config.js`). Sensible defaults are provided for local development, so you only need to override them when required by your environment or performance profile.
+The service connects to two MongoDB databases — `mongoState` (application state, submissions and locks) and `mongoConfig` (grant form definitions). Both share the same `MONGO_URI`; each has its own database name and connection pool variables (see `src/config.js`). Sensible defaults are provided for local development.
 
 - `MONGO_URI` (default: `mongodb://127.0.0.1:27017`)
-  Connection string for your MongoDB deployment.
+  Connection string shared by both databases.
 
-- `MONGO_DATABASE` (default: `grants-ui-backend`)
-  Database name used by the service.
+**State database** (`mongoState`, prefix `MONGO_`):
 
-- `MONGO_MAX_POOL_SIZE` (default: `25`)
-  Maximum number of connections in the client pool.
+- `MONGO_DATABASE` (default: `grants-ui-backend`) — database name
+- `MONGO_MAX_POOL_SIZE` (default: `25`) — maximum connections in the pool
+- `MONGO_MIN_POOL_SIZE` (default: `5`) — minimum connections to keep in the pool
+- `MONGO_MAX_IDLE_TIME_MS` (default: `60000`) — idle connection timeout in milliseconds
 
-- `MONGO_MIN_POOL_SIZE` (default: `5`)
-  Minimum number of connections to keep in the pool.
+**Config database** (`mongoConfig`, prefix `MONGO_CONFIG_`):
 
-- `MONGO_MAX_IDLE_TIME_MS` (default: `60000`)
-  How long an idle connection may remain in the pool before being closed, in milliseconds.
+- `MONGO_CONFIG_DATABASE` (default: `grants-ui-config`) — database name
+- `MONGO_CONFIG_MAX_POOL_SIZE` (default: `25`) — maximum connections in the pool
+- `MONGO_CONFIG_MIN_POOL_SIZE` (default: `5`) — minimum connections to keep in the pool
+- `MONGO_CONFIG_MAX_IDLE_TIME_MS` (default: `60000`) — idle connection timeout in milliseconds
+
+### Database migrations
+
+This service uses [migrate-mongo](https://github.com/seppevs/migrate-mongo) to manage MongoDB schema migrations. Migrations run automatically on startup via `runMigrations()` (`src/common/helpers/run-migrations.js`) and are tracked in a `changelog` collection in each database — so each migration runs exactly once, regardless of how many times the server restarts.
+
+When the service runs as multiple instances (e.g. several ECS tasks behind a rolling deploy), migrations are serialized across instances:
+
+- **Cross-instance serialization** — migrate-mongo's built-in `changelog_lock` (enabled by setting `lockTtl > 0` in both config files) ensures exactly one instance applies pending migrations. Non-winning instances poll with back-off until the lock clears, then start normally.
+- **Fail-loud startup** — a genuine migration error is rethrown and crashes boot, so CDP/ECS health checks catch a broken instance rather than treating a failed migration as healthy.
+- **Duplicate-apply backstop** — a unique index on `changelog.fileName` guards against double-applying a migration.
+- **Index creation is owned by migrations** — index definitions live in dedicated `*-create-indexes.js` migrations (one per database) rather than being created at app boot.
+- **Structured logging** — migration outcomes are logged via the shared `LogCodes.MIGRATIONS` codes: `APPLIED` (info, when migrations were applied), `NONE_PENDING` (debug, when the database is already up to date) and `LOCKED_RETRY` (info, when another instance holds the lock). `NONE_PENDING` only surfaces when the deployed log level allows `debug`.
+
+The service has two MongoDB databases, each with its own migrations folder and config file:
+
+| Database               | Config file                      | Migrations folder    |
+| ---------------------- | -------------------------------- | -------------------- |
+| State (`mongoState`)   | `migrate-mongo-config.state.js`  | `migrations/state/`  |
+| Config (`mongoConfig`) | `migrate-mongo-config.config.js` | `migrations/config/` |
+
+#### Adding a new migration
+
+Use the npm scripts to scaffold a new migration file in the correct folder:
+
+```bash
+# For the state database
+npm run migrate:state:create -- my-migration-name
+
+# For the config database
+npm run migrate:config:create -- my-migration-name
+```
+
+This creates a timestamped file (e.g. `migrations/state/20240101120000-my-migration-name.js`) with empty `up` and `down` functions. Fill in the `up` body with your migration logic; `down` is optional but useful for local rollback.
+
+### Grant version (semver)
+
+`grantVersion` is always a [semver](https://semver.org/) string of the form `x.y.z` (e.g. `1.0.0`). It is part of the identity of a grant application across state documents, submissions and locks.
+
+Input contract:
+
+- When omitted from a request, `grantVersion` defaults to `'1.0.0'`.
+- A non-semver value (e.g. an integer `1`, or a malformed string) is rejected by Joi validation in `src/modules/state/state.schema.js` with a `400` response — the value is validated against `Joi.string().pattern(/^\d+\.\d+\.\d+$/)`.
+- Locks, state and submissions always persist `grantVersion` as a semver string.
+
+The state migration `migrations/state/20260603163942-use-semver.js` performs a one-way data normalisation: it rewrites any legacy `grantVersion` values (e.g. integers) to semver strings and, on state documents, decomposes the version into `pinnedMajor` / `major` / `minor` / `patch` fields used for version-aware querying. Its `down` is an intentional no-op — to roll back, restore the database from a backup.
 
 ### Application locking
 
@@ -333,7 +383,7 @@ The lock token is a JWT containing:
 - `sub` – User identifier (DefraID user ID)
 - `sbi` – Single Business Identifier
 - `grantCode` – Grant application code
-- `grantVersion` – Grant scheme version
+- `grantVersion` – Grant scheme version (semver string `x.y.z`, see [Grant version (semver)](#grant-version-semver))
 - `typ` – Token type (must be `'lock'`)
 
 Generate lock tokens using `npm run generate:lock-header` (see [Generating an Application Lock Header](#generating-an-application-lock-header)).

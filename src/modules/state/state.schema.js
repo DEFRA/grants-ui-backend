@@ -2,19 +2,47 @@ import Joi from 'joi'
 
 /**
  * Joi validation schemas for the state module's routes.
- *
- * `grantVersion` is accepted as either an integer or a string. The state
- * routes default a missing value to `1`; the submissions and lock routes
- * require it explicitly — these variants are intentionally kept distinct.
  */
-const grantVersion = () => Joi.alternatives().try(Joi.number().integer(), Joi.string())
+const SEMVER_RE = /^\d+\.\d+\.\d+$/
+
+/**
+ * TEMPORARY: grants-ui may still send `grantVersion` as the integer `1`
+ * until it is updated to use semver as well. Coerce that single legacy value
+ * to the `'1.0.0'` semver string so those requests keep working. Remove this
+ * tolerance once grants-ui sends semver strings.
+ *
+ * @param {*} value - The raw grantVersion value (integer `1`, `'1'`, or a semver string)
+ * @returns {string|null} The normalised semver string, or `null` if not coercible
+ */
+export const normalizeGrantVersion = (value) => {
+  if (value === 1 || value === '1') {
+    return '1.0.0'
+  }
+  if (typeof value === 'string' && SEMVER_RE.test(value)) {
+    return value
+  }
+  return null
+}
+
+const coerceLegacyGrantVersion = (value, helpers) => {
+  const normalized = normalizeGrantVersion(value)
+  if (normalized === null) {
+    return helpers.error('string.pattern.base')
+  }
+  return normalized
+}
+
+const grantVersion = () =>
+  Joi.any().custom(coerceLegacyGrantVersion).messages({
+    'string.pattern.base': '"grantVersion" must be a semver string (e.g. "1.0.0")'
+  })
 
 // --- /state routes ---
 
 export const stateSaveSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
-  grantVersion: grantVersion().default(1),
+  grantVersion: grantVersion().default('1.0.0'),
   state: Joi.object().unknown(true).required().messages({
     'object.base': '"state" must be an object'
   })
@@ -25,14 +53,14 @@ export const stateSaveSchema = Joi.object({
 export const stateRetrieveSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
-  grantVersion: grantVersion().default(1),
+  grantVersion: grantVersion().default('1.0.0'),
   document: Joi.boolean().default(false)
 })
 
 export const patchParamsSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
-  grantVersion: grantVersion().default(1)
+  grantVersion: grantVersion().default('1.0.0')
 })
 
 export const patchSchema = Joi.object({

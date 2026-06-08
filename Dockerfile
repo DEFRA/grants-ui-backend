@@ -12,6 +12,10 @@ ENV PORT=${PORT}
 EXPOSE ${PORT} ${PORT_DEBUG}
 
 COPY --chown=node:node package*.json ./
+COPY --chown=node:node migrate-mongo-config.config.js ./
+COPY --chown=node:node migrate-mongo-config.state.js ./
+COPY --chown=node:node migrations ./migrations
+
 RUN npm ci
 COPY --chown=node:node ./src ./src
 
@@ -28,6 +32,9 @@ RUN apk add --no-cache curl
 USER node
 
 COPY --from=development /home/node/package*.json ./
+COPY --from=development /home/node/migrate-mongo-config.config.js ./
+COPY --from=development /home/node/migrate-mongo-config.state.js ./
+COPY --from=development /home/node/migrations ./migrations
 COPY --from=development /home/node/src ./src/
 
 RUN npm ci --omit=dev

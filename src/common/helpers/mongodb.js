@@ -33,11 +33,6 @@ export const mongoDb = {
 
       server.logger.info(`MongoDb connected to ${databaseName}`)
 
-      const indexCreation = options.createIndexes(db).catch((err) => {
-        server.logger.error(err, 'Index creation failed')
-      })
-      server.decorate('server', `${decorationKey}MongoIndexesReady`, indexCreation)
-
       server.decorate('server', `${decorationKey}MongoClient`, client)
       server.decorate('server', `${decorationKey}Db`, db)
 

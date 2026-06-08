@@ -46,6 +46,32 @@ describe('application locks', () => {
     expect(lock2).toBeTruthy()
   })
 
+  test('legacy integer grantVersion is persisted as a semver string', async () => {
+    const lock = await acquireOrRefreshApplicationLock({
+      grantCode: 'EGWA',
+      grantVersion: 1,
+      sbi: '106514040',
+      ownerId: 'user-1'
+    })
+
+    expect(lock).toBeTruthy()
+    expect(lock.grantVersion).toBe('1.0.0')
+
+    const stored = await server.stateDb
+      .collection('grant-application-locks')
+      .findOne({ grantCode: 'EGWA', sbi: '106514040', ownerId: 'user-1' })
+    expect(stored.grantVersion).toBe('1.0.0')
+
+    // Releasing with the same legacy value resolves to the same semver lock
+    const released = await releaseApplicationLock({
+      grantCode: 'EGWA',
+      grantVersion: 1,
+      sbi: '106514040',
+      ownerId: 'user-1'
+    })
+    expect(released).toBe(true)
+  })
+
   test('expired lock can be taken over by another user', async () => {
     const now = new Date()
 
@@ -193,6 +219,26 @@ describe('state CRUD service pass-throughs', () => {
     initStateRepository(fakeDb)
     const result = await saveApplicationState({ ...params, state: {} })
     expect(result).toEqual({ upsertedCount: 1 })
+  })
+
+  test('saveApplicationState persists decomposed semver fields on insert', async () => {
+    let capturedFilter
+    let capturedUpdate
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter, update) => {
+          capturedFilter = filter
+          capturedUpdate = update
+          return { upsertedCount: 1 }
+        }
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ sbi: '123456789', grantCode: 'EGWA', grantVersion: 1, state: {} })
+
+    expect(capturedFilter.grantVersion).toBe('1.0.0')
+    expect(capturedUpdate.$setOnInsert).toMatchObject({ pinnedMajor: 1, major: 1, minor: 0, patch: 0 })
   })
 
   test('getApplicationState delegates to repository', async () => {

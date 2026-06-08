@@ -2,7 +2,6 @@ import { Db, MongoClient } from 'mongodb'
 import { createServer } from '../../server.js'
 import { Server } from '@hapi/hapi'
 import { mongoDb } from './mongodb.js'
-import { createStateIndexes } from '../../modules/state/state.repository.js'
 
 describe('#mongoDb', () => {
   let server
@@ -11,8 +10,6 @@ describe('#mongoDb', () => {
     beforeAll(async () => {
       server = await createServer()
       await server.initialize()
-      await server.stateMongoIndexesReady
-      await server.configMongoIndexesReady
     }, 30_000)
 
     afterAll(async () => {
@@ -51,57 +48,13 @@ describe('#mongoDb', () => {
         mongoUri: global.__MONGO_URI__,
         databaseName: 'test-db',
         retryWrites: false,
-        readPreference: 'secondary',
-        createIndexes: createStateIndexes
+        readPreference: 'secondary'
       })
 
       expect(server.stateMongoClient).toBeDefined()
       expect(server.stateDb).toBeDefined()
 
       await server.stateMongoClient.close()
-    })
-  })
-
-  describe('Custom createIndexes option', () => {
-    test('calls custom createIndexes function when provided', async () => {
-      const customCreateIndexes = jest.fn().mockResolvedValue(undefined)
-      const testServer = new Server()
-      testServer.logger = {
-        info: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn()
-      }
-
-      await mongoDb.plugin.register(testServer, {
-        decorationKey: 'custom',
-        mongoUri: global.__MONGO_URI__,
-        databaseName: 'test-custom-db',
-        createIndexes: customCreateIndexes
-      })
-
-      expect(customCreateIndexes).toHaveBeenCalledWith(testServer.customDb)
-
-      await testServer.customMongoClient.close()
-    })
-
-    test('no-op createIndexes does not throw', async () => {
-      const testServer = new Server()
-      testServer.logger = {
-        info: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn()
-      }
-
-      await expect(
-        mongoDb.plugin.register(testServer, {
-          decorationKey: 'noop',
-          mongoUri: global.__MONGO_URI__,
-          databaseName: 'test-noop-db',
-          createIndexes: async () => {}
-        })
-      ).resolves.not.toThrow()
-
-      await testServer.noopMongoClient.close()
     })
   })
 

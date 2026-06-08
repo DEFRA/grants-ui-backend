@@ -24,6 +24,9 @@ jest.mock('./logging/logger.js', () => ({
 jest.mock('../../modules/config/ingest/startup-pull.js', () => ({
   runStartupPull: jest.fn().mockResolvedValue(undefined)
 }))
+jest.mock('./run-migrations.js', () => ({
+  runMigrations: jest.fn().mockResolvedValue([])
+}))
 jest.mock('../../modules/config/ingest/sqs-consumer.js', () => ({
   sqsConsumerPlugin: {
     name: 'config-sqs-consumer',
@@ -65,18 +68,11 @@ describe('#startServer', () => {
 
       expect(createServerSpy).toHaveBeenCalled()
       expect(hapiServerSpy).toHaveBeenCalled()
-      expect(mockHapiLoggerInfo).toHaveBeenNthCalledWith(1, 'Custom secure context is disabled')
-      expect(mockHapiLoggerInfo).toHaveBeenNthCalledWith(2, 'Setting up MongoDb')
-      expect(mockHapiLoggerInfo).toHaveBeenNthCalledWith(3, 'MongoDb connected to grants-ui-backend')
-      expect(mockHapiLoggerInfo).toHaveBeenNthCalledWith(4, 'Setting up MongoDb')
-      expect(mockHapiLoggerInfo).toHaveBeenNthCalledWith(5, 'MongoDb connected to grants-ui-config')
-      expect(mockHapiLoggerInfo).toHaveBeenNthCalledWith(
-        6,
-        { matchedCount: expect.any(Number), modifiedCount: expect.any(Number) },
-        'Migration: migrateApplicantToAdditionalAnswers complete'
-      )
-      expect(mockHapiLoggerInfo).toHaveBeenNthCalledWith(7, 'Server started successfully')
-      expect(mockHapiLoggerInfo).toHaveBeenNthCalledWith(8, 'Access your backend on http://localhost:3098')
+      expect(mockHapiLoggerInfo).toHaveBeenCalledWith('Custom secure context is disabled')
+      expect(mockHapiLoggerInfo).toHaveBeenCalledWith('MongoDb connected to grants-ui-backend')
+      expect(mockHapiLoggerInfo).toHaveBeenCalledWith('MongoDb connected to grants-ui-config')
+      expect(mockHapiLoggerInfo).toHaveBeenCalledWith('Server started successfully')
+      expect(mockHapiLoggerInfo).toHaveBeenCalledWith('Access your backend on http://localhost:3098')
     })
   })
 
@@ -85,8 +81,8 @@ describe('#startServer', () => {
       createServerSpy.mockRejectedValue(new Error('Server failed to start'))
     })
 
-    test('Should log failed startup message', async () => {
-      await startServerImport.startServer()
+    test('Should log failed startup message and rethrow to fail boot loudly', async () => {
+      await expect(startServerImport.startServer()).rejects.toThrow('Server failed to start')
 
       expect(mockLoggerError).toHaveBeenCalledWith('Server failed to start :(')
       expect(mockLoggerError).toHaveBeenCalledWith(Error('Server failed to start'))
