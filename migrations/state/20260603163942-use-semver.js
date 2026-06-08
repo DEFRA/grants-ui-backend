@@ -1,4 +1,4 @@
-import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+import { log, LogCodes } from '../../src/common/helpers/logging/log.js'
 
 const STATE_COLLECTION = 'grant-application-state'
 const LOCKS_COLLECTION = 'grant-application-locks'
