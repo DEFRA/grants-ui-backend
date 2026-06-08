@@ -234,6 +234,11 @@ export const LogCodes = {
     LOCKED_RETRY: {
       level: 'info',
       messageFunc: ({ db, waitMs }) => `Migrations locked by another instance; retrying | db=${db} | waitMs=${waitMs}`
+    },
+    VERSION_PARSE_FALLBACK: {
+      level: 'warn',
+      messageFunc: ({ collection, grantCode, version, defaultVersion }) =>
+        `Cannot parse grantVersion; using safe default | collection=${collection} | grantCode=${grantCode} | version=${version} | defaultVersion=${defaultVersion}`
     }
   }
 }

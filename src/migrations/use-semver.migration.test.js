@@ -10,6 +10,7 @@
  */
 import { MongoClient } from 'mongodb'
 import { up } from '~/migrations/state/20260603163942-use-semver.js'
+import { logger } from '~/src/common/helpers/logging/log.js'
 
 const STATE_COLLECTION = 'grant-application-state'
 const LOCKS_COLLECTION = 'grant-application-locks'
@@ -57,6 +58,22 @@ describe('use-semver migration', () => {
 
     const unparseable = await db.collection(STATE_COLLECTION).findOne({ _id: 'unparseable' })
     expect(unparseable).toMatchObject({ grantVersion: '1.0.0', pinnedMajor: 1, major: 1, minor: 0, patch: 0 })
+  })
+
+  test('emits a structured warn log code (not console.warn) when grantVersion is unparseable', async () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {})
+
+    await db
+      .collection(STATE_COLLECTION)
+      .insertOne({ _id: 'unparseable', grantCode: 'FLY', grantVersion: 'not-a-version' })
+
+    await up(db)
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Cannot parse grantVersion; using safe default | collection=grant-application-state | grantCode=FLY | version=not-a-version | defaultVersion=1.0.0'
+    )
+
+    warnSpy.mockRestore()
   })
 
   test('normalises locks and submissions grantVersion to a semver string only', async () => {

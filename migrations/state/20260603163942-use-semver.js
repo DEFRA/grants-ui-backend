@@ -1,3 +1,5 @@
+import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
+
 const STATE_COLLECTION = 'grant-application-state'
 const LOCKS_COLLECTION = 'grant-application-locks'
 const SUBMISSIONS_COLLECTION = 'grant_application_submissions'
@@ -11,9 +13,10 @@ const SAFE_DEFAULT_MAJOR = 1
  * Falls back to safe defaults if the value cannot be parsed.
  *
  * @param {unknown} raw
+ * @param {{ collection?: string, grantCode?: unknown }} [context] context for structured logging on fallback
  * @returns {{ semver: string, major: number, minor: number, patch: number }}
  */
-function parseSemver(raw) {
+function parseSemver(raw, context = {}) {
   if (typeof raw === 'string') {
     const full = raw.match(SEMVER_RE)
     if (full) {
@@ -30,7 +33,12 @@ function parseSemver(raw) {
     return { semver: `${raw}.0.0`, major: raw, minor: 0, patch: 0 }
   }
 
-  console.warn(`Cannot parse grantVersion "${raw}", using safe default ${SAFE_DEFAULT_VERSION}`)
+  log(LogCodes.MIGRATIONS.VERSION_PARSE_FALLBACK, {
+    collection: context.collection,
+    grantCode: context.grantCode,
+    version: raw,
+    defaultVersion: SAFE_DEFAULT_VERSION
+  })
   return { semver: SAFE_DEFAULT_VERSION, major: SAFE_DEFAULT_MAJOR, minor: 0, patch: 0 }
 }
 
@@ -48,7 +56,10 @@ async function migrateStateCollection(db) {
   const filter = { pinnedMajor: { $exists: false } }
 
   for await (const doc of collection.find(filter)) {
-    const { semver, major, minor, patch } = parseSemver(doc.grantVersion)
+    const { semver, major, minor, patch } = parseSemver(doc.grantVersion, {
+      collection: STATE_COLLECTION,
+      grantCode: doc.grantCode
+    })
     await collection.updateOne(
       { _id: doc._id },
       { $set: { grantVersion: semver, pinnedMajor: major, major, minor, patch } }
@@ -71,7 +82,10 @@ async function migrateVersionOnlyCollection(db, collectionName) {
   const filter = { $nor: [{ grantVersion: { $regex: '^\\d+\\.\\d+\\.\\d+$' } }] }
 
   for await (const doc of collection.find(filter)) {
-    const { semver } = parseSemver(doc.grantVersion)
+    const { semver } = parseSemver(doc.grantVersion, {
+      collection: collectionName,
+      grantCode: doc.grantCode
+    })
     await collection.updateOne({ _id: doc._id }, { $set: { grantVersion: semver } })
   }
 }
