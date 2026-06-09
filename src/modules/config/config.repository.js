@@ -18,7 +18,7 @@
 
 import { FORM_DEFINITION_STATUS } from './config.constants.js'
 
-const COLLECTION = 'form-definitions'
+const COLLECTION = 'config__form_definitions'
 
 /** @type {import('mongodb').Db} */
 let configDb

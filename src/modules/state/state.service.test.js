@@ -25,7 +25,7 @@ describe('application locks', () => {
 
   afterEach(async () => {
     jest.clearAllMocks()
-    await server.stateDb.collection('grant-application-locks').deleteMany({})
+    await server.stateDb.collection('state__grant_application_locks').deleteMany({})
   })
 
   test('acquire and release lock', async () => {
@@ -58,7 +58,7 @@ describe('application locks', () => {
     expect(lock.grantVersion).toBe('1.0.0')
 
     const stored = await server.stateDb
-      .collection('grant-application-locks')
+      .collection('state__grant_application_locks')
       .findOne({ grantCode: 'EGWA', sbi: '106514040', ownerId: 'user-1' })
     expect(stored.grantVersion).toBe('1.0.0')
 
@@ -75,7 +75,7 @@ describe('application locks', () => {
   test('expired lock can be taken over by another user', async () => {
     const now = new Date()
 
-    await server.stateDb.collection('grant-application-locks').insertOne({
+    await server.stateDb.collection('state__grant_application_locks').insertOne({
       grantCode: 'EGWA',
       grantVersion: '1.0.0',
       sbi: '106',
@@ -163,8 +163,8 @@ describe('application locks', () => {
   test('releaseAllApplicationLocksForOwner deletes all locks', async () => {
     const db = server.stateDb
 
-    await db.collection('grant-application-locks').deleteMany({ ownerId: 'user-1' })
-    await db.collection('grant-application-locks').insertMany([
+    await db.collection('state__grant_application_locks').deleteMany({ ownerId: 'user-1' })
+    await db.collection('state__grant_application_locks').insertMany([
       { grantCode: 'A', grantVersion: '1.0.0', sbi: '1', ownerId: 'user-1' },
       { grantCode: 'B', grantVersion: '1.0.0', sbi: '2', ownerId: 'user-1' }
     ])

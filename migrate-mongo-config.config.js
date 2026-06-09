@@ -5,12 +5,12 @@ const mongoConfig = baseConfig.get('mongoConfig')
 const config = {
   mongodb: {
     url: mongoConfig.uri,
-    databaseName: mongoConfig.databaseName,
+    databaseName: `${mongoConfig.databaseName} - config`,
     options: {}
   },
   migrationsDir: 'migrations/config',
-  changelogCollectionName: 'changelog',
-  lockCollectionName: 'changelog_lock',
+  changelogCollectionName: 'config__changelog',
+  lockCollectionName: 'config__changelog_lock',
   lockTtl: 90,
   migrationFileExtension: '.js',
   useFileHash: false,

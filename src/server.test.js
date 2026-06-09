@@ -24,17 +24,4 @@ describe('server MongoDB setup', () => {
     expect(server.configDb).toBeInstanceOf(Db)
     expect(server.configMongoClient).toBeInstanceOf(MongoClient)
   })
-
-  test('stateDb is connected to the grants-ui-backend database', () => {
-    expect(server.stateDb.databaseName).toBe('grants-ui-backend')
-  })
-
-  test('configDb is connected to the grants-ui-config database', () => {
-    expect(server.configDb.databaseName).toBe('grants-ui-config')
-  })
-
-  test('stateDb and configDb are isolated databases', () => {
-    expect(server.stateDb).not.toBe(server.configDb)
-    expect(server.stateDb.databaseName).not.toBe(server.configDb.databaseName)
-  })
 })

@@ -78,8 +78,8 @@ afterAll(async () => {
 })
 
 beforeEach(async () => {
-  await db.collection('grant-application-state').deleteMany({})
-  await db.collection('grant-application-locks').deleteMany({})
+  await db.collection('state__grant_application_state').deleteMany({})
+  await db.collection('state__grant_application_locks').deleteMany({})
 })
 
 describe('POST /state', () => {
@@ -108,7 +108,7 @@ describe('POST /state', () => {
     expect(response.res.statusCode).toBe(201)
     expect(response.payload).toEqual({ success: true, created: true })
 
-    const doc = await db.collection('grant-application-state').findOne({
+    const doc = await db.collection('state__grant_application_state').findOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
       grantVersion: '1.0.0'
@@ -123,7 +123,7 @@ describe('POST /state', () => {
       grantVersion: '1.0.0',
       state: { step: 'start' }
     }
-    await db.collection('grant-application-state').insertOne({
+    await db.collection('state__grant_application_state').insertOne({
       ...payload,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -151,7 +151,7 @@ describe('POST /state', () => {
     expect(response.res.statusCode).toBe(200)
     expect(response.payload).toEqual({ success: true, updated: true })
 
-    const doc = await db.collection('grant-application-state').findOne({
+    const doc = await db.collection('state__grant_application_state').findOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
       grantVersion: '1.0.0'
@@ -184,7 +184,7 @@ describe('POST /state', () => {
     expect(response.res.statusCode).toBe(201)
     expect(response.payload).toEqual({ success: true, created: true })
 
-    const doc = await db.collection('grant-application-state').findOne({
+    const doc = await db.collection('state__grant_application_state').findOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
       grantVersion: '2.3.4'
@@ -221,7 +221,7 @@ describe('POST /state', () => {
     expect(response.payload).toEqual({ success: true, created: true })
 
     // The legacy integer is normalised to a semver string before persistence.
-    const doc = await db.collection('grant-application-state').findOne({
+    const doc = await db.collection('state__grant_application_state').findOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
       grantVersion: '1.0.0'
@@ -229,7 +229,7 @@ describe('POST /state', () => {
     expect(doc).not.toBeNull()
     expect(doc.state).toEqual({ step: 'start' })
 
-    const legacyDoc = await db.collection('grant-application-state').findOne({
+    const legacyDoc = await db.collection('state__grant_application_state').findOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
       grantVersion: 1
@@ -270,7 +270,7 @@ describe('GET /state', () => {
       grantVersion: '1.0.0',
       state: { step: 'start' }
     }
-    await db.collection('grant-application-state').insertMany([
+    await db.collection('state__grant_application_state').insertMany([
       {
         ...payload,
         createdAt: new Date(),
@@ -307,7 +307,7 @@ describe('GET /state', () => {
       grantVersion: '1.0.0',
       state: { step: 'start' }
     }
-    await db.collection('grant-application-state').insertMany([
+    await db.collection('state__grant_application_state').insertMany([
       {
         ...payload,
         createdAt: new Date(),
@@ -350,7 +350,7 @@ describe('GET /state', () => {
       grantVersion: '2.3.4',
       state: { step: 'semver' }
     }
-    await db.collection('grant-application-state').insertOne({
+    await db.collection('state__grant_application_state').insertOne({
       ...payload,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -386,7 +386,7 @@ describe('GET /state', () => {
       grantVersion: '1.0.0',
       state: { step: 'legacy' }
     }
-    await db.collection('grant-application-state').insertOne({
+    await db.collection('state__grant_application_state').insertOne({
       ...payload,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -425,7 +425,7 @@ describe('DELETE /state', () => {
       grantVersion: '1.0.0',
       state: { step: 'start' }
     }
-    await db.collection('grant-application-state').insertOne({
+    await db.collection('state__grant_application_state').insertOne({
       ...payload,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -452,14 +452,14 @@ describe('DELETE /state', () => {
     expect(response.res.statusCode).toBe(200)
     expect(response.payload).toEqual({ success: true, deleted: true })
 
-    const doc = await db.collection('grant-application-state').findOne({ sbi: 'biz-1' })
+    const doc = await db.collection('state__grant_application_state').findOne({ sbi: 'biz-1' })
     expect(doc).toBeNull()
   })
 })
 
 describe('PATCH /state/{sbi}/{grantCode}', () => {
   it('patches applicationStatus on existing state', async () => {
-    await db.collection('grant-application-state').insertOne({
+    await db.collection('state__grant_application_state').insertOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
       grantVersion: '1.0.0',
@@ -491,7 +491,7 @@ describe('PATCH /state/{sbi}/{grantCode}', () => {
     expect(response.res.statusCode).toBe(200)
     expect(response.payload).toEqual({ success: true, patched: true })
 
-    const doc = await db.collection('grant-application-state').findOne({
+    const doc = await db.collection('state__grant_application_state').findOne({
       sbi: 'biz-1',
       grantCode: 'grant-1'
     })
@@ -502,7 +502,7 @@ describe('PATCH /state/{sbi}/{grantCode}', () => {
 
 describe('DELETE /admin/application-lock', () => {
   it('removes a specific application lock', async () => {
-    await db.collection('grant-application-locks').insertOne({
+    await db.collection('state__grant_application_locks').insertOne({
       sbi: 'biz-1',
       grantCode: 'grant-1',
       grantVersion: '1.0.0',
@@ -531,7 +531,7 @@ describe('DELETE /admin/application-lock', () => {
       released: true
     })
 
-    const lock = await db.collection('grant-application-locks').findOne({ sbi: 'biz-1' })
+    const lock = await db.collection('state__grant_application_locks').findOne({ sbi: 'biz-1' })
 
     expect(lock).toBeNull()
   })
@@ -539,7 +539,7 @@ describe('DELETE /admin/application-lock', () => {
 
 describe('DELETE /application-locks', () => {
   it('releases all locks for an owner', async () => {
-    await db.collection('grant-application-locks').insertMany([
+    await db.collection('state__grant_application_locks').insertMany([
       {
         sbi: 'biz-1',
         grantCode: 'grant-1',
@@ -574,7 +574,7 @@ describe('DELETE /application-locks', () => {
       deletedCount: 2
     })
 
-    const remaining = await db.collection('grant-application-locks').find({ ownerId: TEST_CONTACT_ID }).toArray()
+    const remaining = await db.collection('state__grant_application_locks').find({ ownerId: TEST_CONTACT_ID }).toArray()
 
     expect(remaining).toHaveLength(0)
   })
@@ -593,7 +593,7 @@ describe('GET /submissions', () => {
     const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
     const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
 
-    await db.collection('grant_application_submissions').insertMany([
+    await db.collection('state__grant_application_submissions').insertMany([
       {
         sbi,
         crn: crn1,

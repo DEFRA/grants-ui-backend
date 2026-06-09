@@ -1,4 +1,4 @@
-const COLLECTION = 'form-definitions'
+const COLLECTION = 'config__form_definitions'
 
 /**
  * Creates the indexes required by the config module.

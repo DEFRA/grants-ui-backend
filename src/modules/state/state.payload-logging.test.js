@@ -75,7 +75,7 @@ describe('POST /state payload size logging', () => {
     const client = new MongoClient(process.env.MONGO_URI)
     await client.connect()
     const db = client.db('grants-ui-backend')
-    await db.collection('grant-application-state').deleteMany({})
+    await db.collection('state__grant_application_state').deleteMany({})
     await client.close()
   })
 
