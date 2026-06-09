@@ -43,6 +43,13 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
     await createStateIndexes(server.stateDb)
     // Run rename migration to align collection names
     await renameCollections(server.stateDb)
+    // Ensure the index exists on the final collection the repository uses
+    // under test as we use a shared in-memory database here so we can't
+    // guarantee the rename will correctly bring indexes over to the renamed
+    // collection.
+    await server.stateDb
+      .collection('state__grant_application_locks')
+      .createIndex({ grantCode: 1, grantVersion: 1, sbi: 1 }, { unique: true })
 
     server.route({
       method: 'GET',
