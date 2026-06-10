@@ -5,12 +5,12 @@ const mongoState = baseConfig.get('mongoState')
 const config = {
   mongodb: {
     url: mongoState.uri,
-    databaseName: mongoState.databaseName,
+    databaseName: `${mongoState.databaseName} - state`,
     options: {}
   },
   migrationsDir: 'migrations/state',
-  changelogCollectionName: 'changelog',
-  lockCollectionName: 'changelog_lock',
+  changelogCollectionName: 'state__changelog',
+  lockCollectionName: 'state__changelog_lock',
   lockTtl: 90,
   migrationFileExtension: '.js',
   useFileHash: false,

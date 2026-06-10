@@ -130,7 +130,6 @@ cp env.example.sh .env
 **Optional MongoDB configuration** (sensible defaults are provided):
 
 - `MONGO_DATABASE` – state database name (default: `grants-ui-backend`)
-- `MONGO_CONFIG_DATABASE` – config database name (default: `grants-ui-config`)
 - `MONGO_MAX_POOL_SIZE` / `MONGO_CONFIG_MAX_POOL_SIZE` – maximum connection pool size (default: `25`)
 - `MONGO_MIN_POOL_SIZE` / `MONGO_CONFIG_MIN_POOL_SIZE` – minimum connection pool size (default: `5`)
 - `MONGO_MAX_IDLE_TIME_MS` / `MONGO_CONFIG_MAX_IDLE_TIME_MS` – idle connection timeout in milliseconds (default: `60000`)
@@ -272,11 +271,11 @@ Application logs follow the shared, code-driven format used by the Grants UI fro
 
 ### Application state and frontend rehydration
 
-Mongo documents written to the `grant-application-state` collection are rehydrated by the frontend during user journeys. Review the [frontend session rehydration documentation](https://github.com/DEFRA/grants-ui#session-rehydration) before modifying stored shapes or lifecycle expectations, and update the OpenAPI schema plus Postman collection accordingly.
+Mongo documents written to the `state__grant_application_state` collection are rehydrated by the frontend during user journeys. Review the [frontend session rehydration documentation](https://github.com/DEFRA/grants-ui#session-rehydration) before modifying stored shapes or lifecycle expectations, and update the OpenAPI schema plus Postman collection accordingly.
 
 ### Config ingestion from grants-config-broker
 
-Grant form definitions are sourced from the [grants-config-broker](https://github.com/DEFRA) and ingested into MongoDB (the `form-definitions` collection in the config database). Ingestion happens in two ways:
+Grant form definitions are sourced from the [grants-config-broker](https://github.com/DEFRA) and ingested into MongoDB (the `config__form_definitions` collection in the config database). Ingestion happens in two ways:
 
 - **Startup pull** – on boot the service fetches all grant versions from the broker (`GET /api/allGrants` via `CONFIG_BROKER_BASE_URL`) and ingests each one (`runStartupPull`).
 - **Ongoing updates** – the broker publishes change notifications to an SNS topic, which fans out to an SQS queue. The SQS consumer reads messages, fetches the corresponding YAML manifests from S3, transforms them, and upserts the definitions into Mongo.
@@ -285,40 +284,37 @@ The SQS consumer only runs when `CONFIG_INGEST_SQS_QUEUE_URL` is set; if it is u
 
 ### Mongo configuration
 
-The service connects to two MongoDB databases — `mongoState` (application state, submissions and locks) and `mongoConfig` (grant form definitions). Both share the same `MONGO_URI`; each has its own database name and connection pool variables (see `src/config.js`). Sensible defaults are provided for local development.
+The service connects to a single MongoDB database as required by CDP as there is a 1-to-1 mapping between service and database, howvever there are separate mongo plugins and server decorations for `mongoState` (application state, submissions and locks) and `mongoConfig` (grant form definitions).
+Both share the same `MONGO_` environment variables (see `src/common/helpers/convict/mongo-schema.js`). Sensible defaults are provided for local development.
 
 - `MONGO_URI` (default: `mongodb://127.0.0.1:27017`)
-  Connection string shared by both databases.
-
-**State database** (`mongoState`, prefix `MONGO_`):
-
 - `MONGO_DATABASE` (default: `grants-ui-backend`) — database name
 - `MONGO_MAX_POOL_SIZE` (default: `25`) — maximum connections in the pool
 - `MONGO_MIN_POOL_SIZE` (default: `5`) — minimum connections to keep in the pool
 - `MONGO_MAX_IDLE_TIME_MS` (default: `60000`) — idle connection timeout in milliseconds
 
-**Config database** (`mongoConfig`, prefix `MONGO_CONFIG_`):
-
-- `MONGO_CONFIG_DATABASE` (default: `grants-ui-config`) — database name
-- `MONGO_CONFIG_MAX_POOL_SIZE` (default: `25`) — maximum connections in the pool
-- `MONGO_CONFIG_MIN_POOL_SIZE` (default: `5`) — minimum connections to keep in the pool
-- `MONGO_CONFIG_MAX_IDLE_TIME_MS` (default: `60000`) — idle connection timeout in milliseconds
-
 ### Database migrations
 
-This service uses [migrate-mongo](https://github.com/seppevs/migrate-mongo) to manage MongoDB schema migrations. Migrations run automatically on startup via `runMigrations()` (`src/common/helpers/run-migrations.js`) and are tracked in a `changelog` collection in each database — so each migration runs exactly once, regardless of how many times the server restarts.
+This service uses [migrate-mongo](https://github.com/seppevs/migrate-mongo) to manage MongoDB schema migrations. Migrations run automatically on startup via `runMigrations()` (`src/common/helpers/run-migrations.js`) and are tracked in prefixed changelog collections within the shared MongoDB database — so each migration runs exactly once, regardless of how many times the server restarts.
+
+Although `mongoState` and `mongoConfig` are two separate logical databases (each with its own Hapi plugin and server decoration), CDP's 1-to-1 service-to-database constraint means both connect to the **same physical MongoDB database**. To avoid collection name collisions, the changelog collections are namespaced with a prefix:
+
+| Logical database       | Changelog collection | Lock collection          |
+| ---------------------- | -------------------- | ------------------------ |
+| State (`mongoState`)   | `state__changelog`   | `state__changelog_lock`  |
+| Config (`mongoConfig`) | `config__changelog`  | `config__changelog_lock` |
 
 When the service runs as multiple instances (e.g. several ECS tasks behind a rolling deploy), migrations are serialized across instances:
 
-- **Cross-instance serialization** — migrate-mongo's built-in `changelog_lock` (enabled by setting `lockTtl > 0` in both config files) ensures exactly one instance applies pending migrations. Non-winning instances poll with back-off until the lock clears, then start normally.
+- **Cross-instance serialization** — migrate-mongo's built-in lock collection (enabled by setting `lockTtl > 0` in both config files) ensures exactly one instance applies pending migrations per logical database. Non-winning instances poll with back-off until the lock clears, then start normally.
 - **Fail-loud startup** — a genuine migration error is rethrown and crashes boot, so CDP/ECS health checks catch a broken instance rather than treating a failed migration as healthy.
-- **Duplicate-apply backstop** — a unique index on `changelog.fileName` guards against double-applying a migration.
-- **Index creation is owned by migrations** — index definitions live in dedicated `*-create-indexes.js` migrations (one per database) rather than being created at app boot.
+- **Duplicate-apply backstop** — a unique index on `fileName` in each changelog collection guards against double-applying a migration.
+- **Index creation is owned by migrations** — index definitions live in dedicated `*-create-indexes.js` migrations (one per logical database) rather than being created at app boot.
 - **Structured logging** — migration outcomes are logged via the shared `LogCodes.MIGRATIONS` codes: `APPLIED` (info, when migrations were applied), `NONE_PENDING` (debug, when the database is already up to date) and `LOCKED_RETRY` (info, when another instance holds the lock). `NONE_PENDING` only surfaces when the deployed log level allows `debug`.
 
-The service has two MongoDB databases, each with its own migrations folder and config file:
+Each logical database has its own migrations folder and config file:
 
-| Database               | Config file                      | Migrations folder    |
+| Logical database       | Config file                      | Migrations folder    |
 | ---------------------- | -------------------------------- | -------------------- |
 | State (`mongoState`)   | `migrate-mongo-config.state.js`  | `migrations/state/`  |
 | Config (`mongoConfig`) | `migrate-mongo-config.config.js` | `migrations/config/` |
@@ -405,7 +401,7 @@ If another user holds the lock, the request is rejected with:
 
 #### Storage
 
-Lock state is stored in MongoDB in the `grant-application-locks` collection.
+Lock state is stored in MongoDB in the `state__grant_application_locks` collection.
 
 Each lock document contains:
 

@@ -25,12 +25,12 @@ describe('#mongoDb', () => {
 
     test('MongoDb should have expected database name', () => {
       expect(server.stateDb.databaseName).toBe('grants-ui-backend')
-      expect(server.configDb.databaseName).toBe('grants-ui-config')
+      expect(server.configDb.databaseName).toBe('grants-ui-backend')
     })
 
     test('MongoDb should have expected namespace', () => {
       expect(server.stateDb.namespace).toBe('grants-ui-backend')
-      expect(server.configDb.namespace).toBe('grants-ui-config')
+      expect(server.configDb.namespace).toBe('grants-ui-backend')
     })
 
     test('MongoDb plugin uses secureContext if present', async () => {

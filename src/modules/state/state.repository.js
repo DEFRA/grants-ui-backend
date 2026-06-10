@@ -42,9 +42,9 @@ import { config } from '../../config.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
 import { normaliseGrantVersion } from './grant-version.js'
 
-const LOCKS_COLLECTION = 'grant-application-locks'
-const STATE_COLLECTION = 'grant-application-state'
-const SUBMISSIONS_COLLECTION = 'grant_application_submissions'
+const LOCKS_COLLECTION = 'state__grant_application_locks'
+const STATE_COLLECTION = 'state__grant_application_state'
+const SUBMISSIONS_COLLECTION = 'state__grant_application_submissions'
 const IGNORE_ELEVEN_THOUSAND = 11000
 
 export const APPLICATION_LOCK_TTL_MS = config.get('applicationLock.ttlMs')

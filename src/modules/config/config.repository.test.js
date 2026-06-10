@@ -1,5 +1,4 @@
 import { MongoClient } from 'mongodb'
-import { createServer } from '../../server.js'
 import { FORM_DEFINITION_STATUS } from './config.constants.js'
 import {
   initConfigRepository,
@@ -12,7 +11,7 @@ import {
 } from './config.repository.js'
 import { up as createConfigIndexes } from '~/migrations/config/20260603163943-create-indexes.js'
 
-const COLLECTION = 'form-definitions'
+const COLLECTION = 'config__form_definitions'
 
 const makeDefinition = (overrides = {}) => ({
   grantCode: 'farm-payments',
@@ -307,23 +306,5 @@ describe('config.repository', () => {
       expect(result.get(definitionStatusKey('woodland', 1, 1, 0))).toBe(FORM_DEFINITION_STATUS.ACTIVE)
       expect(result.has(definitionStatusKey('other-grant', 5, 0, 0))).toBe(false)
     })
-  })
-})
-
-describe('config server integration', () => {
-  let server
-
-  beforeAll(async () => {
-    server = await createServer()
-    await server.initialize()
-  }, 30_000)
-
-  afterAll(async () => {
-    await server.stop({ timeout: 0 })
-  })
-
-  test('configDb does not contain state collections', async () => {
-    const collections = await server.configDb.listCollections({ name: 'grant-application-state' }).toArray()
-    expect(collections).toHaveLength(0)
   })
 })

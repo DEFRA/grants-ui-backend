@@ -19,8 +19,8 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals'
 // test correctness to the config broker's cold-start timing and was chronically
 // flaky in CI.
 
-const CONFIG_DB = 'grants-ui-config'
-const CONFIG_COLLECTION = 'form-definitions'
+const CONFIG_DB = 'grants-ui-backend'
+const CONFIG_COLLECTION = 'config__form_definitions'
 const BUCKET = 'configs-bucket'
 const QUEUE_NAME = 'grants_ui_backend__sqs__config_updates'
 const REGION = 'eu-west-2'

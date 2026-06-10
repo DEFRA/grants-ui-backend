@@ -30,7 +30,7 @@ describe('State integration tests for grantVersion filtering', () => {
 
   beforeEach(async () => {
     // Clean collection before each test
-    await db.collection('grant-application-state').deleteMany({})
+    await db.collection('state__grant_application_state').deleteMany({})
 
     mockRequest = {
       server: { logger: { error: jest.fn() } },
@@ -39,7 +39,7 @@ describe('State integration tests for grantVersion filtering', () => {
   })
 
   test('stateRetrieve returns document matching the specified grantVersion', async () => {
-    await db.collection('grant-application-state').insertMany([
+    await db.collection('state__grant_application_state').insertMany([
       { ...baseQuery, grantVersion: '1.0.0', state: { version: '1.0.0' } },
       { ...baseQuery, grantVersion: '2.0.3', state: { version: '2.0.3' } },
       { ...baseQuery, grantVersion: '3.1.0', state: { version: '3.1.0' } }
@@ -54,7 +54,7 @@ describe('State integration tests for grantVersion filtering', () => {
   })
 
   test('stateRetrieve returns 404 when specified grantVersion does not exist', async () => {
-    await db.collection('grant-application-state').insertMany([
+    await db.collection('state__grant_application_state').insertMany([
       { ...baseQuery, grantVersion: '1.0.0', state: { version: '1.0.0' } },
       { ...baseQuery, grantVersion: '2.0.3', state: { version: '2.0.3' } }
     ])
@@ -68,23 +68,23 @@ describe('State integration tests for grantVersion filtering', () => {
   })
 
   test('stateDelete deletes only the document matching the specified grantVersion', async () => {
-    await db.collection('grant-application-state').insertMany([
+    await db.collection('state__grant_application_state').insertMany([
       { ...baseQuery, grantVersion: '1.0.0', state: { version: '1.0.0' } },
       { ...baseQuery, grantVersion: '2.0.3', state: { version: '2.0.3' } },
       { ...baseQuery, grantVersion: '3.1.0', state: { version: '3.1.0' } }
     ])
 
-    let count = await db.collection('grant-application-state').countDocuments(baseQuery)
+    let count = await db.collection('state__grant_application_state').countDocuments(baseQuery)
     expect(count).toBe(3)
 
     mockRequest.query = { ...baseQuery, grantVersion: '2.0.3' }
 
     await stateDelete.handler(mockRequest, mockH)
 
-    count = await db.collection('grant-application-state').countDocuments(baseQuery)
+    count = await db.collection('state__grant_application_state').countDocuments(baseQuery)
     expect(count).toBe(2)
 
-    const remainingDocs = await db.collection('grant-application-state').find(baseQuery).toArray()
+    const remainingDocs = await db.collection('state__grant_application_state').find(baseQuery).toArray()
 
     expect(remainingDocs.map((d) => d.grantVersion)).toEqual(expect.arrayContaining(['1.0.0', '3.1.0']))
 
@@ -94,7 +94,7 @@ describe('State integration tests for grantVersion filtering', () => {
 
   test('stateDelete returns 404 when specified grantVersion does not exist', async () => {
     await db
-      .collection('grant-application-state')
+      .collection('state__grant_application_state')
       .insertMany([{ ...baseQuery, grantVersion: '1.0.0', state: { version: '1.0.0' } }])
 
     mockRequest.query = { ...baseQuery, grantVersion: '9.9.9' }

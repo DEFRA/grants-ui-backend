@@ -31,7 +31,7 @@ export const mongoDb = {
       const databaseName = options.databaseName
       const db = client.db(databaseName)
 
-      server.logger.info(`MongoDb connected to ${databaseName}`)
+      server.logger.info(`MongoDb connected to ${databaseName} - ${decorationKey}`)
 
       server.decorate('server', `${decorationKey}MongoClient`, client)
       server.decorate('server', `${decorationKey}Db`, db)

@@ -48,7 +48,7 @@ describe('create-indexes migrations', () => {
     await upConfigIndexes(db)
     await upConfigIndexes(db)
 
-    const indexes = await db.collection('form-definitions').indexes()
+    const indexes = await db.collection('config__form_definitions').indexes()
     expect(
       indexes.find((i) => i.unique && i.key.grantCode === 1 && i.key.status === 1 && i.key.major === -1)
     ).toBeDefined()

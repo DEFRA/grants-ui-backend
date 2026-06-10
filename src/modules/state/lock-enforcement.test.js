@@ -5,6 +5,7 @@ import {
 } from '../../test-helpers/auth-constants.js'
 import { acquireOrRefreshApplicationLock } from './state.service.js'
 import { up as createStateIndexes } from '~/migrations/state/20260603163943-create-indexes.js'
+import { up as renameCollections } from '~/migrations/state/20260609132200-rename-collections.js'
 import { enforceApplicationLock } from './lock-enforcement.js'
 import jwt from 'jsonwebtoken'
 import { config } from '../../config.js'
@@ -40,6 +41,15 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
     // Indexes are owned by migrate-mongo migrations, so create them explicitly
     // here for the unique-lock constraint under test.
     await createStateIndexes(server.stateDb)
+    // Run rename migration to align collection names
+    await renameCollections(server.stateDb)
+    // Ensure the index exists on the final collection the repository uses
+    // under test as we use a shared in-memory database here so we can't
+    // guarantee the rename will correctly bring indexes over to the renamed
+    // collection.
+    await server.stateDb
+      .collection('state__grant_application_locks')
+      .createIndex({ grantCode: 1, grantVersion: 1, sbi: 1 }, { unique: true })
 
     server.route({
       method: 'GET',
@@ -59,8 +69,8 @@ describe('applicationLockPlugin (JWT-based locking)', () => {
   })
 
   afterEach(async () => {
-    await server.stateDb.collection('grant-application-locks').deleteMany({})
-    await server.stateDb.collection('grant_application_submissions').deleteMany({})
+    await server.stateDb.collection('state__grant_application_locks').deleteMany({})
+    await server.stateDb.collection('state__grant_application_submissions').deleteMany({})
   })
 
   afterAll(async () => {
