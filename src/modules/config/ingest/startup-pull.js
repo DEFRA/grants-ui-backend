@@ -113,6 +113,8 @@ export async function runStartupPull() {
         upserted += 1
       } else if (result === 'failed') {
         failed += 1
+      } else {
+        // skipped — no action needed
       }
     }
   }
@@ -121,7 +123,9 @@ export async function runStartupPull() {
   // Done after the version loop so form definitions are fully up to date first.
   for (const grant of grants) {
     const hasActiveVersion = (grant.versions ?? []).some((v) => v.status === 'active')
-    if (!hasActiveVersion) continue
+    if (!hasActiveVersion) {
+      continue
+    }
 
     try {
       const latestActive = await fetchLatestActiveVersion(grant.grant)

@@ -107,7 +107,9 @@ function validateAuthToken(authHeader) {
  * @returns {Record<string, unknown>}
  */
 export function decodeEncryptedAuthHeader(encryptedAuth, jwtSecret) {
-  if (!encryptedAuth) return {}
+  if (!encryptedAuth) {
+    return {}
+  }
 
   if (!jwtSecret) {
     log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {

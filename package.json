@@ -74,7 +74,7 @@
   },
   "overrides": {
     "protobufjs": "7.5.8",
-    "tmp": "0.2.6",
+    "tmp": "0.2.7",
     "underscore": "1.13.8",
     "uuid": "14.0.0"
   },

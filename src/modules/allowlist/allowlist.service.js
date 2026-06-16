@@ -25,7 +25,9 @@ export const allowlistCache = new LRUCache({ max: 500, ttl: 2 * 60 * 1000 })
 export async function resolveAllowedGrants(crn, sbi) {
   const cacheKey = `${crn}:${sbi}`
   const cached = allowlistCache.get(cacheKey)
-  if (cached) return cached
+  if (cached) {
+    return cached
+  }
 
   const env = config.get('cdpEnvironment')
   const allActiveGrants = await getAllActiveGrants()
@@ -41,7 +43,9 @@ export async function resolveAllowedGrants(crn, sbi) {
   const restrictedSet = new Set(grantsWithAllowlist)
 
   const allowed = allActiveGrants.filter(({ grantCode }) => {
-    if (!restrictedSet.has(grantCode)) return true
+    if (!restrictedSet.has(grantCode)) {
+      return true
+    }
     return crnSet.has(grantCode) && sbiSet.has(grantCode)
   })
 
