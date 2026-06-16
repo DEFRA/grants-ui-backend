@@ -1,6 +1,7 @@
 import { fetchAllGrants, fetchVersion, fetchLatestActiveVersion } from './broker-client.js'
 import { ingestVersion } from './ingest.js'
 import { definitionStatusKey, getDefinitionStatuses, updateDefinitionStatus } from '../config.repository.js'
+import { FORM_DEFINITION_STATUS } from '../config.constants.js'
 import { ingestAllowlist } from '../../allowlist/ingest-allowlist.js'
 import { log, LogCodes } from '../../../common/helpers/logging/log.js'
 
@@ -122,7 +123,7 @@ export async function runStartupPull() {
   // Ingest the allowlist for the latest active version of each grant.
   // Done after the version loop so form definitions are fully up to date first.
   for (const grant of grants) {
-    const hasActiveVersion = (grant.versions ?? []).some((v) => v.status === 'active')
+    const hasActiveVersion = (grant.versions ?? []).some((v) => v.status === FORM_DEFINITION_STATUS.ACTIVE)
     if (!hasActiveVersion) {
       continue
     }

@@ -240,7 +240,7 @@ export const LogCodes = {
     },
     GRANTS_BAD_REQUEST: {
       level: 'warn',
-      messageFunc: ({ errorMessage }) => `POST /allowlist/grants, validation failed: ${errorMessage}`
+      messageFunc: ({ errorMessage }) => `GET /allowlist/grants, validation failed: ${errorMessage}`
     },
     STARTUP_PULL_FAILED: {
       level: 'error',

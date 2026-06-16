@@ -30,9 +30,9 @@ export async function resolveAllowedGrants(crn, sbi) {
   }
 
   const env = config.get('cdpEnvironment')
-  const allActiveGrants = await getAllActiveGrants()
 
-  const [crnMatches, sbiMatches, grantsWithAllowlist] = await Promise.all([
+  const [allActiveGrants, crnMatches, sbiMatches, grantsWithAllowlist] = await Promise.all([
+    getAllActiveGrants(),
     findGrantCodesByEntry('crn', String(crn), env),
     findGrantCodesByEntry('sbi', String(sbi), env),
     findGrantCodesWithAllowlist(env)
