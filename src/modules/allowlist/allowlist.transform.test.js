@@ -72,6 +72,14 @@ describe('buildAllowlistEntries', () => {
     expect(entries[0]).toMatchObject({ type: 'crn', value: '111' })
   })
 
+  test('handles null env value gracefully', () => {
+    const allowlist = { dev: null }
+
+    const entries = buildAllowlistEntries('woodland', allowlist)
+
+    expect(entries).toEqual([])
+  })
+
   test('each entry has an updatedAt date', () => {
     const allowlist = { dev: { crns: ['111'] } }
 

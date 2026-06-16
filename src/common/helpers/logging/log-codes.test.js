@@ -441,6 +441,43 @@ describe('LogCodes', () => {
     })
   })
 
+  describe('ALLOWLIST log codes', () => {
+    it.each([
+      [
+        'INGEST_UPSERTED',
+        'info',
+        { grantCode: 'woodland', version: '1.0.0', status: 'active', entryCount: 42 },
+        'Upserted allowlist entries | grantCode=woodland | version=1.0.0 | status=active | entryCount=42'
+      ],
+      [
+        'INGEST_CLEARED',
+        'debug',
+        { grantCode: 'woodland', version: '1.0.0' },
+        'No allowlist.yaml in manifest, clearing entries to open grant to all | grantCode=woodland | version=1.0.0'
+      ],
+      [
+        'GRANTS_CHECKED',
+        'info',
+        { crn: '1234567890', sbi: '123456789', env: 'local', matchedCount: 2 },
+        'Allowlist grants checked | crn=1234567890 | sbi=123456789 | env=local | matchedCount=2'
+      ],
+      [
+        'GRANTS_BAD_REQUEST',
+        'warn',
+        { errorMessage: 'crn and sbi are required' },
+        'POST /allowlist/grants, validation failed: crn and sbi are required'
+      ],
+      [
+        'STARTUP_PULL_FAILED',
+        'error',
+        { grantCode: 'woodland', errorName: 'Error', errorMessage: 'broker down', stack: 'Error: broker down' },
+        'Failed to ingest allowlist during startup pull | grantCode=woodland | errorName=Error | errorMessage=broker down | stack=Error: broker down'
+      ]
+    ])('should have valid %s log code', (logCodeName, expectedLevel, testParams, expectedMessage) => {
+      assertLogCode('ALLOWLIST', logCodeName, expectedLevel, testParams, expectedMessage)
+    })
+  })
+
   describe('validateLogCodes', () => {
     it('should validate all log codes without throwing', () => {
       expect(() => validateLogCodes(LogCodes)).not.toThrow()
