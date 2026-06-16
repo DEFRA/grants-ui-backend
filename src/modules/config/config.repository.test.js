@@ -261,34 +261,32 @@ describe('config.repository', () => {
 
   describe('getAllActiveGrants', () => {
     test('returns one entry per grant with title and description from the latest active version', async () => {
-      await db
-        .collection(COLLECTION)
-        .insertMany([
-          makeDefinition({
-            grantCode: 'woodland',
-            major: 1,
-            minor: 0,
-            patch: 0,
-            title: 'Woodland v1',
-            description: 'Old desc'
-          }),
-          makeDefinition({
-            grantCode: 'woodland',
-            major: 2,
-            minor: 0,
-            patch: 0,
-            title: 'Woodland v2',
-            description: 'New desc'
-          }),
-          makeDefinition({
-            grantCode: 'farm-payments',
-            major: 1,
-            minor: 0,
-            patch: 0,
-            title: 'Farm Payments',
-            description: 'Farm desc'
-          })
-        ])
+      await db.collection(COLLECTION).insertMany([
+        makeDefinition({
+          grantCode: 'woodland',
+          major: 1,
+          minor: 0,
+          patch: 0,
+          title: 'Woodland v1',
+          description: 'Old desc'
+        }),
+        makeDefinition({
+          grantCode: 'woodland',
+          major: 2,
+          minor: 0,
+          patch: 0,
+          title: 'Woodland v2',
+          description: 'New desc'
+        }),
+        makeDefinition({
+          grantCode: 'farm-payments',
+          major: 1,
+          minor: 0,
+          patch: 0,
+          title: 'Farm Payments',
+          description: 'Farm desc'
+        })
+      ])
 
       const result = await getAllActiveGrants()
 
@@ -302,24 +300,22 @@ describe('config.repository', () => {
     })
 
     test('excludes draft versions', async () => {
-      await db
-        .collection(COLLECTION)
-        .insertMany([
-          makeDefinition({
-            grantCode: 'woodland',
-            major: 1,
-            minor: 0,
-            patch: 0,
-            status: FORM_DEFINITION_STATUS.ACTIVE
-          }),
-          makeDefinition({
-            grantCode: 'farm-payments',
-            major: 1,
-            minor: 0,
-            patch: 0,
-            status: FORM_DEFINITION_STATUS.DRAFT
-          })
-        ])
+      await db.collection(COLLECTION).insertMany([
+        makeDefinition({
+          grantCode: 'woodland',
+          major: 1,
+          minor: 0,
+          patch: 0,
+          status: FORM_DEFINITION_STATUS.ACTIVE
+        }),
+        makeDefinition({
+          grantCode: 'farm-payments',
+          major: 1,
+          minor: 0,
+          patch: 0,
+          status: FORM_DEFINITION_STATUS.DRAFT
+        })
+      ])
 
       const result = await getAllActiveGrants()
 
