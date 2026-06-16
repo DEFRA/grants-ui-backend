@@ -1,6 +1,6 @@
 import { config } from '../../../config.js'
 import { buildBrokerBearerHeader } from './broker-auth.js'
-import { fetchAllGrants, fetchVersion } from './broker-client.js'
+import { fetchAllGrants, fetchVersion, fetchLatestActiveVersion } from './broker-client.js'
 
 jest.mock('../../../config.js', () => ({
   config: {
@@ -106,6 +106,21 @@ describe('broker-client', () => {
 
       expect(global.fetch).toHaveBeenCalledWith(
         'https://broker.example/api/version?grant=farm-payments&version=1.0.0',
+        expect.any(Object)
+      )
+      expect(result).toEqual(version)
+    })
+  })
+
+  describe('fetchLatestActiveVersion', () => {
+    test('requests the latest active version for a grant', async () => {
+      const version = { grant: 'farm-payments', version: '2.0.0', status: 'active' }
+      global.fetch.mockResolvedValue(okResponse(version))
+
+      const result = await fetchLatestActiveVersion('farm-payments')
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://broker.example/api/latestVersion?grant=farm-payments',
         expect.any(Object)
       )
       expect(result).toEqual(version)

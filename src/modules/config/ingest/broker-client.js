@@ -106,3 +106,14 @@ export function fetchVersion(grant, version) {
   const params = new URLSearchParams({ grant, version })
   return brokerGet(`/api/version?${params.toString()}`)
 }
+
+/**
+ * Returns the latest active version of a grant configuration.
+ *
+ * @param {string} grant
+ * @returns {Promise<BrokerVersion>}
+ */
+export function fetchLatestActiveVersion(grant) {
+  const params = new URLSearchParams({ grant })
+  return brokerGet(`/api/latestVersion?${params.toString()}`)
+}

@@ -1,6 +1,7 @@
-import { fetchAllGrants, fetchVersion } from './broker-client.js'
+import { fetchAllGrants, fetchVersion, fetchLatestActiveVersion } from './broker-client.js'
 import { ingestVersion } from './ingest.js'
 import { definitionStatusKey, getDefinitionStatuses, updateDefinitionStatus } from '../config.repository.js'
+import { ingestAllowlist } from '../../allowlist/ingest-allowlist.js'
 import { log, LogCodes } from '../../../common/helpers/logging/log.js'
 
 /**
@@ -79,6 +80,8 @@ async function pullVersionSafely(grant, versionSummary, existingStatuses) {
 
 /**
  * Pulls every grant version from the broker and upserts each into Mongo.
+ * After all form definitions are ingested, ingests the allowlist for the
+ * latest active version of each grant.
  *
  * Failures for individual versions are logged but do not abort the rest of
  * the pull — we want the server to come up with as much current data as the
@@ -110,9 +113,31 @@ export async function runStartupPull() {
         upserted += 1
       } else if (result === 'failed') {
         failed += 1
-      } else {
-        // skipped
       }
+    }
+  }
+
+  // Ingest the allowlist for the latest active version of each grant.
+  // Done after the version loop so form definitions are fully up to date first.
+  for (const grant of grants) {
+    const hasActiveVersion = (grant.versions ?? []).some((v) => v.status === 'active')
+    if (!hasActiveVersion) continue
+
+    try {
+      const latestActive = await fetchLatestActiveVersion(grant.grant)
+      await ingestAllowlist({
+        grantCode: latestActive.grant,
+        version: latestActive.version,
+        bucket: latestActive.path,
+        manifest: latestActive.manifest
+      })
+    } catch (err) {
+      log(LogCodes.ALLOWLIST.STARTUP_PULL_FAILED, {
+        grantCode: grant.grant,
+        errorName: err.name,
+        errorMessage: err.message,
+        stack: err.stack
+      })
     }
   }
 

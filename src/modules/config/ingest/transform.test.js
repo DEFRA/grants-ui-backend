@@ -53,6 +53,7 @@ describe('buildFormDefinition', () => {
       grantCode: 'farm-payments',
       id: 'fd-001',
       title: 'Farm Payments',
+      description: null,
       major: 1,
       minor: 2,
       patch: 3,
@@ -66,6 +67,15 @@ describe('buildFormDefinition', () => {
     const result = buildFormDefinition({ ...baseParams, definition: { name: 'Farm Payments' } })
 
     expect(result.id).toBe('farm-payments@1.2.3')
+  })
+
+  test('extracts description from metadata', () => {
+    const result = buildFormDefinition({
+      ...baseParams,
+      definition: { name: 'Farm Payments', metadata: { id: 'fd-001', description: 'A description.' } }
+    })
+
+    expect(result.description).toBe('A description.')
   })
 
   test('falls back to grantCode for title when definition name is missing', () => {

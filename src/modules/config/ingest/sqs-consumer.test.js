@@ -1,6 +1,7 @@
 import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } from '@aws-sdk/client-sqs'
 import { config } from '../../../config.js'
 import { ingestVersion } from './ingest.js'
+import { ingestAllowlist } from '../../allowlist/ingest-allowlist.js'
 import { parseSnsMessage } from './sns-message.js'
 import { handleMessage, sqsConsumerPlugin } from './sqs-consumer.js'
 import { log, LogCodes } from '../../../common/helpers/logging/log.js'
@@ -19,6 +20,10 @@ jest.mock('../../../config.js', () => ({
 
 jest.mock('./ingest.js', () => ({
   ingestVersion: jest.fn()
+}))
+
+jest.mock('../../allowlist/ingest-allowlist.js', () => ({
+  ingestAllowlist: jest.fn()
 }))
 
 jest.mock('./sns-message.js', () => ({
@@ -65,6 +70,33 @@ describe('handleMessage', () => {
       bucket: 'my-bucket',
       manifest: ['farm-payments.yaml']
     })
+  })
+
+  test('ingests allowlist when status is active', async () => {
+    parseSnsMessage.mockReturnValue({
+      attributes: { grant: 'farm-payments', version: '1.0.0', status: 'active', path: 'my-bucket' },
+      manifest: ['farm-payments.yaml']
+    })
+
+    await handleMessage({ Body: 'body' })
+
+    expect(ingestAllowlist).toHaveBeenCalledWith({
+      grantCode: 'farm-payments',
+      version: '1.0.0',
+      bucket: 'my-bucket',
+      manifest: ['farm-payments.yaml']
+    })
+  })
+
+  test('does not ingest allowlist when status is draft', async () => {
+    parseSnsMessage.mockReturnValue({
+      attributes: { grant: 'farm-payments', version: '1.0.0', status: 'draft', path: 'my-bucket' },
+      manifest: ['farm-payments.yaml']
+    })
+
+    await handleMessage({ Body: 'body' })
+
+    expect(ingestAllowlist).not.toHaveBeenCalled()
   })
 
   test.each([

@@ -8,6 +8,7 @@
  * @property {string} grantCode
  * @property {string} id
  * @property {string} title
+ * @property {string|null} description
  * @property {number} major
  * @property {number} minor
  * @property {number} patch
@@ -104,6 +105,24 @@ export async function updateDefinitionStatus({ grantCode, major, minor, patch, s
     set.updatedAt = updatedAt
   }
   return configDb.collection(COLLECTION).updateOne({ grantCode, major, minor, patch }, { $set: set })
+}
+
+/**
+ * Returns the latest active version metadata for every active grant.
+ * One entry per grant code — the highest semver active version.
+ *
+ * @returns {Promise<Array<{ grantCode: string, title: string, description: string|null }>>}
+ */
+export async function getAllActiveGrants() {
+  return configDb
+    .collection(COLLECTION)
+    .aggregate([
+      { $match: { status: FORM_DEFINITION_STATUS.ACTIVE } },
+      { $sort: { major: -1, minor: -1, patch: -1 } },
+      { $group: { _id: '$grantCode', title: { $first: '$title' }, description: { $first: '$description' } } },
+      { $project: { _id: 0, grantCode: '$_id', title: 1, description: 1 } }
+    ])
+    .toArray()
 }
 
 /**

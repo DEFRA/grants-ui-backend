@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import crypto from 'node:crypto'
+import jwt from 'jsonwebtoken'
 import { config } from '../config.js'
 import { log, LogCodes } from '../common/helpers/logging/log.js'
 
@@ -96,6 +97,38 @@ function validateAuthToken(authHeader) {
   return { isValid: true }
 }
 
+/**
+ * Decodes an x-encrypted-auth JWT and returns its claims.
+ * Returns an empty object if the token is absent, the secret is missing,
+ * or verification fails.
+ *
+ * @param {string|undefined} encryptedAuth
+ * @param {string} jwtSecret
+ * @returns {Record<string, unknown>}
+ */
+export function decodeEncryptedAuthHeader(encryptedAuth, jwtSecret) {
+  if (!encryptedAuth) return {}
+
+  if (!jwtSecret) {
+    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
+      errorName: 'JWT secret not configured',
+      errorMessage: 'Cannot decode x-encrypted-auth header — JWT secret is missing'
+    })
+    return {}
+  }
+
+  try {
+    return jwt.verify(encryptedAuth, jwtSecret)
+  } catch (err) {
+    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
+      errorName: err.name,
+      errorMessage: err.message,
+      stack: err.stack
+    })
+    return {}
+  }
+}
+
 const auth = {
   plugin: {
     name: 'auth',
@@ -116,7 +149,13 @@ const auth = {
               method: request.method
             })
 
-            return h.authenticated({ credentials: { authenticated: true } })
+            const jwtSecret = config.get('encryptedAuthJwtSecret')
+            const payload = decodeEncryptedAuthHeader(request.headers['x-encrypted-auth'], jwtSecret)
+            const crn =
+              typeof payload.crn === 'string' || typeof payload.crn === 'number' ? `${payload.crn}` : undefined
+            const sbi =
+              typeof payload.sbi === 'string' || typeof payload.sbi === 'number' ? `${payload.sbi}` : undefined
+            return h.authenticated({ credentials: { authenticated: true, crn, sbi } })
           }
         }
       })

@@ -30,6 +30,8 @@ tags:
     description: Manage persisted grant application state
   - name: Submissions
     description: Record grant application submissions
+  - name: Allowlist
+    description: Resolve grants a user is permitted to access
 
 components:
   securitySchemes:
@@ -143,6 +145,30 @@ components:
       description: A list of submissions matching the provided filters
       items:
         $ref: '#/components/schemas/Submission'
+    Grant:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Grant code / slug
+        title:
+          type: string
+          description: Human-readable grant title
+        description:
+          type: ['string', 'null']
+          description: Short description of the grant
+        url:
+          type: ['string', 'null']
+          description: URL to the grant application, or null if not configured
+      required: [code, title, description, url]
+    AllowlistGrantsResponse:
+      type: object
+      properties:
+        grants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Grant'
+      required: [grants]
     StatePatchRequest:
       type: object
       additionalProperties: false
@@ -437,6 +463,49 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Failed to retrieve submissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /allowlist/grants:
+    get:
+      tags: [Allowlist]
+      summary: Resolve grants accessible to a user
+      description: |
+        Returns the list of active grants the user identified by `crn` and `sbi`
+        is permitted to access. The user identity is read from the `x-encrypted-auth`
+        JWT header (signed with `ENCRYPTED_AUTH_JWT_SECRET`), which must contain `crn`
+        and `sbi` claims. Grants with no allowlist entries are open to all users.
+        Grants with entries require the user to appear in both the CRN and SBI lists
+        for the current environment.
+      parameters:
+        - in: header
+          name: x-encrypted-auth
+          required: true
+          schema:
+            type: string
+          description: JWT signed with ENCRYPTED_AUTH_JWT_SECRET containing crn and sbi claims
+      responses:
+        '200':
+          description: List of grants the user may access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllowlistGrantsResponse'
+              example:
+                grants:
+                  - code: woodland
+                    title: Woodland Creation Grant
+                    description: Support for creating new woodland areas
+                    url: http://localhost:3000/woodland
+        '401':
+          description: Missing or invalid bearer token, or missing crn/sbi in JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to resolve allowlist
           content:
             application/json:
               schema:

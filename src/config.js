@@ -186,6 +186,19 @@ const config = convict({
       env: 'CONFIG_INGEST_SQS_VISIBILITY_TIMEOUT_SECONDS'
     }
   },
+  grantsUiBaseUrl: {
+    doc: 'Base URL of the Grants UI frontend, used to construct grant URLs',
+    format: String,
+    default: '',
+    env: 'GRANTS_UI_BASE_URL'
+  },
+  encryptedAuthJwtSecret: {
+    doc: 'Secret used to verify the x-encrypted-auth JWT sent by grants-ui',
+    format: String,
+    default: '',
+    env: 'ENCRYPTED_AUTH_JWT_SECRET',
+    sensitive: true
+  },
   applicationLock: {
     secret: {
       doc: 'Secret used to verify application lock tokens',

@@ -1,13 +1,19 @@
 import { runStartupPull } from './startup-pull.js'
-import { fetchAllGrants, fetchVersion } from './broker-client.js'
+import { fetchAllGrants, fetchVersion, fetchLatestActiveVersion } from './broker-client.js'
 import { ingestVersion } from './ingest.js'
+import { ingestAllowlist } from '../../allowlist/ingest-allowlist.js'
 import { definitionStatusKey, getDefinitionStatuses, updateDefinitionStatus } from '../config.repository.js'
 import { FORM_DEFINITION_STATUS } from '../config.constants.js'
 import { log, LogCodes } from '../../../common/helpers/logging/log.js'
 
 jest.mock('./broker-client.js', () => ({
   fetchAllGrants: jest.fn(),
-  fetchVersion: jest.fn()
+  fetchVersion: jest.fn(),
+  fetchLatestActiveVersion: jest.fn()
+}))
+
+jest.mock('../../allowlist/ingest-allowlist.js', () => ({
+  ingestAllowlist: jest.fn()
 }))
 
 jest.mock('./ingest.js', () => ({
@@ -149,5 +155,52 @@ describe('runStartupPull', () => {
     const result = await runStartupPull()
 
     expect(result).toEqual({ total: 0, upserted: 0, failed: 0 })
+  })
+
+  test('ingests allowlist for grants with an active version', async () => {
+    fetchAllGrants.mockResolvedValue([
+      { grant: 'woodland', versions: [{ version: '1.0.0', status: FORM_DEFINITION_STATUS.ACTIVE }] }
+    ])
+    fetchLatestActiveVersion.mockResolvedValue({
+      grant: 'woodland',
+      version: '1.0.0',
+      path: 'my-bucket',
+      manifest: ['woodland/1.0.0/woodland.yaml', 'woodland/1.0.0/allowlist.yaml']
+    })
+
+    await runStartupPull()
+
+    expect(fetchLatestActiveVersion).toHaveBeenCalledWith('woodland')
+    expect(ingestAllowlist).toHaveBeenCalledWith({
+      grantCode: 'woodland',
+      version: '1.0.0',
+      bucket: 'my-bucket',
+      manifest: ['woodland/1.0.0/woodland.yaml', 'woodland/1.0.0/allowlist.yaml']
+    })
+  })
+
+  test('skips allowlist ingest for grants with no active versions', async () => {
+    fetchAllGrants.mockResolvedValue([
+      { grant: 'woodland', versions: [{ version: '1.0.0', status: FORM_DEFINITION_STATUS.DRAFT }] }
+    ])
+
+    await runStartupPull()
+
+    expect(fetchLatestActiveVersion).not.toHaveBeenCalled()
+    expect(ingestAllowlist).not.toHaveBeenCalled()
+  })
+
+  test('logs and continues when allowlist ingest fails', async () => {
+    fetchAllGrants.mockResolvedValue([
+      { grant: 'woodland', versions: [{ version: '1.0.0', status: FORM_DEFINITION_STATUS.ACTIVE }] }
+    ])
+    fetchLatestActiveVersion.mockRejectedValue(new Error('broker unavailable'))
+
+    await runStartupPull()
+
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.ALLOWLIST.STARTUP_PULL_FAILED,
+      expect.objectContaining({ grantCode: 'woodland', errorMessage: 'broker unavailable' })
+    )
   })
 })
