@@ -465,7 +465,7 @@ describe('LogCodes', () => {
         'GRANTS_BAD_REQUEST',
         'warn',
         { errorMessage: 'crn and sbi are required' },
-        'POST /allowlist/grants, validation failed: crn and sbi are required'
+        'GET /allowlist/grants, validation failed: crn and sbi are required'
       ],
       [
         'STARTUP_PULL_FAILED',
