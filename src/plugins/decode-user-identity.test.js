@@ -90,9 +90,6 @@ describe('decodeEncryptedAuthHeader', () => {
 
 describe('decodeEncryptedAuthHeader — existing endpoint compatibility', () => {
   test('returns empty object when x-encrypted-auth header is absent, leaving existing endpoints unaffected', () => {
-    // Existing endpoints (/state/*, /health, etc.) do not send x-encrypted-auth.
-    // decodeEncryptedAuthHeader must return {} so credentials.crn and credentials.sbi
-    // remain undefined and the authenticate function still calls h.authenticated() normally.
     const result = decodeEncryptedAuthHeader(undefined, SECRET)
 
     expect(result).toEqual({})
