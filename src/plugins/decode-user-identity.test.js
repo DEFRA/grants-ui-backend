@@ -87,3 +87,23 @@ describe('decodeEncryptedAuthHeader', () => {
     expect(result).not.toHaveProperty('sbi')
   })
 })
+
+describe('decodeEncryptedAuthHeader — existing endpoint compatibility', () => {
+  test('returns empty object when x-encrypted-auth header is absent, leaving existing endpoints unaffected', () => {
+    // Existing endpoints (/state/*, /health, etc.) do not send x-encrypted-auth.
+    // decodeEncryptedAuthHeader must return {} so credentials.crn and credentials.sbi
+    // remain undefined and the authenticate function still calls h.authenticated() normally.
+    const result = decodeEncryptedAuthHeader(undefined, SECRET)
+
+    expect(result).toEqual({})
+  })
+
+  test('crn and sbi are undefined when x-encrypted-auth is absent', () => {
+    const payload = decodeEncryptedAuthHeader(undefined, SECRET)
+    const crn = typeof payload.crn === 'string' || typeof payload.crn === 'number' ? `${payload.crn}` : undefined
+    const sbi = typeof payload.sbi === 'string' || typeof payload.sbi === 'number' ? `${payload.sbi}` : undefined
+
+    expect(crn).toBeUndefined()
+    expect(sbi).toBeUndefined()
+  })
+})
