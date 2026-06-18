@@ -11,6 +11,7 @@
 @grantCode = example-grant-with-auth
 @grantVersion = 1.0.1
 @sbi = 1234567891
+@crn = 1234567890
 @userId = test-user-2
 
 ### Health check
@@ -89,6 +90,17 @@ Content-Type: application/json
 # @name getSubmissions
 GET {{backendBaseUrl}}/submissions?sbi={{sbi}}&grantCode={{grantCode}}
 Authorization: Bearer {{backendAuthToken}}
+
+
+### --- Allowlist ---
+
+### Resolve grants accessible to a user
+# @name getAllowedGrants
+# encryptedAuthToken is a JWT signed with ENCRYPTED_AUTH_JWT_SECRET containing crn and sbi.
+# Run `npm run generate:env` to regenerate it.
+GET {{backendBaseUrl}}/allowlist/grants
+Authorization: Bearer {{backendAuthToken}}
+x-encrypted-auth: {{encryptedAuthToken}}
 
 
 ### --- Release lock ---
