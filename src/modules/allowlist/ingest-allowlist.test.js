@@ -1,7 +1,7 @@
 import { ingestAllowlist } from './ingest-allowlist.js'
 import { replaceAllowlistEntries } from './allowlist.repository.js'
 import { buildAllowlistEntries } from './allowlist.transform.js'
-import { getYamlObject } from '../config/ingest/s3-client.js'
+import { getYamlObject } from '../../common/helpers/s3.js'
 
 jest.mock('./allowlist.repository.js', () => ({
   replaceAllowlistEntries: jest.fn()
@@ -11,7 +11,7 @@ jest.mock('./allowlist.transform.js', () => ({
   buildAllowlistEntries: jest.fn()
 }))
 
-jest.mock('../config/ingest/s3-client.js', () => ({
+jest.mock('../../common/helpers/s3.js', () => ({
   getYamlObject: jest.fn()
 }))
 
@@ -29,7 +29,7 @@ describe('ingestAllowlist', () => {
     grantCode: 'woodland',
     version: '1.0.0',
     bucket: 'my-bucket',
-    manifest: ['woodland/1.0.0/woodland.yaml', 'woodland/1.0.0/allowlist.yaml']
+    manifest: ['woodland/1.0.0/grants-ui/woodland.yaml', 'woodland/1.0.0/grants-ui/allowlist.yaml']
   }
 
   test('fetches and ingests allowlist when allowlist.yaml is in manifest', async () => {
@@ -41,7 +41,7 @@ describe('ingestAllowlist', () => {
 
     await ingestAllowlist(baseParams)
 
-    expect(getYamlObject).toHaveBeenCalledWith('my-bucket', 'woodland/1.0.0/allowlist.yaml')
+    expect(getYamlObject).toHaveBeenCalledWith('my-bucket', 'woodland/1.0.0/grants-ui/allowlist.yaml')
     expect(buildAllowlistEntries).toHaveBeenCalledWith('woodland', definition)
     expect(replaceAllowlistEntries).toHaveBeenCalledWith('woodland', entries)
   })
@@ -49,7 +49,7 @@ describe('ingestAllowlist', () => {
   test('clears entries when allowlist.yaml is not in manifest', async () => {
     await ingestAllowlist({
       ...baseParams,
-      manifest: ['woodland/1.0.0/woodland.yaml']
+      manifest: ['woodland/1.0.0/grants-ui/woodland.yaml']
     })
 
     expect(getYamlObject).not.toHaveBeenCalled()

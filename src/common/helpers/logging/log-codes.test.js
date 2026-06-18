@@ -457,12 +457,12 @@ describe('LogCodes', () => {
       ],
       [
         'GRANTS_CHECKED',
-        'info',
+        'debug',
         { crn: '1234567890', sbi: '123456789', env: 'local', matchedCount: 2 },
         'Allowlist grants checked | crn=1234567890 | sbi=123456789 | env=local | matchedCount=2'
       ],
       [
-        'GRANTS_BAD_REQUEST',
+        'GRANTS_UNAUTHORIZED',
         'warn',
         { errorMessage: 'crn and sbi are required' },
         'GET /allowlist/grants, validation failed: crn and sbi are required'

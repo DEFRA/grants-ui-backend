@@ -15,8 +15,9 @@ export const allowlistCache = new LRUCache({ max: 500, ttl: 2 * 60 * 1000 })
  * current environment, with title, description and resolved url.
  *
  * Rules:
- * - A user must appear in BOTH the crn list AND the sbi list for a grant.
- * - Grants with no allowlist entries for the current env are open to all users.
+ * - Grants with no allowlist entries for the current env are closed to all users.
+ * - Grants with allowAll: true are open to all users.
+ * - Otherwise a user must appear in BOTH the crn list AND the sbi list.
  *
  * @param {string} crn
  * @param {string} sbi
@@ -40,10 +41,13 @@ export async function resolveAllowedGrants(crn, sbi) {
 
   const crnSet = new Set(crnMatches)
   const sbiSet = new Set(sbiMatches)
-  const restrictedSet = new Set(grantsWithAllowlist)
 
   const allowed = allActiveGrants.filter(({ grantCode }) => {
-    if (!restrictedSet.has(grantCode)) {
+    const allowlist = grantsWithAllowlist.get(grantCode)
+    if (!allowlist) {
+      return false
+    }
+    if (allowlist.allowAll) {
       return true
     }
     return crnSet.has(grantCode) && sbiSet.has(grantCode)

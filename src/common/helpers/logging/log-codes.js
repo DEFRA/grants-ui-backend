@@ -234,11 +234,11 @@ export const LogCodes = {
         `No allowlist.yaml in manifest, clearing entries to open grant to all | grantCode=${grantCode} | version=${version}`
     },
     GRANTS_CHECKED: {
-      level: 'info',
+      level: 'debug',
       messageFunc: ({ crn, sbi, env, matchedCount }) =>
         `Allowlist grants checked | crn=${crn} | sbi=${sbi} | env=${env} | matchedCount=${matchedCount}`
     },
-    GRANTS_BAD_REQUEST: {
+    GRANTS_UNAUTHORIZED: {
       level: 'warn',
       messageFunc: ({ errorMessage }) => `GET /allowlist/grants, validation failed: ${errorMessage}`
     },

@@ -165,7 +165,7 @@ describe('runStartupPull', () => {
       grant: 'woodland',
       version: '1.0.0',
       path: 'my-bucket',
-      manifest: ['woodland/1.0.0/woodland.yaml', 'woodland/1.0.0/allowlist.yaml']
+      manifest: ['woodland/1.0.0/grants-ui/woodland.yaml', 'woodland/1.0.0/grants-ui/allowlist.yaml']
     })
 
     await runStartupPull()
@@ -175,7 +175,7 @@ describe('runStartupPull', () => {
       grantCode: 'woodland',
       version: '1.0.0',
       bucket: 'my-bucket',
-      manifest: ['woodland/1.0.0/woodland.yaml', 'woodland/1.0.0/allowlist.yaml']
+      manifest: ['woodland/1.0.0/grants-ui/woodland.yaml', 'woodland/1.0.0/grants-ui/allowlist.yaml']
     })
   })
 

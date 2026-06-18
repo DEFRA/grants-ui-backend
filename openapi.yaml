@@ -475,9 +475,23 @@ paths:
         Returns the list of active grants the user identified by `crn` and `sbi`
         is permitted to access. The user identity is read from the `x-encrypted-auth`
         JWT header (signed with `ENCRYPTED_AUTH_JWT_SECRET`), which must contain `crn`
-        and `sbi` claims. Grants with no allowlist entries are open to all users.
-        Grants with entries require the user to appear in both the CRN and SBI lists
-        for the current environment.
+        and `sbi` claims.
+
+        Access rules (evaluated per environment):
+        - Grants with **no allowlist entries** are **closed to all users**.
+        - Grants with `allowAll: true` in their `allowlist.yaml` are **open to all users**.
+        - Otherwise the user must appear in **both** the CRN and SBI lists.
+
+        The `allowlist.yaml` format (per environment, per grant config):
+        ```yaml
+        dev:
+          allowAll: true        # open to everyone in dev
+        test:
+          crns:
+            - '1234567890'
+          sbis:
+            - '123456789'
+        ```
       parameters:
         - in: header
           name: x-encrypted-auth

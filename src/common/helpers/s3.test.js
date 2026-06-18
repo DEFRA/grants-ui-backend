@@ -1,7 +1,7 @@
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { load as loadYaml } from 'js-yaml'
-import { config } from '../../../config.js'
-import { getS3Client, getYamlObject, _resetS3ClientForTests } from './s3-client.js'
+import { config } from '../../config.js'
+import { getS3Client, getYamlObject, _resetS3ClientForTests } from './s3.js'
 
 jest.mock('@aws-sdk/client-s3', () => ({
   S3Client: jest.fn(),
@@ -12,7 +12,7 @@ jest.mock('js-yaml', () => ({
   load: jest.fn()
 }))
 
-jest.mock('../../../config.js', () => ({
+jest.mock('../../config.js', () => ({
   config: {
     get: jest.fn()
   }
@@ -23,7 +23,7 @@ const configValues = {
   'aws.endpointUrl': undefined
 }
 
-describe('s3-client', () => {
+describe('s3', () => {
   beforeEach(() => {
     _resetS3ClientForTests()
     config.get.mockImplementation((key) => configValues[key])

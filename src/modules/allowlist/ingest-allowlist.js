@@ -1,6 +1,6 @@
 import { replaceAllowlistEntries } from './allowlist.repository.js'
 import { buildAllowlistEntries } from './allowlist.transform.js'
-import { getYamlObject } from '../config/ingest/s3-client.js'
+import { getYamlObject } from '../../common/helpers/s3.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
 
 /**
@@ -18,7 +18,7 @@ import { log, LogCodes } from '../../common/helpers/logging/log.js'
  * @returns {Promise<void>}
  */
 export async function ingestAllowlist({ grantCode, version, bucket, manifest }) {
-  const allowlistPath = manifest.find((path) => path === `${grantCode}/${version}/allowlist.yaml`)
+  const allowlistPath = manifest.find((path) => path === `${grantCode}/${version}/grants-ui/allowlist.yaml`)
 
   if (!allowlistPath) {
     log(LogCodes.ALLOWLIST.INGEST_CLEARED, { grantCode, version })

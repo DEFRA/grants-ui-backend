@@ -32,30 +32,17 @@ beforeEach(() => {
     if (key === 'grantsUiBaseUrl') return 'https://grants-ui.dev.cdp-int.defra.cloud'
     return null
   })
+  findGrantCodesWithAllowlist.mockResolvedValue(new Map())
 })
 
 describe('resolveAllowedGrants', () => {
-  test('returns all active grants for a grant with no allowlist entries', async () => {
+  test('denies access to a grant with no allowlist entries (closed by default)', async () => {
     getAllActiveGrants.mockResolvedValue([woodland, farmPayments])
     findGrantCodesByEntry.mockResolvedValue([])
-    findGrantCodesWithAllowlist.mockResolvedValue([])
 
     const result = await resolveAllowedGrants('1234567890', '123456789')
 
-    expect(result).toEqual([
-      {
-        code: 'woodland',
-        title: 'Woodland Management Plan',
-        description: 'A description.',
-        url: 'https://grants-ui.dev.cdp-int.defra.cloud/woodland'
-      },
-      {
-        code: 'farm-payments',
-        title: 'Farm Payments',
-        description: null,
-        url: 'https://grants-ui.dev.cdp-int.defra.cloud/farm-payments'
-      }
-    ])
+    expect(result).toEqual([])
   })
 
   test('returns only grants where user is in both crn and sbi lists', async () => {
@@ -64,7 +51,12 @@ describe('resolveAllowedGrants', () => {
       if (type === 'crn') return Promise.resolve(['woodland'])
       if (type === 'sbi') return Promise.resolve(['woodland'])
     })
-    findGrantCodesWithAllowlist.mockResolvedValue(['woodland', 'farm-payments'])
+    findGrantCodesWithAllowlist.mockResolvedValue(
+      new Map([
+        ['woodland', { allowAll: false }],
+        ['farm-payments', { allowAll: false }]
+      ])
+    )
 
     const result = await resolveAllowedGrants('1234567890', '123456789')
 
@@ -78,7 +70,7 @@ describe('resolveAllowedGrants', () => {
       if (type === 'crn') return Promise.resolve(['woodland'])
       if (type === 'sbi') return Promise.resolve([])
     })
-    findGrantCodesWithAllowlist.mockResolvedValue(['woodland'])
+    findGrantCodesWithAllowlist.mockResolvedValue(new Map([['woodland', { allowAll: false }]]))
 
     const result = await resolveAllowedGrants('1234567890', '000000000')
 
@@ -91,28 +83,26 @@ describe('resolveAllowedGrants', () => {
       if (type === 'crn') return Promise.resolve([])
       if (type === 'sbi') return Promise.resolve(['woodland'])
     })
-    findGrantCodesWithAllowlist.mockResolvedValue(['woodland'])
+    findGrantCodesWithAllowlist.mockResolvedValue(new Map([['woodland', { allowAll: false }]]))
 
     const result = await resolveAllowedGrants('0000000000', '123456789')
 
     expect(result).toEqual([])
   })
 
-  test('allows access to grant with no allowlist even when other grants restrict', async () => {
+  test('denies access to all grants when none have allowlist entries', async () => {
     getAllActiveGrants.mockResolvedValue([woodland, farmPayments])
     findGrantCodesByEntry.mockResolvedValue([])
-    findGrantCodesWithAllowlist.mockResolvedValue(['woodland'])
 
     const result = await resolveAllowedGrants('0000000000', '000000000')
 
-    expect(result).toHaveLength(1)
-    expect(result[0].code).toBe('farm-payments')
+    expect(result).toEqual([])
   })
 
   test('returns empty array when user is not on any allowlist and all grants are restricted', async () => {
     getAllActiveGrants.mockResolvedValue([woodland])
     findGrantCodesByEntry.mockResolvedValue([])
-    findGrantCodesWithAllowlist.mockResolvedValue(['woodland'])
+    findGrantCodesWithAllowlist.mockResolvedValue(new Map([['woodland', { allowAll: false }]]))
 
     const result = await resolveAllowedGrants('0000000000', '000000000')
 
@@ -122,11 +112,37 @@ describe('resolveAllowedGrants', () => {
   test('returns empty array when there are no active grants', async () => {
     getAllActiveGrants.mockResolvedValue([])
     findGrantCodesByEntry.mockResolvedValue([])
-    findGrantCodesWithAllowlist.mockResolvedValue([])
 
     const result = await resolveAllowedGrants('1234567890', '123456789')
 
     expect(result).toEqual([])
+  })
+
+  test('allows all users when allowAll is set for the grant', async () => {
+    getAllActiveGrants.mockResolvedValue([woodland])
+    findGrantCodesByEntry.mockResolvedValue([])
+    findGrantCodesWithAllowlist.mockResolvedValue(new Map([['woodland', { allowAll: true }]]))
+
+    const result = await resolveAllowedGrants('9999999999', '999999999')
+
+    expect(result).toHaveLength(1)
+    expect(result[0].code).toBe('woodland')
+  })
+
+  test('allowAll only applies per grant — other grants still check crn/sbi', async () => {
+    getAllActiveGrants.mockResolvedValue([woodland, farmPayments])
+    findGrantCodesByEntry.mockResolvedValue([])
+    findGrantCodesWithAllowlist.mockResolvedValue(
+      new Map([
+        ['woodland', { allowAll: true }],
+        ['farm-payments', { allowAll: false }]
+      ])
+    )
+
+    const result = await resolveAllowedGrants('9999999999', '999999999')
+
+    expect(result).toHaveLength(1)
+    expect(result[0].code).toBe('woodland')
   })
 
   test('constructs url from GRANTS_UI_BASE_URL and grantCode', async () => {
@@ -136,8 +152,11 @@ describe('resolveAllowedGrants', () => {
       return null
     })
     getAllActiveGrants.mockResolvedValue([woodland])
-    findGrantCodesByEntry.mockResolvedValue([])
-    findGrantCodesWithAllowlist.mockResolvedValue([])
+    findGrantCodesByEntry.mockImplementation((type) => {
+      if (type === 'crn') return Promise.resolve(['woodland'])
+      if (type === 'sbi') return Promise.resolve(['woodland'])
+    })
+    findGrantCodesWithAllowlist.mockResolvedValue(new Map([['woodland', { allowAll: false }]]))
 
     const result = await resolveAllowedGrants('1234567890', '123456789')
 
@@ -151,8 +170,11 @@ describe('resolveAllowedGrants', () => {
       return null
     })
     getAllActiveGrants.mockResolvedValue([woodland])
-    findGrantCodesByEntry.mockResolvedValue([])
-    findGrantCodesWithAllowlist.mockResolvedValue([])
+    findGrantCodesByEntry.mockImplementation((type) => {
+      if (type === 'crn') return Promise.resolve(['woodland'])
+      if (type === 'sbi') return Promise.resolve(['woodland'])
+    })
+    findGrantCodesWithAllowlist.mockResolvedValue(new Map([['woodland', { allowAll: false }]]))
 
     const result = await resolveAllowedGrants('1234567890', '123456789')
 
@@ -162,7 +184,6 @@ describe('resolveAllowedGrants', () => {
   test('returns cached result on repeated call without hitting the db', async () => {
     getAllActiveGrants.mockResolvedValue([woodland])
     findGrantCodesByEntry.mockResolvedValue([])
-    findGrantCodesWithAllowlist.mockResolvedValue([])
 
     const first = await resolveAllowedGrants('1234567890', '123456789')
     const second = await resolveAllowedGrants('1234567890', '123456789')
@@ -179,7 +200,6 @@ describe('resolveAllowedGrants', () => {
     })
     getAllActiveGrants.mockResolvedValue([woodland])
     findGrantCodesByEntry.mockResolvedValue([])
-    findGrantCodesWithAllowlist.mockResolvedValue([])
 
     await resolveAllowedGrants('1234567890', '123456789')
 

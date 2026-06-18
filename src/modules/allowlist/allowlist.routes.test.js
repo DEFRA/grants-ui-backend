@@ -69,7 +69,7 @@ describe('allowlistGrants route', () => {
 
     test('logs a warning when crn or sbi is missing', async () => {
       await expect(allowlistGrants.handler(mockRequest(undefined, undefined), mockH)).rejects.toThrow()
-      expect(log).toHaveBeenCalledWith(LogCodes.ALLOWLIST.GRANTS_BAD_REQUEST, expect.any(Object))
+      expect(log).toHaveBeenCalledWith(LogCodes.ALLOWLIST.GRANTS_UNAUTHORIZED, expect.any(Object))
     })
   })
 

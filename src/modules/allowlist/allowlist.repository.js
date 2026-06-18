@@ -86,15 +86,23 @@ export async function findGrantCodesByEntry(type, value, env) {
 }
 
 /**
- * Returns all distinct grantCodes that have any entries for the given env.
- * Used to distinguish "grant has no allowlist" (allow all) from "grant has an
- * allowlist but this user is not on it" (deny).
+ * Returns a Map of grantCode → { allowAll: boolean } for every grant that has
+ * any allowlist entries for the given env. Grants absent from the map have no
+ * allowlist and are closed to all users.
  *
- * Backed by the covered index { env, grantCode } — index-only scan.
+ * Single aggregation pipeline — replaces the two separate distinct() queries.
  *
  * @param {string} env
- * @returns {Promise<string[]>}
+ * @returns {Promise<Map<string, { allowAll: boolean }>>}
  */
 export async function findGrantCodesWithAllowlist(env) {
-  return allowlistDb.collection(COLLECTION).distinct('grantCode', { env })
+  const rows = await allowlistDb
+    .collection(COLLECTION)
+    .aggregate([
+      { $match: { env } },
+      { $group: { _id: '$grantCode', allowAll: { $max: { $eq: ['$type', 'allowAll'] } } } }
+    ])
+    .toArray()
+
+  return new Map(rows.map(({ _id, allowAll }) => [_id, { allowAll }]))
 }

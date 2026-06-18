@@ -1,6 +1,6 @@
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { load as loadYaml } from 'js-yaml'
-import { config } from '../../../config.js'
+import { config } from '../../config.js'
 
 let s3Client
 

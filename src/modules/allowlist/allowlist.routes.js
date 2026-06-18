@@ -13,7 +13,7 @@ export const allowlistGrants = {
     const { crn, sbi } = request.auth.credentials
 
     if (!crn || !sbi) {
-      log(LogCodes.ALLOWLIST.GRANTS_BAD_REQUEST, { errorMessage: 'crn and sbi missing from token' })
+      log(LogCodes.ALLOWLIST.GRANTS_UNAUTHORIZED, { errorMessage: 'crn and sbi missing from token' })
       throw Boom.unauthorized('crn and sbi are required in the x-encrypted-auth token')
     }
 

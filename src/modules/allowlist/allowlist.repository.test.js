@@ -78,33 +78,50 @@ describe('allowlist.repository', () => {
   })
 
   describe('findGrantCodesWithAllowlist', () => {
-    test('returns all grant codes that have any entries for the env', async () => {
+    test('returns a Map of grantCode to meta for grants with entries in the env', async () => {
       await db
         .collection(COLLECTION)
         .insertMany([
-          makeEntry({ grantCode: 'woodland', env: 'local' }),
+          makeEntry({ grantCode: 'woodland', env: 'local', type: 'crn', value: '111' }),
           makeEntry({ grantCode: 'woodland', env: 'local', type: 'sbi', value: '999' }),
-          makeEntry({ grantCode: 'farm-payments', env: 'local' })
+          makeEntry({ grantCode: 'farm-payments', env: 'local', type: 'crn', value: '222' })
         ])
 
       const result = await findGrantCodesWithAllowlist('local')
 
-      expect(result).toHaveLength(2)
-      expect(result).toEqual(expect.arrayContaining(['woodland', 'farm-payments']))
+      expect(result).toBeInstanceOf(Map)
+      expect(result.size).toBe(2)
+      expect(result.get('woodland')).toEqual({ allowAll: false })
+      expect(result.get('farm-payments')).toEqual({ allowAll: false })
     })
 
-    test('does not return grant codes from a different environment', async () => {
+    test('sets allowAll: true for grants with an allowAll entry', async () => {
+      await db
+        .collection(COLLECTION)
+        .insertMany([
+          makeEntry({ grantCode: 'woodland', type: 'allowAll', value: 'true', env: 'local' }),
+          makeEntry({ grantCode: 'farm-payments', type: 'crn', value: '111', env: 'local' })
+        ])
+
+      const result = await findGrantCodesWithAllowlist('local')
+
+      expect(result.get('woodland')).toEqual({ allowAll: true })
+      expect(result.get('farm-payments')).toEqual({ allowAll: false })
+    })
+
+    test('does not include grants from a different environment', async () => {
       await db.collection(COLLECTION).insertOne(makeEntry({ grantCode: 'woodland', env: 'production' }))
 
       const result = await findGrantCodesWithAllowlist('local')
 
-      expect(result).toEqual([])
+      expect(result.size).toBe(0)
     })
 
-    test('returns empty array when collection is empty', async () => {
+    test('returns empty Map when collection is empty', async () => {
       const result = await findGrantCodesWithAllowlist('local')
 
-      expect(result).toEqual([])
+      expect(result).toBeInstanceOf(Map)
+      expect(result.size).toBe(0)
     })
   })
 })
