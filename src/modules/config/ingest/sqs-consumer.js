@@ -1,7 +1,9 @@
 import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } from '@aws-sdk/client-sqs'
 import { config } from '../../../config.js'
 import { ingestVersion } from './ingest.js'
+import { ingestAllowlist } from '../../allowlist/ingest-allowlist.js'
 import { parseSnsMessage } from './sns-message.js'
+import { FORM_DEFINITION_STATUS } from '../config.constants.js'
 import { log, LogCodes } from '../../../common/helpers/logging/log.js'
 
 /**
@@ -55,6 +57,10 @@ export async function handleMessage(message) {
     bucket,
     manifest
   })
+
+  if (status === FORM_DEFINITION_STATUS.ACTIVE) {
+    await ingestAllowlist({ grantCode, version, bucket, manifest })
+  }
 }
 
 /**

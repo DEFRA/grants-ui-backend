@@ -7,6 +7,7 @@ import { requestLogger } from './common/helpers/logging/request-logger.js'
 import { mongoDb } from './common/helpers/mongodb.js'
 import { initStateRepository } from './modules/state/state.repository.js'
 import { initConfigRepository } from './modules/config/config.repository.js'
+import { initAllowlistRepository } from './modules/allowlist/allowlist.repository.js'
 import { failAction } from './common/helpers/fail-action.js'
 import { secureContext } from './common/helpers/secure-context/index.js'
 import { pulse } from './common/helpers/pulse.js'
@@ -88,6 +89,7 @@ async function createServer() {
   // server.stateDb / server.configDb decorations are available.
   initStateRepository(server.stateDb)
   initConfigRepository(server.configDb)
+  initAllowlistRepository(server.configDb)
 
   return server
 }

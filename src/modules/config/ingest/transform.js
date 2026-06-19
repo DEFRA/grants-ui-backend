@@ -50,6 +50,7 @@ export function buildFormDefinition({ grantCode, version, status, definition, up
     grantCode,
     id: definition?.metadata?.id ?? `${grantCode}@${version}`,
     title: definition?.name ?? grantCode,
+    description: definition?.metadata?.description ?? null,
     major,
     minor,
     patch,

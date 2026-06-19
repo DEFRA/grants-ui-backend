@@ -7,7 +7,8 @@ import {
   getDefinition,
   getDefinitionStatuses,
   updateDefinitionStatus,
-  definitionStatusKey
+  definitionStatusKey,
+  getAllActiveGrants
 } from './config.repository.js'
 import { up as createConfigIndexes } from '~/migrations/config/20260603163943-create-indexes.js'
 
@@ -255,6 +256,87 @@ describe('config.repository', () => {
       const result = await getDefinition('farm-payments', 1, 0, 0)
 
       expect(result).toMatchObject({ status: FORM_DEFINITION_STATUS.DRAFT })
+    })
+  })
+
+  describe('getAllActiveGrants', () => {
+    test('returns one entry per grant with title and description from the latest active version', async () => {
+      await db.collection(COLLECTION).insertMany([
+        makeDefinition({
+          grantCode: 'woodland',
+          major: 1,
+          minor: 0,
+          patch: 0,
+          title: 'Woodland v1',
+          description: 'Old desc'
+        }),
+        makeDefinition({
+          grantCode: 'woodland',
+          major: 2,
+          minor: 0,
+          patch: 0,
+          title: 'Woodland v2',
+          description: 'New desc'
+        }),
+        makeDefinition({
+          grantCode: 'farm-payments',
+          major: 1,
+          minor: 0,
+          patch: 0,
+          title: 'Farm Payments',
+          description: 'Farm desc'
+        })
+      ])
+
+      const result = await getAllActiveGrants()
+
+      expect(result).toHaveLength(2)
+      expect(result).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ grantCode: 'woodland', title: 'Woodland v2', description: 'New desc' }),
+          expect.objectContaining({ grantCode: 'farm-payments', title: 'Farm Payments', description: 'Farm desc' })
+        ])
+      )
+    })
+
+    test('excludes draft versions', async () => {
+      await db.collection(COLLECTION).insertMany([
+        makeDefinition({
+          grantCode: 'woodland',
+          major: 1,
+          minor: 0,
+          patch: 0,
+          status: FORM_DEFINITION_STATUS.ACTIVE
+        }),
+        makeDefinition({
+          grantCode: 'farm-payments',
+          major: 1,
+          minor: 0,
+          patch: 0,
+          status: FORM_DEFINITION_STATUS.DRAFT
+        })
+      ])
+
+      const result = await getAllActiveGrants()
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toMatchObject({ grantCode: 'woodland' })
+    })
+
+    test('returns empty array when there are no active grants', async () => {
+      await db.collection(COLLECTION).insertOne(makeDefinition({ status: FORM_DEFINITION_STATUS.DRAFT }))
+
+      const result = await getAllActiveGrants()
+
+      expect(result).toEqual([])
+    })
+
+    test('does not include _id in the result', async () => {
+      await db.collection(COLLECTION).insertOne(makeDefinition())
+
+      const result = await getAllActiveGrants()
+
+      expect(result[0]).not.toHaveProperty('_id')
     })
   })
 

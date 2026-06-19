@@ -5,10 +5,11 @@
  * http/http-client.private.env.json (local section only).
  *
  * Variables are sourced from:
- *   - http/grants-ui-backend.http  (grantCode, grantVersion, sbi, userId)
+ *   - http/grants-ui-backend.http  (grantCode, grantVersion, sbi, crn, userId)
  *   - compose.yml                  (APPLICATION_LOCK_TOKEN_SECRET,
  *                                   GRANTS_UI_BACKEND_AUTH_TOKEN,
- *                                   GRANTS_UI_BACKEND_ENCRYPTION_KEY)
+ *                                   GRANTS_UI_BACKEND_ENCRYPTION_KEY,
+ *                                   ENCRYPTED_AUTH_JWT_SECRET)
  *
  * No .env file required.
  */
@@ -37,6 +38,7 @@ function parseHttpVar(name) {
 const grantCode = parseHttpVar('grantCode')
 const grantVersion = parseHttpVar('grantVersion')
 const sbi = parseHttpVar('sbi')
+const crn = parseHttpVar('crn')
 const userId = parseHttpVar('userId')
 
 // ---------------------------------------------------------------------------
@@ -56,6 +58,7 @@ function parseComposeEnv(name) {
 const lockSecret = parseComposeEnv('APPLICATION_LOCK_TOKEN_SECRET')
 const authToken = parseComposeEnv('GRANTS_UI_BACKEND_AUTH_TOKEN')
 const encryptionKey = parseComposeEnv('GRANTS_UI_BACKEND_ENCRYPTION_KEY')
+const encryptedAuthJwtSecret = parseComposeEnv('ENCRYPTED_AUTH_JWT_SECRET')
 const configBrokerAuthToken = parseComposeEnv('GRANTS_CONFIG_BROKER_AUTH_TOKEN')
 const configBrokerEncryptionKey = parseComposeEnv('GRANTS_CONFIG_BROKER_ENCRYPTION_KEY')
 
@@ -65,6 +68,9 @@ const configBrokerEncryptionKey = parseComposeEnv('GRANTS_CONFIG_BROKER_ENCRYPTI
 const backendAuthToken = generateAuthToken(authToken, encryptionKey)
 const applicationLockOwnerToken = generateLockOwnerToken(lockSecret, userId, sbi, grantCode, grantVersion)
 const applicationLockReleaseToken = generateLockReleaseToken(lockSecret, userId)
+
+const { default: jwt } = await import('jsonwebtoken')
+const encryptedAuthToken = jwt.sign({ crn, sbi }, encryptedAuthJwtSecret)
 
 // ---------------------------------------------------------------------------
 // 4. Write results into the local section of http-client.private.env.json
@@ -84,6 +90,7 @@ if (!privateEnv.local) privateEnv.local = {}
 privateEnv.local.backendAuthToken = backendAuthToken
 privateEnv.local.applicationLockOwnerToken = applicationLockOwnerToken
 privateEnv.local.applicationLockReleaseToken = applicationLockReleaseToken
+privateEnv.local.encryptedAuthToken = encryptedAuthToken
 
 if (!privateEnv.local.configBrokerAuthToken) {
   privateEnv.local.configBrokerAuthToken = configBrokerAuthToken
@@ -102,6 +109,7 @@ console.log('✓ http/http-client.private.env.json (local) updated:')
 console.log('  backendAuthToken')
 console.log('  applicationLockOwnerToken')
 console.log('  applicationLockReleaseToken')
+console.log('  encryptedAuthToken')
 console.log('  configBrokerAuthToken (if absent)')
 console.log('  configBrokerEncryptionKey (if absent)')
 console.log('  xApiKey (if absent)')

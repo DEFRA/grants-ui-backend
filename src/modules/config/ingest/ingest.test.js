@@ -1,6 +1,6 @@
 import { ingestVersion } from './ingest.js'
 import { upsertDefinition } from '../config.repository.js'
-import { getYamlObject } from './s3-client.js'
+import { getYamlObject } from '../../../common/helpers/s3.js'
 import { FORM_DEFINITION_STATUS } from '../config.constants.js'
 import { log, LogCodes } from '../../../common/helpers/logging/log.js'
 
@@ -8,7 +8,7 @@ jest.mock('../config.repository.js', () => ({
   upsertDefinition: jest.fn()
 }))
 
-jest.mock('./s3-client.js', () => ({
+jest.mock('../../../common/helpers/s3.js', () => ({
   getYamlObject: jest.fn()
 }))
 

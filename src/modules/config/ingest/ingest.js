@@ -1,5 +1,5 @@
 import { upsertDefinition } from '../config.repository.js'
-import { getYamlObject } from './s3-client.js'
+import { getYamlObject } from '../../../common/helpers/s3.js'
 import { buildFormDefinition } from './transform.js'
 import { log, LogCodes } from '../../../common/helpers/logging/log.js'
 

@@ -222,6 +222,32 @@ export const LogCodes = {
         `SQS consumer shutdown error | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
     }
   },
+  ALLOWLIST: {
+    INGEST_UPSERTED: {
+      level: 'info',
+      messageFunc: ({ grantCode, version, status, entryCount }) =>
+        `Upserted allowlist entries | grantCode=${grantCode} | version=${version} | status=${status} | entryCount=${entryCount}`
+    },
+    INGEST_CLEARED: {
+      level: 'debug',
+      messageFunc: ({ grantCode, version }) =>
+        `No allowlist.yaml in manifest, clearing entries to open grant to all | grantCode=${grantCode} | version=${version}`
+    },
+    GRANTS_CHECKED: {
+      level: 'debug',
+      messageFunc: ({ crn, sbi, env, matchedCount }) =>
+        `Allowlist grants checked | crn=${crn} | sbi=${sbi} | env=${env} | matchedCount=${matchedCount}`
+    },
+    GRANTS_UNAUTHORIZED: {
+      level: 'warn',
+      messageFunc: ({ errorMessage }) => `GET /allowlist/grants, validation failed: ${errorMessage}`
+    },
+    STARTUP_PULL_FAILED: {
+      level: 'error',
+      messageFunc: ({ grantCode, errorName, errorMessage, stack }) =>
+        `Failed to ingest allowlist during startup pull | grantCode=${grantCode} | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
+    }
+  },
   MIGRATIONS: {
     APPLIED: {
       level: 'info',
