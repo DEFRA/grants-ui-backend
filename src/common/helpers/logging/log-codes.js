@@ -6,6 +6,11 @@ export const LogCodes = {
       level: 'info',
       messageFunc: (messageOptions) => `Received payload | size=${messageOptions.payloadSize}`
     },
+    STATE_VERSION_UPGRADED: {
+      level: 'info',
+      messageFunc: ({ sbi, grantCode, fromVersion, toVersion }) =>
+        `Upgraded application state grant version | sbi=${sbi} | grantCode=${grantCode} | fromVersion=${fromVersion} | toVersion=${toVersion}`
+    },
     STATE_PAYLOAD_SIZE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>

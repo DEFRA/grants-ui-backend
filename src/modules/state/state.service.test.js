@@ -13,11 +13,17 @@ import {
 } from './state.service'
 import { initStateRepository } from './state.repository'
 import { resolveLatestVersion, resolveLatestVersionWithinMajor } from '../config/config.service.js'
+import { log, LogCodes } from '../../common/helpers/logging/log.js'
 
 jest.mock('../config/config.service.js', () => ({
   resolveLatestVersion: jest.fn(),
   resolveLatestVersionWithinMajor: jest.fn()
 }))
+
+jest.mock('../../common/helpers/logging/log.js', () => {
+  const actual = jest.requireActual('../../common/helpers/logging/log.js')
+  return { ...actual, log: jest.fn() }
+})
 
 describe('application locks', () => {
   let server
@@ -441,6 +447,13 @@ describe('getStateWithFormDefinition orchestration', () => {
     expect(lockRelease).toHaveBeenCalledWith(
       expect.objectContaining({ grantCode: 'EGWA', grantVersion: '1.0.0', sbi: '123456789', ownerId: 'user-1' })
     )
+    // The version upgrade is logged.
+    expect(log).toHaveBeenCalledWith(LogCodes.STATE.STATE_VERSION_UPGRADED, {
+      sbi: '123456789',
+      grantCode: 'EGWA',
+      fromVersion: '1.0.0',
+      toVersion: '1.4.2'
+    })
   })
 
   test('existing state + version changed -> upgrade still succeeds if old-lock release fails', async () => {

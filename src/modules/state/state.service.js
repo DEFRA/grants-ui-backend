@@ -25,6 +25,7 @@ import {
   updateApplicationStateVersion as repoUpdateApplicationStateVersion
 } from './state.repository.js'
 import { resolveLatestVersion, resolveLatestVersionWithinMajor } from '../config/config.service.js'
+import { log, LogCodes } from '../../common/helpers/logging/log.js'
 
 export { APPLICATION_LOCK_TTL_MS } from './state.repository.js'
 
@@ -237,6 +238,13 @@ export async function getStateWithFormDefinition({ sbi, grantCode, ownerId, incl
     major,
     minor,
     patch
+  })
+
+  log(LogCodes.STATE.STATE_VERSION_UPGRADED, {
+    sbi,
+    grantCode,
+    fromVersion: existing.grantVersion,
+    toVersion: newGrantVersion
   })
 
   // Best-effort release of the now-orphaned lock on the previous version. The
