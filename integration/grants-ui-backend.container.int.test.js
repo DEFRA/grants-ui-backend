@@ -2,7 +2,8 @@ import Wreck from '@hapi/wreck'
 import {
   TEST_AUTH_TOKEN,
   TEST_ENCRYPTION_KEY,
-  APPLICATION_LOCK_TOKEN_SECRET
+  APPLICATION_LOCK_TOKEN_SECRET,
+  ENCRYPTED_AUTH_JWT_SECRET
 } from '../src/test-helpers/auth-constants.js'
 import { MongoClient } from 'mongodb'
 import { describe, it, expect, beforeAll, beforeEach } from '@jest/globals'
@@ -1057,6 +1058,126 @@ describe('POST /submissions', () => {
     })
 
     expect(response.statusCode).toBe(400)
+  })
+})
+
+describe('GET /allowlist/grants', () => {
+  const createEncryptedAuthHeader = ({ crn, sbi }) => jwt.sign({ crn, sbi }, ENCRYPTED_AUTH_JWT_SECRET)
+
+  beforeEach(async () => {
+    await db.collection('config__allowlist_entries').deleteMany({})
+    await db.collection('config__form_definitions').deleteMany({})
+  })
+
+  it('returns grants where the user matches the allowlist', async () => {
+    await db.collection('config__form_definitions').insertOne({
+      grantCode: 'woodland',
+      title: 'Woodland Management Plan',
+      description: 'A woodland grant.',
+      status: 'active',
+      major: 1,
+      minor: 0,
+      patch: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+    await db.collection('config__allowlist_entries').insertMany([
+      { grantCode: 'woodland', env: 'local', type: 'crn', value: '1100946179', updatedAt: new Date() },
+      { grantCode: 'woodland', env: 'local', type: 'sbi', value: '115371673', updatedAt: new Date() }
+    ])
+
+    const response = await Wreck.get(`${apiUrl}/allowlist/grants`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-encrypted-auth': createEncryptedAuthHeader({ crn: '1100946179', sbi: '115371673' })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload.grants).toHaveLength(1)
+    expect(response.payload.grants[0].code).toBe('woodland')
+  })
+
+  it('returns empty grants when user is not on the allowlist', async () => {
+    await db.collection('config__form_definitions').insertOne({
+      grantCode: 'woodland',
+      title: 'Woodland Management Plan',
+      description: 'A woodland grant.',
+      status: 'active',
+      major: 1,
+      minor: 0,
+      patch: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+    await db.collection('config__allowlist_entries').insertMany([
+      { grantCode: 'woodland', env: 'local', type: 'crn', value: '1100946179', updatedAt: new Date() },
+      { grantCode: 'woodland', env: 'local', type: 'sbi', value: '115371673', updatedAt: new Date() }
+    ])
+
+    const response = await Wreck.get(`${apiUrl}/allowlist/grants`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-encrypted-auth': createEncryptedAuthHeader({ crn: '9999999999', sbi: '999999999' })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload.grants).toHaveLength(0)
+  })
+
+  it('returns all grants when allowAll is true', async () => {
+    await db.collection('config__form_definitions').insertOne({
+      grantCode: 'woodland',
+      title: 'Woodland Management Plan',
+      description: 'A woodland grant.',
+      status: 'active',
+      major: 1,
+      minor: 0,
+      patch: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+    await db.collection('config__allowlist_entries').insertOne({
+      grantCode: 'woodland',
+      env: 'local',
+      type: 'allowAll',
+      value: 'true',
+      updatedAt: new Date()
+    })
+
+    const response = await Wreck.get(`${apiUrl}/allowlist/grants`, {
+      json: true,
+      headers: {
+        authorization: createAuthHeader(),
+        'x-encrypted-auth': createEncryptedAuthHeader({ crn: 'any-crn', sbi: 'any-sbi' })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload.grants).toHaveLength(1)
+    expect(response.payload.grants[0].code).toBe('woodland')
+  })
+
+  it('returns 401 when x-encrypted-auth is missing', async () => {
+    const response = await Wreck.request('GET', `${apiUrl}/allowlist/grants`, {
+      json: true,
+      headers: { authorization: createAuthHeader() },
+      throwOnError: false
+    })
+
+    expect(response.statusCode).toBe(401)
+  })
+
+  it('returns 401 when authorization header is missing', async () => {
+    const response = await Wreck.request('GET', `${apiUrl}/allowlist/grants`, {
+      json: true,
+      throwOnError: false
+    })
+
+    expect(response.statusCode).toBe(401)
   })
 })
 
