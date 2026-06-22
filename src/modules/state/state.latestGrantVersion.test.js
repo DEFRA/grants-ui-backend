@@ -45,7 +45,7 @@ describe('State integration tests for grantVersion filtering', () => {
       { ...baseQuery, grantVersion: '3.1.0', state: { version: '3.1.0' } }
     ])
 
-    mockRequest.query = { ...baseQuery, grantVersion: '2.0.3', document: false }
+    mockRequest.query = { ...baseQuery, grantVersion: '2.0.3' }
 
     await stateRetrieve.handler(mockRequest, mockH)
 

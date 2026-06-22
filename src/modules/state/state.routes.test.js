@@ -391,24 +391,12 @@ describe('State', () => {
     test('should retrieve state and return 200 by default', async () => {
       const mockDocument = { grantVersion: '1.0.0', sbi: 'business123', grantCode: 'grant123', state: { key: 'value' } }
       getApplicationState.mockResolvedValue(mockDocument)
-      mockRequest.query = { ...defaultQuery, document: false }
+      mockRequest.query = { ...defaultQuery }
 
       await stateRetrieve.handler(mockRequest, mockH)
 
       expect(getApplicationState).toHaveBeenCalledWith(defaultQuery)
       expect(mockH.response).toHaveBeenCalledWith(mockDocument.state)
-      expect(mockH.code).toHaveBeenCalledWith(200)
-    })
-
-    test('should retrieve full document when document=true', async () => {
-      const mockDocument = { grantVersion: '1.0.0', sbi: 'business123', grantCode: 'grant123', state: { key: 'value' } }
-      getApplicationState.mockResolvedValue(mockDocument)
-      mockRequest.query = { ...defaultQuery, document: true }
-
-      await stateRetrieve.handler(mockRequest, mockH)
-
-      expect(getApplicationState).toHaveBeenCalledWith(defaultQuery)
-      expect(mockH.response).toHaveBeenCalledWith(mockDocument)
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
