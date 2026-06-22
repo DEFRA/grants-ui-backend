@@ -27,7 +27,7 @@ describe('ingestVersion', () => {
     version: '1.2.3',
     bucket: 'my-bucket',
     status: FORM_DEFINITION_STATUS.ACTIVE,
-    manifest: ['farm-payments/1.2.3/farm-payments.yaml', 'some/prefix/extra.yaml'],
+    manifest: ['farm-payments/1.2.3/grants-ui/farm-payments.yaml', 'some/prefix/extra.yaml'],
     updatedAt: '2024-01-01T00:00:00.000Z'
   })
 
@@ -36,7 +36,7 @@ describe('ingestVersion', () => {
 
     await ingestVersion(baseParams())
 
-    expect(getYamlObject).toHaveBeenCalledWith('my-bucket', 'farm-payments/1.2.3/farm-payments.yaml')
+    expect(getYamlObject).toHaveBeenCalledWith('my-bucket', 'farm-payments/1.2.3/grants-ui/farm-payments.yaml')
     expect(upsertDefinition).toHaveBeenCalledWith(
       expect.objectContaining({
         grantCode: 'farm-payments',
@@ -60,7 +60,7 @@ describe('ingestVersion', () => {
       expect.objectContaining({
         grantCode: 'farm-payments',
         version: '1.2.3',
-        grantDefinitionPath: 'farm-payments/1.2.3/farm-payments.yaml'
+        grantDefinitionPath: 'farm-payments/1.2.3/grants-ui/farm-payments.yaml'
       })
     )
   })
@@ -69,29 +69,27 @@ describe('ingestVersion', () => {
     ['grantCode', { grantCode: undefined }],
     ['version', { version: undefined }],
     ['bucket', { bucket: undefined }]
-  ])('throws when %s is missing', async (_field, overrides) => {
-    await expect(ingestVersion({ ...baseParams(), ...overrides })).rejects.toThrow(
-      'ingestVersion requires grantCode, version and bucket'
-    )
+  ])('logs and returns when %s is missing', async (_field, overrides) => {
+    await ingestVersion({ ...baseParams(), ...overrides })
+    expect(log).toHaveBeenCalledWith(LogCodes.CONFIG.INGEST_MISSING_PARAMS, expect.any(Object))
     expect(upsertDefinition).not.toHaveBeenCalled()
   })
 
-  test('throws when the manifest is not an array', async () => {
-    await expect(ingestVersion({ ...baseParams(), manifest: 'farm-payments.yaml' })).rejects.toThrow(
-      'No manifest provided for farm-payments@1.2.3'
-    )
+  test('logs and returns when the manifest is not an array', async () => {
+    await ingestVersion({ ...baseParams(), manifest: 'farm-payments.yaml' })
+    expect(log).toHaveBeenCalledWith(LogCodes.CONFIG.INGEST_EMPTY_MANIFEST, expect.any(Object))
+    expect(upsertDefinition).not.toHaveBeenCalled()
   })
 
-  test('throws when the manifest is empty', async () => {
-    await expect(ingestVersion({ ...baseParams(), manifest: [] })).rejects.toThrow(
-      'No manifest provided for farm-payments@1.2.3'
-    )
+  test('logs and returns when the manifest is empty', async () => {
+    await ingestVersion({ ...baseParams(), manifest: [] })
+    expect(log).toHaveBeenCalledWith(LogCodes.CONFIG.INGEST_EMPTY_MANIFEST, expect.any(Object))
+    expect(upsertDefinition).not.toHaveBeenCalled()
   })
 
-  test('throws when the manifest has no entry matching the grant yaml', async () => {
-    await expect(ingestVersion({ ...baseParams(), manifest: ['other.yaml'] })).rejects.toThrow(
-      'Manifest for farm-payments@1.2.3 contains no entry matching farm-payments.yaml'
-    )
+  test('logs and returns when the manifest has no entry matching the grant yaml', async () => {
+    await ingestVersion({ ...baseParams(), manifest: ['other.yaml'] })
+    expect(log).toHaveBeenCalledWith(LogCodes.CONFIG.INGEST_MANIFEST_MISSING_ENTRY, expect.any(Object))
     expect(getYamlObject).not.toHaveBeenCalled()
   })
 })

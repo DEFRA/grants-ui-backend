@@ -1,18 +1,26 @@
 import { logIfApproachingPayloadLimit } from '../../common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
-import { enforceApplicationLock } from './lock-enforcement.js'
+import { enforceApplicationLock, extractLockKeys } from './lock-enforcement.js'
 import { StatusCodes } from 'http-status-codes'
-import { stateSaveSchema, stateRetrieveSchema, patchParamsSchema, patchSchema } from './state.schema.js'
+import {
+  stateSaveSchema,
+  stateRetrieveSchema,
+  stateWithDefinitionSchema,
+  patchParamsSchema,
+  patchSchema
+} from './state.schema.js'
 import {
   saveApplicationState,
   getApplicationState,
   deleteApplicationState,
-  patchApplicationState
+  patchApplicationState,
+  getStateWithFormDefinition
 } from './state.service.js'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
 const PAYLOAD_SIZE_MAX = 1_048_576 // 1 MB
 const STATE_NOT_FOUND = 'State not found'
+const FORM_DEFINITION_NOT_FOUND = 'Form definition not found'
 
 export const stateSave = {
   method: 'POST',
@@ -197,6 +205,62 @@ export const statePatch = {
       return h.response({ success: true, patched: true }).code(StatusCodes.OK)
     } catch (_err) {
       return h.response({ error: 'Failed to patch application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
+    }
+  }
+}
+
+export const stateWithDefinition = {
+  method: 'POST',
+  path: '/state/with-definition',
+  options: {
+    auth: 'bearer',
+    // No `enforceApplicationLock` pre-handler here: this endpoint is partly
+    // responsible for resolving the grantVersion, so a cold first call cannot
+    // yet carry a version-bearing lock token. Instead the lock is acquired
+    // inside `getStateWithFormDefinition` once the version has been resolved.
+    validate: {
+      payload: stateWithDefinitionSchema,
+      failAction: (request, _h, err) => {
+        const { sbi, grantCode } = request.payload
+        log(LogCodes.STATE.STATE_WITH_DEFINITION_FAILED, {
+          sbi,
+          grantCode,
+          errorName: err.name,
+          errorMessage: `POST /state/with-definition, validation failed: ${err.message}`,
+          errorReason: err.reason,
+          errorCode: err.code,
+          isMongoError: false,
+          stack: err.stack?.split('\n')[0]
+        })
+        throw err
+      }
+    }
+  },
+  handler: async (request, h) => {
+    const { sbi, grantCode, includeDefinition } = request.payload
+
+    // Identify the lock owner from the token, but tolerate a missing
+    // grantVersion: the orchestrator resolves the authoritative version and
+    // acquires the lock against it. A missing/invalid token still yields 401.
+    const { ownerId } = extractLockKeys(request, { requireGrantVersion: false })
+
+    try {
+      const result = await getStateWithFormDefinition({ sbi, grantCode, ownerId, includeDefinition })
+
+      if (!result) {
+        return h.response({ error: FORM_DEFINITION_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
+      }
+
+      return h.response(result).code(StatusCodes.OK)
+    } catch (err) {
+      // Lock conflicts (and other Boom errors) carry their own status code
+      // (e.g. 423 Locked); let Hapi map them rather than masking as 500.
+      if (err?.isBoom) {
+        throw err
+      }
+      return h
+        .response({ error: 'Failed to retrieve state with form definition' })
+        .code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
 }

@@ -67,6 +67,37 @@ Content-Type: application/json
 }
 
 
+### Retrieve state with form definition
+# @name getStateWithDefinition
+POST {{backendBaseUrl}}/state/with-definition
+Authorization: Bearer {{backendAuthToken}}
+x-application-lock-owner: {{applicationLockOwnerToken}}
+Content-Type: application/json
+
+{
+  "sbi": "{{sbi}}",
+  "grantCode": "{{grantCode}}",
+  "includeDefinition": true
+}
+
+
+### Retrieve state only (skip form definition resolution)
+# Set includeDefinition to false when the caller already holds the form
+# definition locally (e.g. a legacy YAML-sourced form). The backend skips all
+# definition resolution and returns only the stored state with no definition.
+# @name getStateWithoutDefinition
+POST {{backendBaseUrl}}/state/with-definition
+Authorization: Bearer {{backendAuthToken}}
+x-application-lock-owner: {{applicationLockOwnerToken}}
+Content-Type: application/json
+
+{
+  "sbi": "{{sbi}}",
+  "grantCode": "{{grantCode}}",
+  "includeDefinition": false
+}
+
+
 ### --- Submissions ---
 
 ### Add submission

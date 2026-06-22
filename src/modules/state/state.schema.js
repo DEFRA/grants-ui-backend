@@ -57,6 +57,17 @@ export const stateRetrieveSchema = Joi.object({
   document: Joi.boolean().default(false)
 })
 
+export const stateWithDefinitionSchema = Joi.object({
+  sbi: Joi.string().required(),
+  grantCode: Joi.string().required(),
+  // When `false`, the caller already holds the form definition locally (e.g. a
+  // legacy YAML-sourced form) and only needs the state, so the backend skips
+  // resolving/serialising a definition and omits it from the response.
+  includeDefinition: Joi.boolean().default(true)
+})
+  .required()
+  .unknown(false) // Disallow unknown top-level fields
+
 export const patchParamsSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),

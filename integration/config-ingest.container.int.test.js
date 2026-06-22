@@ -120,7 +120,7 @@ afterAll(async () => {
 describe('config ingest: SNS -> SQS -> S3 -> Mongo', () => {
   it('upserts a definition when a config-update message is received', async () => {
     const version = '2.3.4'
-    const key = `${INGEST_GRANT_CODE}/${version}/${INGEST_GRANT_CODE}.yaml`
+    const key = `${INGEST_GRANT_CODE}/${version}/grants-ui/${INGEST_GRANT_CODE}.yaml`
     const definitionYaml = ['name: Integration Test Grant', 'metadata:', '  id: int-test-ingest-id'].join('\n')
 
     await db.collection(CONFIG_COLLECTION).deleteMany({ grantCode: INGEST_GRANT_CODE })

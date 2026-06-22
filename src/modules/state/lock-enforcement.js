@@ -12,6 +12,10 @@ import { log } from '../../common/helpers/logging/log.js'
  *
  * @param {Object} request - Hapi request object
  * @param {Object} request.headers - Request headers
+ * @param {Object} [options] - Extraction options
+ * @param {boolean} [options.requireGrantVersion=true] - When `false`, a missing
+ *   `grantVersion` claim is tolerated and returned as `undefined` (used by
+ *   routes that resolve the version themselves, e.g. POST /state/with-definition).
  * @throws {Boom.unauthorized} If the header is missing or the token is invalid,
  *   or the token type is incorrect
  * @throws {Boom.badRequest} If required lock-scoping claims are missing
@@ -19,9 +23,10 @@ import { log } from '../../common/helpers/logging/log.js'
  *   - ownerId {string} User identifier owning the lock (JWT `sub`)
  *   - sbi {string} Single Business Identifier defining the lock scope
  *   - grantCode {string} Grant application code
- *   - grantVersion {string} Grant scheme version
+ *   - grantVersion {string|undefined} Grant scheme version (may be undefined when
+ *     `requireGrantVersion` is `false`)
  */
-export function extractLockKeys(request) {
+export function extractLockKeys(request, { requireGrantVersion = true } = {}) {
   const path = request.path
   const method = request.method.toUpperCase()
   const rawToken = request.headers['x-application-lock-owner']
@@ -81,7 +86,7 @@ export function extractLockKeys(request) {
     throw Boom.badRequest('Missing grant code in lock token')
   }
 
-  if (!grantVersion) {
+  if (requireGrantVersion && !grantVersion) {
     log(LogCodes.APPLICATION_LOCK.LOCK_TOKEN_INVALID_VERSION, {
       path,
       method,

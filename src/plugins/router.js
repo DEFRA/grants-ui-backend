@@ -1,6 +1,12 @@
 import { health } from '../routes/health.js'
 import { applicationLockRelease, applicationLocksRelease } from '../modules/state/locks.routes.js'
-import { stateSave, stateRetrieve, stateDelete, statePatch } from '../modules/state/state.routes.js'
+import {
+  stateSave,
+  stateRetrieve,
+  stateDelete,
+  statePatch,
+  stateWithDefinition
+} from '../modules/state/state.routes.js'
 import { addSubmission, retrieveSubmissions } from '../modules/state/submissions.routes.js'
 import { allowlistGrants } from '../modules/allowlist/allowlist.routes.js'
 
@@ -13,6 +19,7 @@ const router = {
         stateSave,
         stateRetrieve,
         stateDelete,
+        stateWithDefinition,
         addSubmission,
         retrieveSubmissions,
         statePatch,

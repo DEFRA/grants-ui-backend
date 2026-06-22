@@ -1,4 +1,4 @@
-import { stateSaveSchema, stateRetrieveSchema, addSubmissionSchema } from './state.schema.js'
+import { stateSaveSchema, stateRetrieveSchema, stateWithDefinitionSchema, addSubmissionSchema } from './state.schema.js'
 
 const validSave = {
   sbi: '123456789',
@@ -61,5 +61,51 @@ describe('grantVersion validation', () => {
     })
     expect(error).toBeUndefined()
     expect(value.grantVersion).toBe('1.0.0')
+  })
+})
+
+describe('stateWithDefinitionSchema', () => {
+  test('accepts sbi + grantCode and defaults includeDefinition to true', () => {
+    const { error, value } = stateWithDefinitionSchema.validate({ sbi: '123456789', grantCode: 'farm-payments' })
+    expect(error).toBeUndefined()
+    expect(value).toEqual({ sbi: '123456789', grantCode: 'farm-payments', includeDefinition: true })
+  })
+
+  test('accepts an explicit includeDefinition: false', () => {
+    const { error, value } = stateWithDefinitionSchema.validate({
+      sbi: '123456789',
+      grantCode: 'farm-payments',
+      includeDefinition: false
+    })
+    expect(error).toBeUndefined()
+    expect(value.includeDefinition).toBe(false)
+  })
+
+  test('rejects a non-boolean includeDefinition', () => {
+    const { error } = stateWithDefinitionSchema.validate({
+      sbi: '123456789',
+      grantCode: 'farm-payments',
+      includeDefinition: 'nope'
+    })
+    expect(error).toBeDefined()
+  })
+
+  test('rejects a missing sbi', () => {
+    const { error } = stateWithDefinitionSchema.validate({ grantCode: 'farm-payments' })
+    expect(error).toBeDefined()
+  })
+
+  test('rejects a missing grantCode', () => {
+    const { error } = stateWithDefinitionSchema.validate({ sbi: '123456789' })
+    expect(error).toBeDefined()
+  })
+
+  test('rejects unknown fields (e.g. a stray referenceNumber)', () => {
+    const { error } = stateWithDefinitionSchema.validate({
+      sbi: '123456789',
+      grantCode: 'farm-payments',
+      referenceNumber: 'REF-1'
+    })
+    expect(error).toBeDefined()
   })
 })

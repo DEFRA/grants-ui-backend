@@ -17,15 +17,18 @@ import { log, LogCodes } from '../../../common/helpers/logging/log.js'
  */
 export async function ingestVersion({ grantCode, version, bucket, status, manifest, updatedAt }) {
   if (!grantCode || !version || !bucket) {
-    throw new Error('ingestVersion requires grantCode, version and bucket')
+    log(LogCodes.CONFIG.INGEST_MISSING_PARAMS, { grantCode, version, bucket })
+    return
   }
   if (!Array.isArray(manifest) || manifest.length === 0) {
-    throw new Error(`No manifest provided for ${grantCode}@${version}`)
+    log(LogCodes.CONFIG.INGEST_EMPTY_MANIFEST, { grantCode, version })
+    return
   }
 
-  const grantDefinitionPath = manifest.find((path) => path === `${grantCode}/${version}/${grantCode}.yaml`)
+  const grantDefinitionPath = manifest.find((path) => path === `${grantCode}/${version}/grants-ui/${grantCode}.yaml`)
   if (!grantDefinitionPath) {
-    throw new Error(`Manifest for ${grantCode}@${version} contains no entry matching ${grantCode}.yaml`)
+    log(LogCodes.CONFIG.INGEST_MANIFEST_MISSING_ENTRY, { grantCode, version })
+    return
   }
 
   const definition = await getYamlObject(bucket, grantDefinitionPath)

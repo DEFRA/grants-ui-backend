@@ -1,19 +1,26 @@
-import { stateDelete, statePatch, stateRetrieve, stateSave } from './state.routes.js'
+import { stateDelete, statePatch, stateRetrieve, stateSave, stateWithDefinition } from './state.routes.js'
 import { logIfApproachingPayloadLimit } from '~/src/common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
-import { enforceApplicationLock } from './lock-enforcement.js'
+import { enforceApplicationLock, extractLockKeys } from './lock-enforcement.js'
 import {
   saveApplicationState,
   getApplicationState,
   deleteApplicationState,
-  patchApplicationState
+  patchApplicationState,
+  getStateWithFormDefinition
 } from './state.service.js'
 
 jest.mock('./state.service.js', () => ({
   saveApplicationState: jest.fn(),
   getApplicationState: jest.fn(),
   deleteApplicationState: jest.fn(),
-  patchApplicationState: jest.fn()
+  patchApplicationState: jest.fn(),
+  getStateWithFormDefinition: jest.fn()
+}))
+
+jest.mock('./lock-enforcement.js', () => ({
+  enforceApplicationLock: jest.fn(),
+  extractLockKeys: jest.fn()
 }))
 
 jest.mock('~/src/common/helpers/logging/log-if-approaching-payload-limit.js', () => ({
@@ -72,6 +79,128 @@ describe('State', () => {
 
     test('statePatch route is protected by application lock', () => {
       expect(statePatch.options.pre[0].method).toBe(enforceApplicationLock)
+    })
+
+    test('stateWithDefinition route does NOT use the lock pre-handler (lock is acquired in-handler after the version is resolved)', () => {
+      expect(stateWithDefinition.options.pre).toBeUndefined()
+    })
+  })
+
+  describe('stateWithDefinition', () => {
+    const defaultPayload = { sbi: 'business123', grantCode: 'grant123', includeDefinition: true }
+    const lockKeys = { ownerId: 'user-1', sbi: 'business123', grantCode: 'grant123', grantVersion: '1.0.0' }
+
+    test('should return 200 with { definition, state } when a definition is found', async () => {
+      mockRequest.payload = defaultPayload
+      extractLockKeys.mockReturnValue(lockKeys)
+      const result = { definition: { grantCode: 'grant123', major: 1, minor: 2, patch: 0 }, state: { _id: 's1' } }
+      getStateWithFormDefinition.mockResolvedValue(result)
+
+      await stateWithDefinition.handler(mockRequest, mockH)
+
+      // grantVersion is resolved by the orchestrator, so the handler tolerates a
+      // missing version claim on the token.
+      expect(extractLockKeys).toHaveBeenCalledWith(mockRequest, { requireGrantVersion: false })
+      expect(getStateWithFormDefinition).toHaveBeenCalledWith({
+        sbi: 'business123',
+        grantCode: 'grant123',
+        ownerId: 'user-1',
+        includeDefinition: true
+      })
+      expect(mockH.response).toHaveBeenCalledWith(result)
+      expect(mockH.code).toHaveBeenCalledWith(200)
+    })
+
+    test('should forward includeDefinition: false for state-only reads', async () => {
+      mockRequest.payload = { sbi: 'business123', grantCode: 'grant123', includeDefinition: false }
+      extractLockKeys.mockReturnValue(lockKeys)
+      const result = { state: { _id: 's1', grantVersion: '1.3.0' }, upgraded: false }
+      getStateWithFormDefinition.mockResolvedValue(result)
+
+      await stateWithDefinition.handler(mockRequest, mockH)
+
+      expect(getStateWithFormDefinition).toHaveBeenCalledWith({
+        sbi: 'business123',
+        grantCode: 'grant123',
+        ownerId: 'user-1',
+        includeDefinition: false
+      })
+      expect(mockH.response).toHaveBeenCalledWith(result)
+      expect(mockH.code).toHaveBeenCalledWith(200)
+    })
+
+    test('should return 200 with state: null when no state exists yet', async () => {
+      mockRequest.payload = defaultPayload
+      extractLockKeys.mockReturnValue(lockKeys)
+      const result = { definition: { grantCode: 'grant123', major: 1, minor: 0, patch: 0 }, state: null }
+      getStateWithFormDefinition.mockResolvedValue(result)
+
+      await stateWithDefinition.handler(mockRequest, mockH)
+
+      expect(mockH.response).toHaveBeenCalledWith(result)
+      expect(mockH.code).toHaveBeenCalledWith(200)
+    })
+
+    test('should return 404 when no form definition is found', async () => {
+      mockRequest.payload = defaultPayload
+      extractLockKeys.mockReturnValue(lockKeys)
+      getStateWithFormDefinition.mockResolvedValue(null)
+
+      await stateWithDefinition.handler(mockRequest, mockH)
+
+      expect(mockH.response).toHaveBeenCalledWith({ error: 'Form definition not found' })
+      expect(mockH.code).toHaveBeenCalledWith(404)
+    })
+
+    test('should handle errors and return 500', async () => {
+      mockRequest.payload = defaultPayload
+      extractLockKeys.mockReturnValue(lockKeys)
+      getStateWithFormDefinition.mockRejectedValue(new Error('boom'))
+
+      await stateWithDefinition.handler(mockRequest, mockH)
+
+      expect(mockH.response).toHaveBeenCalledWith({ error: 'Failed to retrieve state with form definition' })
+      expect(mockH.code).toHaveBeenCalledWith(500)
+    })
+
+    test('should re-throw Boom errors (e.g. 423 Locked) so Hapi maps them', async () => {
+      mockRequest.payload = defaultPayload
+      extractLockKeys.mockReturnValue(lockKeys)
+      const lockedError = Object.assign(new Error('locked'), {
+        isBoom: true,
+        output: { statusCode: 423 }
+      })
+      getStateWithFormDefinition.mockRejectedValue(lockedError)
+
+      await expect(stateWithDefinition.handler(mockRequest, mockH)).rejects.toBe(lockedError)
+      expect(mockH.code).not.toHaveBeenCalledWith(500)
+    })
+
+    test('should validate payload and throw error for invalid data', () => {
+      const invalidPayload = { grantCode: 'grant123' }
+      const mockValidationRequest = { server: mockServer, payload: invalidPayload }
+
+      const mockError = new Error('Validation error')
+      mockError.name = 'ValidationError'
+      mockError.code = 400
+      mockError.reason = 'Some reason'
+
+      expect(() => stateWithDefinition.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
+        'Validation error'
+      )
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.STATE.STATE_WITH_DEFINITION_FAILED,
+        expect.objectContaining({
+          sbi: invalidPayload.sbi,
+          grantCode: invalidPayload.grantCode,
+          errorName: mockError.name,
+          errorMessage: `POST /state/with-definition, validation failed: ${mockError.message}`,
+          errorReason: mockError.reason,
+          errorCode: mockError.code,
+          isMongoError: false,
+          stack: expect.stringContaining('ValidationError: Validation error')
+        })
+      )
     })
   })
 
