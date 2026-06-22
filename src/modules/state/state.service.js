@@ -134,6 +134,29 @@ async function acquireLockOrThrow({ grantCode, grantVersion, sbi, ownerId }) {
 }
 
 /**
+ * Resolves the cold-start (no existing state) result for `getStateWithFormDefinition`.
+ *
+ * Resolves the latest active definition for the grant, acquires the lock against
+ * its version, and returns it with `state: null`; the frontend creates the state.
+ * No state write occurs.
+ *
+ * @param {{ grantCode: string, sbi: number|string, ownerId: number|string }} params
+ * @returns {Promise<{ definition: FormDefinition, state: null, upgraded: false } | null>}
+ *   `null` when no suitable form definition is found
+ * @throws {Boom} 423 Locked when another owner holds the lock for the resolved version
+ */
+async function resolveDefinitionForNewState({ grantCode, sbi, ownerId }) {
+  const definition = await resolveLatestVersion(grantCode)
+  if (!definition) {
+    return null
+  }
+  const { major, minor, patch } = definition
+  const grantVersion = `${major}.${minor}.${patch}`
+  await acquireLockOrThrow({ grantCode, grantVersion, sbi, ownerId })
+  return { definition, state: null, upgraded: false }
+}
+
+/**
  * Returns an application's form definition and its current state together.
  *
  * Orchestrates the state and config domains (config is reached only through its
@@ -186,14 +209,7 @@ export async function getStateWithFormDefinition({ sbi, grantCode, ownerId, incl
 
   // No state yet: return the latest definition; the frontend creates the state.
   if (!existing) {
-    const definition = await resolveLatestVersion(grantCode)
-    if (!definition) {
-      return null
-    }
-    const { major, minor, patch } = definition
-    const grantVersion = `${major}.${minor}.${patch}`
-    await acquireLockOrThrow({ grantCode, grantVersion, sbi, ownerId })
-    return { definition, state: null, upgraded: false }
+    return resolveDefinitionForNewState({ grantCode, sbi, ownerId })
   }
 
   // Existing state: resolve the latest definition within its pinned major.
