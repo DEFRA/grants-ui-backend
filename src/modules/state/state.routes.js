@@ -110,7 +110,7 @@ export const stateRetrieve = {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
       }
 
-      return h.response(document.state).code(StatusCodes.OK)
+      return h.response(document).code(StatusCodes.OK)
     } catch (_err) {
       return h.response({ error: 'Failed to retrieve application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }

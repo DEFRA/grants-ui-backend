@@ -59,6 +59,39 @@ components:
       description: Arbitrary state object stored by the service
       type: object
       additionalProperties: true
+    StateDocument:
+      description: >-
+        The full stored state document, including its identifiers, version
+        fields and audit timestamps, with the arbitrary state under `state`.
+      type: object
+      additionalProperties: true
+      properties:
+        _id:
+          type: string
+          description: MongoDB document identifier
+        sbi:
+          type: string
+        grantCode:
+          type: string
+        grantVersion:
+          type: string
+        pinnedMajor:
+          type: integer
+        major:
+          type: integer
+        minor:
+          type: integer
+        patch:
+          type: integer
+        state:
+          $ref: '#/components/schemas/StateObject'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [sbi, grantCode, grantVersion, state]
     StateSaveRequest:
       type: object
       additionalProperties: false
@@ -340,11 +373,11 @@ paths:
           required: true
       responses:
         '200':
-          description: The stored state object
+          description: The stored state document
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StateObject'
+                $ref: '#/components/schemas/StateDocument'
         '400':
           description: Validation error
           content:

@@ -396,7 +396,7 @@ describe('State', () => {
       await stateRetrieve.handler(mockRequest, mockH)
 
       expect(getApplicationState).toHaveBeenCalledWith(defaultQuery)
-      expect(mockH.response).toHaveBeenCalledWith(mockDocument.state)
+      expect(mockH.response).toHaveBeenCalledWith(mockDocument)
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 

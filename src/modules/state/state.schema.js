@@ -53,7 +53,8 @@ export const stateSaveSchema = Joi.object({
 export const stateRetrieveSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
-  grantVersion: grantVersion().default('1.0.0')
+  grantVersion: grantVersion().default('1.0.0'),
+  document: Joi.boolean().optional() // TODO - remove when grants-ui changes for combined endpoint are merged
 })
 
 export const stateWithDefinitionSchema = Joi.object({

@@ -298,7 +298,12 @@ describe('GET /state', () => {
     })
 
     expect(response.res.statusCode).toBe(200)
-    expect(response.payload).toEqual({ step: 'start' })
+    expect(response.payload).toMatchObject({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '1.0.0',
+      state: { step: 'start' }
+    })
   })
 
   it('retrieves state for an explicit multi-part semver grantVersion', async () => {
@@ -334,7 +339,12 @@ describe('GET /state', () => {
     })
 
     expect(response.res.statusCode).toBe(200)
-    expect(response.payload).toEqual({ step: 'semver' })
+    expect(response.payload).toMatchObject({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '2.3.4',
+      state: { step: 'semver' }
+    })
   })
 
   it('retrieves state when the legacy integer grantVersion query param is supplied', async () => {
@@ -371,7 +381,12 @@ describe('GET /state', () => {
     })
 
     expect(response.res.statusCode).toBe(200)
-    expect(response.payload).toEqual({ step: 'legacy' })
+    expect(response.payload).toMatchObject({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '1.0.0',
+      state: { step: 'legacy' }
+    })
   })
 })
 
