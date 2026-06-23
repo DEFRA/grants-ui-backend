@@ -298,44 +298,6 @@ describe('GET /state', () => {
     })
 
     expect(response.res.statusCode).toBe(200)
-    expect(response.payload).toEqual({ step: 'start' })
-  })
-
-  it('retrieves full document when document=true', async () => {
-    const payload = {
-      sbi: 'biz-1',
-      grantCode: 'grant-1',
-      grantVersion: '1.0.0',
-      state: { step: 'start' }
-    }
-    await db.collection('state__grant_application_state').insertMany([
-      {
-        ...payload,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ])
-
-    const qs = new URLSearchParams({
-      sbi: 'biz-1',
-      grantCode: 'grant-1',
-      document: 'true'
-    }).toString()
-
-    const response = await Wreck.get(`${apiUrl}/state?${qs}`, {
-      json: true,
-      headers: {
-        authorization: createAuthHeader(),
-        'x-application-lock-owner': createLockToken({
-          sub: TEST_CONTACT_ID,
-          sbi: payload.sbi,
-          grantCode: payload.grantCode,
-          grantVersion: payload.grantVersion
-        })
-      }
-    })
-
-    expect(response.res.statusCode).toBe(200)
     expect(response.payload).toMatchObject({
       sbi: 'biz-1',
       grantCode: 'grant-1',
@@ -377,7 +339,12 @@ describe('GET /state', () => {
     })
 
     expect(response.res.statusCode).toBe(200)
-    expect(response.payload).toEqual({ step: 'semver' })
+    expect(response.payload).toMatchObject({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '2.3.4',
+      state: { step: 'semver' }
+    })
   })
 
   it('retrieves state when the legacy integer grantVersion query param is supplied', async () => {
@@ -414,7 +381,12 @@ describe('GET /state', () => {
     })
 
     expect(response.res.statusCode).toBe(200)
-    expect(response.payload).toEqual({ step: 'legacy' })
+    expect(response.payload).toMatchObject({
+      sbi: 'biz-1',
+      grantCode: 'grant-1',
+      grantVersion: '1.0.0',
+      state: { step: 'legacy' }
+    })
   })
 })
 
@@ -498,6 +470,311 @@ describe('PATCH /state/{sbi}/{grantCode}', () => {
     })
 
     expect(doc.state.applicationStatus).toBe('SUBMITTED')
+  })
+})
+
+describe('POST /state/with-definition', () => {
+  const seedDefinition = ({ grantCode, major, minor, patch, status = 'active' }) =>
+    db.collection('config__form_definitions').insertOne({
+      grantCode,
+      id: `${grantCode}-${major}.${minor}.${patch}`,
+      title: `${grantCode} form`,
+      major,
+      minor,
+      patch,
+      status,
+      definition: { pages: [] },
+      updatedAt: new Date()
+    })
+
+  const seedState = ({ sbi, grantCode, major, minor, patch }) =>
+    db.collection('state__grant_application_state').insertOne({
+      sbi,
+      grantCode,
+      grantVersion: `${major}.${minor}.${patch}`,
+      pinnedMajor: major,
+      major,
+      minor,
+      patch,
+      state: { step: 'start' },
+      createdAt: new Date(),
+      updatedAt: new Date('2020-01-01T00:00:00.000Z')
+    })
+
+  beforeEach(async () => {
+    await db.collection('config__form_definitions').deleteMany({})
+  })
+
+  it('returns the latest definition with state: null when no state exists', async () => {
+    const sbi = 'biz-wd-1'
+    const grantCode = 'wd-grant-1'
+    await seedDefinition({ grantCode, major: 2, minor: 1, patch: 0 })
+
+    const response = await Wreck.post(`${apiUrl}/state/with-definition`, {
+      json: true,
+      payload: { sbi, grantCode },
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi,
+          grantCode,
+          grantVersion: '2.1.0'
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload.state).toBeNull()
+    expect(response.payload.definition).toMatchObject({ grantCode, major: 2, minor: 1, patch: 0 })
+
+    const stateDoc = await db.collection('state__grant_application_state').findOne({ sbi, grantCode })
+    expect(stateDoc).toBeNull()
+  })
+
+  it('returns the stored state unchanged when the resolved version matches (read-only)', async () => {
+    const sbi = 'biz-wd-2'
+    const grantCode = 'wd-grant-2'
+    await seedDefinition({ grantCode, major: 1, minor: 3, patch: 0 })
+    await seedState({ sbi, grantCode, major: 1, minor: 3, patch: 0 })
+
+    const response = await Wreck.post(`${apiUrl}/state/with-definition`, {
+      json: true,
+      payload: { sbi, grantCode },
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi,
+          grantCode,
+          grantVersion: '1.3.0'
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload.state.grantVersion).toBe('1.3.0')
+    expect(response.payload.definition).toMatchObject({ grantCode, major: 1, minor: 3, patch: 0 })
+
+    // No write: grantVersion and the seeded updatedAt are untouched.
+    const stateDoc = await db.collection('state__grant_application_state').findOne({ sbi, grantCode })
+    expect(stateDoc.grantVersion).toBe('1.3.0')
+    expect(new Date(stateDoc.updatedAt).toISOString()).toBe('2020-01-01T00:00:00.000Z')
+  })
+
+  it('upgrades the state and acquires the lock on the upgraded version when a newer version exists within the major', async () => {
+    const sbi = 'biz-wd-3'
+    const grantCode = 'wd-grant-3'
+    await seedDefinition({ grantCode, major: 1, minor: 0, patch: 0 })
+    await seedDefinition({ grantCode, major: 1, minor: 4, patch: 2 })
+    await seedState({ sbi, grantCode, major: 1, minor: 0, patch: 0 })
+    // Pre-existing lock on the old version that must be released after upgrade.
+    await db.collection('state__grant_application_locks').insertOne({
+      grantCode,
+      grantVersion: '1.0.0',
+      sbi,
+      ownerId: TEST_CONTACT_ID,
+      lockedAt: new Date(),
+      expiresAt: new Date(Date.now() + 60000)
+    })
+
+    const response = await Wreck.post(`${apiUrl}/state/with-definition`, {
+      json: true,
+      payload: { sbi, grantCode },
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi,
+          grantCode,
+          grantVersion: '1.0.0'
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload.state.grantVersion).toBe('1.4.2')
+    expect(response.payload.definition).toMatchObject({ grantCode, major: 1, minor: 4, patch: 2 })
+
+    // State version fields are upgraded.
+    const stateDoc = await db.collection('state__grant_application_state').findOne({ sbi, grantCode })
+    expect(stateDoc.grantVersion).toBe('1.4.2')
+    expect(stateDoc.major).toBe(1)
+    expect(stateDoc.minor).toBe(4)
+    expect(stateDoc.patch).toBe(2)
+
+    // The lock is acquired against the resolved (upgraded) version, not the
+    // token's version, so it guards 1.4.2; the pre-existing 1.0.0 lock is
+    // released best-effort after the upgrade, so none remains at 1.0.0.
+    const heldLock = await db
+      .collection('state__grant_application_locks')
+      .findOne({ grantCode, sbi, ownerId: TEST_CONTACT_ID })
+    expect(heldLock.grantVersion).toBe('1.4.2')
+    const oldLock = await db
+      .collection('state__grant_application_locks')
+      .findOne({ grantCode, sbi, ownerId: TEST_CONTACT_ID, grantVersion: '1.0.0' })
+    expect(oldLock).toBeNull()
+  })
+
+  it('succeeds on a cold start when the lock token carries no grantVersion (option A)', async () => {
+    const sbi = 'biz-wd-cold'
+    const grantCode = 'wd-grant-cold'
+    await seedDefinition({ grantCode, major: 3, minor: 2, patch: 1 })
+
+    // No grantVersion claim in the token: the endpoint resolves the version and
+    // acquires the lock against it.
+    const response = await Wreck.post(`${apiUrl}/state/with-definition`, {
+      json: true,
+      payload: { sbi, grantCode },
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi,
+          grantCode
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload.state).toBeNull()
+    expect(response.payload.definition).toMatchObject({ grantCode, major: 3, minor: 2, patch: 1 })
+
+    // The lock was acquired against the resolved version.
+    const heldLock = await db
+      .collection('state__grant_application_locks')
+      .findOne({ grantCode, sbi, ownerId: TEST_CONTACT_ID })
+    expect(heldLock.grantVersion).toBe('3.2.1')
+  })
+
+  it('returns 404 when no form definition is found', async () => {
+    const sbi = 'biz-wd-4'
+    const grantCode = 'wd-grant-4-no-def'
+
+    const res = await Wreck.request('POST', `${apiUrl}/state/with-definition`, {
+      json: true,
+      payload: { sbi, grantCode },
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi,
+          grantCode,
+          grantVersion: '1.0.0'
+        })
+      },
+      throwOnError: false
+    })
+
+    expect(res.statusCode).toBe(404)
+  })
+
+  it('returns 423 when the lock is held by another owner', async () => {
+    const sbi = 'biz-wd-5'
+    const grantCode = 'wd-grant-5'
+    await seedDefinition({ grantCode, major: 1, minor: 0, patch: 0 })
+    await db.collection('state__grant_application_locks').insertOne({
+      grantCode,
+      grantVersion: '1.0.0',
+      sbi,
+      ownerId: 'someone-else',
+      lockedAt: new Date(),
+      expiresAt: new Date(Date.now() + 60000)
+    })
+
+    const res = await Wreck.request('POST', `${apiUrl}/state/with-definition`, {
+      json: true,
+      payload: { sbi, grantCode },
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi,
+          grantCode,
+          grantVersion: '1.0.0'
+        })
+      },
+      throwOnError: false
+    })
+
+    expect(res.statusCode).toBe(423)
+  })
+
+  it('returns 401 when the application lock token is missing', async () => {
+    const res = await Wreck.request('POST', `${apiUrl}/state/with-definition`, {
+      json: true,
+      payload: { sbi: 'biz-wd-6', grantCode: 'wd-grant-6' },
+      headers: {
+        authorization: createAuthHeader()
+      },
+      throwOnError: false
+    })
+
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('returns the stored state with no definition payload when includeDefinition is false', async () => {
+    const sbi = 'biz-wd-state-only'
+    const grantCode = 'wd-grant-state-only'
+    // No definition is seeded: state-only mode must not resolve one.
+    await seedState({ sbi, grantCode, major: 1, minor: 3, patch: 0 })
+
+    const response = await Wreck.post(`${apiUrl}/state/with-definition`, {
+      json: true,
+      payload: { sbi, grantCode, includeDefinition: false },
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi,
+          grantCode,
+          grantVersion: '1.3.0'
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload.state.grantVersion).toBe('1.3.0')
+    expect(response.payload.upgraded).toBe(false)
+    expect(response.payload.definition).toBeUndefined()
+
+    // No version write occurred.
+    const stateDoc = await db.collection('state__grant_application_state').findOne({ sbi, grantCode })
+    expect(stateDoc.grantVersion).toBe('1.3.0')
+    expect(new Date(stateDoc.updatedAt).toISOString()).toBe('2020-01-01T00:00:00.000Z')
+
+    // The lock was acquired against the state's own version.
+    const heldLock = await db
+      .collection('state__grant_application_locks')
+      .findOne({ grantCode, sbi, ownerId: TEST_CONTACT_ID })
+    expect(heldLock.grantVersion).toBe('1.3.0')
+  })
+
+  it('returns 200 with state: null (not 404) when includeDefinition is false and no state or definition exists', async () => {
+    const sbi = 'biz-wd-state-only-empty'
+    const grantCode = 'wd-grant-state-only-empty'
+
+    const response = await Wreck.post(`${apiUrl}/state/with-definition`, {
+      json: true,
+      payload: { sbi, grantCode, includeDefinition: false },
+      headers: {
+        authorization: createAuthHeader(),
+        'x-application-lock-owner': createLockToken({
+          sub: TEST_CONTACT_ID,
+          sbi,
+          grantCode
+        })
+      }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload.state).toBeNull()
+    expect(response.payload.upgraded).toBe(false)
+    expect(response.payload.definition).toBeUndefined()
+
+    // No lock is acquired when there is no state to guard.
+    const heldLock = await db.collection('state__grant_application_locks').findOne({ grantCode, sbi })
+    expect(heldLock).toBeNull()
   })
 })
 

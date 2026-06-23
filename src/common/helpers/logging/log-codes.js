@@ -6,6 +6,11 @@ export const LogCodes = {
       level: 'info',
       messageFunc: (messageOptions) => `Received payload | size=${messageOptions.payloadSize}`
     },
+    STATE_VERSION_UPGRADED: {
+      level: 'info',
+      messageFunc: ({ sbi, grantCode, fromVersion, toVersion }) =>
+        `Upgraded application state grant version | sbi=${sbi} | grantCode=${grantCode} | fromVersion=${fromVersion} | toVersion=${toVersion}`
+    },
     STATE_PAYLOAD_SIZE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>
@@ -30,6 +35,11 @@ export const LogCodes = {
       level: 'error',
       messageFunc: (messageOptions) =>
         `Failed to patch application state | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+    },
+    STATE_WITH_DEFINITION_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Failed to retrieve state with form definition | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     }
   },
   AUTH: {
@@ -170,6 +180,21 @@ export const LogCodes = {
     }
   },
   CONFIG: {
+    INGEST_MISSING_PARAMS: {
+      level: 'error',
+      messageFunc: ({ grantCode, version, bucket }) =>
+        `ingestVersion called with missing required params | grantCode=${grantCode} | version=${version} | bucket=${bucket}`
+    },
+    INGEST_EMPTY_MANIFEST: {
+      level: 'warn',
+      messageFunc: ({ grantCode, version }) =>
+        `No manifest provided for grant version | grantCode=${grantCode} | version=${version}`
+    },
+    INGEST_MANIFEST_MISSING_ENTRY: {
+      level: 'warn',
+      messageFunc: ({ grantCode, version }) =>
+        `Manifest contains no entry matching grant definition YAML | grantCode=${grantCode} | version=${version}`
+    },
     INGEST_UPSERTED: {
       level: 'info',
       messageFunc: ({ grantCode, version, status, grantDefinitionPath }) =>

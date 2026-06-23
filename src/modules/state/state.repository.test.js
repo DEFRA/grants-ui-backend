@@ -5,7 +5,9 @@ import {
   deleteApplicationState,
   patchApplicationState,
   insertSubmission,
-  findSubmissions
+  findSubmissions,
+  getLatestApplicationStateForGrant,
+  updateApplicationStateVersion
 } from './state.repository.js'
 
 // Note: index creation is owned by migrate-mongo migrations and is verified in
@@ -91,5 +93,80 @@ describe('state.repository CRUD error paths', () => {
       })
     })
     await expect(findSubmissions({ sbi: '123' })).rejects.toThrow('DB failed')
+  })
+
+  test('getLatestApplicationStateForGrant re-throws and logs on error', async () => {
+    initStateRepository({
+      collection: () => ({
+        find: () => ({
+          sort: () => ({
+            limit: () => ({
+              next: () => {
+                throw dbError
+              }
+            })
+          })
+        })
+      })
+    })
+    await expect(getLatestApplicationStateForGrant({ sbi: '123', grantCode: 'EGWA' })).rejects.toThrow('DB failed')
+  })
+
+  test('updateApplicationStateVersion re-throws and logs on error', async () => {
+    initStateRepository({
+      collection: () => ({
+        findOneAndUpdate: () => {
+          throw dbError
+        }
+      })
+    })
+    await expect(
+      updateApplicationStateVersion({ _id: 'abc', grantVersion: '1.2.0', major: 1, minor: 2, patch: 0 })
+    ).rejects.toThrow('DB failed')
+  })
+})
+
+describe('state.repository cross-version helpers', () => {
+  afterEach(() => {
+    initStateRepository(null)
+  })
+
+  test('getLatestApplicationStateForGrant returns the highest-semver doc', async () => {
+    const topDoc = { _id: 'top', sbi: '123', grantCode: 'EGWA', grantVersion: '2.3.1' }
+    const sort = jest.fn().mockReturnValue({
+      limit: () => ({ next: () => Promise.resolve(topDoc) })
+    })
+    const find = jest.fn().mockReturnValue({ sort })
+    initStateRepository({ collection: () => ({ find }) })
+
+    const result = await getLatestApplicationStateForGrant({ sbi: '123', grantCode: 'EGWA' })
+
+    expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA' })
+    expect(sort).toHaveBeenCalledWith({ major: -1, minor: -1, patch: -1 })
+    expect(result).toBe(topDoc)
+  })
+
+  test('updateApplicationStateVersion sets version fields + updatedAt and returns the updated doc', async () => {
+    const updated = { _id: 'abc', grantVersion: '1.2.0', major: 1, minor: 2, patch: 0 }
+    const findOneAndUpdate = jest.fn().mockResolvedValue(updated)
+    initStateRepository({ collection: () => ({ findOneAndUpdate }) })
+
+    const result = await updateApplicationStateVersion({
+      _id: 'abc',
+      grantVersion: '1.2.0',
+      major: 1,
+      minor: 2,
+      patch: 0
+    })
+
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      { _id: 'abc' },
+      {
+        $set: { grantVersion: '1.2.0', major: 1, minor: 2, patch: 0 },
+        $currentDate: { updatedAt: true }
+      },
+      { returnDocument: 'after' }
+    )
+    expect(result).toBe(updated)
   })
 })

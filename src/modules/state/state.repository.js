@@ -358,6 +358,72 @@ export async function patchApplicationState({ sbi, grantCode, grantVersion, appl
 }
 
 /**
+ * Retrieves the highest-semver application state for an (sbi, grantCode) pair.
+ *
+ * Used when the caller does not know the exact grantVersion.
+ *
+ * @param {{ sbi: string, grantCode: string }} params
+ * @returns {Promise<ApplicationState|null>}
+ */
+export async function getLatestApplicationStateForGrant({ sbi, grantCode }) {
+  try {
+    return await stateDb
+      .collection(STATE_COLLECTION)
+      .find({ sbi, grantCode })
+      .sort({ major: -1, minor: -1, patch: -1 })
+      .limit(1)
+      .next()
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
+      sbi,
+      grantCode,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Updates the version fields of an existing application state document.
+ *
+ * `pinnedMajor` is intentionally left untouched so the major stays pinned.
+ *
+ * @param {{ _id: import('mongodb').ObjectId, grantVersion: string, major: number, minor: number, patch: number }} params
+ * @returns {Promise<ApplicationState|null>} Updated document, or null if not found
+ */
+export async function updateApplicationStateVersion({ _id, grantVersion, major, minor, patch }) {
+  try {
+    return await stateDb.collection(STATE_COLLECTION).findOneAndUpdate(
+      { _id },
+      {
+        $set: { grantVersion, major, minor, patch },
+        $currentDate: { updatedAt: true }
+      },
+      { returnDocument: 'after' }
+    )
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.STATE.STATE_SAVE_FAILED, {
+      grantCode: undefined,
+      grantVersion,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
  * Inserts a submission record.
  *
  * @param {Omit<Submission, '_id'>} submission

@@ -54,8 +54,19 @@ export const stateRetrieveSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
   grantVersion: grantVersion().default('1.0.0'),
-  document: Joi.boolean().default(false)
+  document: Joi.boolean().optional() // TODO - remove when grants-ui changes for combined endpoint are merged
 })
+
+export const stateWithDefinitionSchema = Joi.object({
+  sbi: Joi.string().required(),
+  grantCode: Joi.string().required(),
+  // When `false`, the caller already holds the form definition locally (e.g. a
+  // legacy YAML-sourced form) and only needs the state, so the backend skips
+  // resolving/serialising a definition and omits it from the response.
+  includeDefinition: Joi.boolean().default(true)
+})
+  .required()
+  .unknown(false) // Disallow unknown top-level fields
 
 export const patchParamsSchema = Joi.object({
   sbi: Joi.string().required(),

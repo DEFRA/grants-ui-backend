@@ -59,6 +59,39 @@ components:
       description: Arbitrary state object stored by the service
       type: object
       additionalProperties: true
+    StateDocument:
+      description: >-
+        The full stored state document, including its identifiers, version
+        fields and audit timestamps, with the arbitrary state under `state`.
+      type: object
+      additionalProperties: true
+      properties:
+        _id:
+          type: string
+          description: MongoDB document identifier
+        sbi:
+          type: string
+        grantCode:
+          type: string
+        grantVersion:
+          type: string
+        pinnedMajor:
+          type: integer
+        major:
+          type: integer
+        minor:
+          type: integer
+        patch:
+          type: integer
+        state:
+          $ref: '#/components/schemas/StateObject'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [sbi, grantCode, grantVersion, state]
     StateSaveRequest:
       type: object
       additionalProperties: false
@@ -108,6 +141,83 @@ components:
           type: boolean
           example: true
       required: [success, deleted]
+    FormDefinition:
+      description: A grant form definition document
+      type: object
+      additionalProperties: true
+      properties:
+        grantCode:
+          type: string
+        id:
+          type: string
+        title:
+          type: string
+        major:
+          type: integer
+        minor:
+          type: integer
+        patch:
+          type: integer
+        status:
+          type: string
+        definition:
+          type: object
+          additionalProperties: true
+    StateWithDefinitionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        sbi:
+          type: string
+        grantCode:
+          type: string
+        includeDefinition:
+          type: boolean
+          default: true
+          description: >-
+            When `true` (the default) the resolved form definition is returned
+            alongside the state. When `false` the caller already holds the form
+            definition locally (e.g. a legacy YAML-sourced form), so the backend
+            skips all definition resolution and version-upgrade work and returns
+            only the stored state (and its version) with no `definition` payload.
+      required: [sbi, grantCode]
+    StateWithDefinitionResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        definition:
+          description: >-
+            The resolved form definition. Present only when the request set
+            `includeDefinition: true` (the default); omitted entirely for
+            state-only reads (`includeDefinition: false`).
+          $ref: '#/components/schemas/FormDefinition'
+        state:
+          description: The application state, or null when no state exists yet
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: 'null'
+        upgraded:
+          type: boolean
+          description: >-
+            True when this call persisted a grant version upgrade on the stored
+            state as a side effect; false when the call was read-only or no state
+            existed yet. The application lock is always acquired against the
+            resolved version; on an upgrade the previous version's lock is released
+            best-effort (failures ignored, otherwise reaped by its TTL).
+        fromVersion:
+          type: string
+          description: >-
+            The previous `grantVersion` before the upgrade. Present only when
+            `upgraded` is true.
+          example: '1.0.0'
+        toVersion:
+          type: string
+          description: >-
+            The new `grantVersion` the state was upgraded to. Present only when
+            `upgraded` is true.
+          example: '1.4.2'
+      required: [state, upgraded]
     Submission:
       type: object
       additionalProperties: false
@@ -263,11 +373,11 @@ paths:
           required: true
       responses:
         '200':
-          description: The stored state object
+          description: The stored state document
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StateObject'
+                $ref: '#/components/schemas/StateDocument'
         '400':
           description: Validation error
           content:
@@ -328,6 +438,137 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Failed to delete state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /state/with-definition:
+    post:
+      tags: [State]
+      summary: Retrieve an application's form definition and state together
+      description: |
+        Returns the resolved form definition and the matching application state in a single call.
+        When no state exists, the latest active definition is returned with `state: null` (the
+        frontend creates the state). When state exists, the latest active definition within the
+        state's pinned major is resolved; if it is newer than the stored version, the state's
+        version fields are upgraded.
+
+        Unlike the other `/state` routes, this endpoint does NOT enforce the lock via a
+        pre-handler. Because it is partly responsible for resolving the `grantVersion`, a cold
+        first call cannot yet carry a version-bearing token. The lock token is still required
+        (it identifies the owner), but its `grantVersion` claim is optional: the endpoint
+        resolves the authoritative version and then acquires/refreshes the application lock
+        against that resolved version, returning `423` if another owner holds it. When a
+        version upgrade is persisted, the now-orphaned lock on the previous version is released
+        on a best-effort basis (any failure is ignored and that lock simply expires via its TTL).
+
+        The response always includes an `upgraded` boolean indicating whether a version upgrade
+        was persisted on this call. When `upgraded` is `true`, `fromVersion` and `toVersion`
+        report the previous and new `grantVersion` respectively.
+
+        Set `includeDefinition: false` in the request body for a state-only read: the caller
+        already holds the form definition locally (e.g. a legacy YAML-sourced form), so the
+        backend skips all definition resolution and version-upgrade work and returns only the
+        stored state (and its version) with no `definition` payload. In that mode the lock is
+        acquired against the state's existing version, and a `404` is never returned (a missing
+        state simply yields `state: null`).
+      parameters:
+        - in: header
+          name: x-application-lock-owner
+          description: >-
+            Application lock JWT identifying the owner. Carries the owner, sbi and grantCode
+            claims; the grantVersion claim is optional here because the endpoint resolves the
+            version itself and acquires the lock against the resolved version.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StateWithDefinitionRequest'
+            examples:
+              withDefinition:
+                summary: Definition + state (default)
+                value:
+                  sbi: '1234567890'
+                  grantCode: 'example-grant-with-auth'
+              stateOnly:
+                summary: State only (caller has the definition locally)
+                value:
+                  sbi: '1234567890'
+                  grantCode: 'example-grant-with-auth'
+                  includeDefinition: false
+      responses:
+        '200':
+          description: >-
+            The resolved form definition and the application state (state may be null). The
+            `upgraded` flag reports whether a grant version upgrade was persisted as a side
+            effect of this call.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateWithDefinitionResponse'
+              examples:
+                readOnly:
+                  summary: No upgrade (read-only)
+                  value:
+                    definition:
+                      grantCode: 'example-grant-with-auth'
+                      major: 1
+                      minor: 3
+                      patch: 0
+                    state:
+                      grantVersion: '1.3.0'
+                    upgraded: false
+                upgraded:
+                  summary: Version upgraded as a side effect
+                  value:
+                    definition:
+                      grantCode: 'example-grant-with-auth'
+                      major: 1
+                      minor: 4
+                      patch: 2
+                    state:
+                      grantVersion: '1.4.2'
+                    upgraded: true
+                    fromVersion: '1.0.0'
+                    toVersion: '1.4.2'
+                stateOnly:
+                  summary: State only (includeDefinition false), no definition payload
+                  value:
+                    state:
+                      grantVersion: '1.3.0'
+                    upgraded: false
+        '400':
+          description: Validation error or missing lock token claims
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid application lock token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: >-
+            No form definition found. Only returned when `includeDefinition` is
+            `true`; state-only reads never return `404`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '423':
+          description: The application lock is held by another owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to retrieve state with form definition
           content:
             application/json:
               schema:

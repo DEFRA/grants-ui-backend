@@ -8,9 +8,22 @@ import {
   deleteApplicationState,
   patchApplicationState,
   insertSubmission,
-  findSubmissions
+  findSubmissions,
+  getStateWithFormDefinition
 } from './state.service'
 import { initStateRepository } from './state.repository'
+import { resolveLatestVersion, resolveLatestVersionWithinMajor } from '../config/config.service.js'
+import { log, LogCodes } from '../../common/helpers/logging/log.js'
+
+jest.mock('../config/config.service.js', () => ({
+  resolveLatestVersion: jest.fn(),
+  resolveLatestVersionWithinMajor: jest.fn()
+}))
+
+jest.mock('../../common/helpers/logging/log.js', () => {
+  const actual = jest.requireActual('../../common/helpers/logging/log.js')
+  return { ...actual, log: jest.fn() }
+})
 
 describe('application locks', () => {
   let server
@@ -301,5 +314,252 @@ describe('state CRUD service pass-throughs', () => {
     initStateRepository(fakeDb)
     const result = await findSubmissions({ sbi: '123' })
     expect(result).toEqual([{ sbi: '123' }])
+  })
+})
+
+describe('getStateWithFormDefinition orchestration', () => {
+  const baseParams = { sbi: '123456789', grantCode: 'EGWA', ownerId: 'user-1' }
+
+  /**
+   * Builds a fake state db where the latest-state finder resolves to `existingState`
+   * and exposes spies for the version-update and lock-acquire collection calls.
+   *
+   * @param {object|null} existingState - the doc the latest-state finder resolves to
+   * @param {object|null} [acquiredLock] - what the lock acquisition resolves to
+   *   (a truthy lock by default; pass `null` to simulate a lock held by another owner)
+   */
+  const buildStateDb = (existingState, acquiredLock = { _id: 'lock-1' }) => {
+    const stateUpdate = jest.fn().mockImplementation((_filter, update) => ({
+      _id: 'state-1',
+      grantVersion: update.$set.grantVersion,
+      major: update.$set.major,
+      minor: update.$set.minor,
+      patch: update.$set.patch
+    }))
+    // The lock is acquired inside the orchestrator, against the resolved version,
+    // via acquireOrRefreshApplicationLock's findOneAndUpdate.
+    const lockAcquire = jest.fn().mockResolvedValue(acquiredLock)
+    // Best-effort release of the old-version lock after an upgrade -> deleteOne.
+    const lockRelease = jest.fn().mockResolvedValue({ deletedCount: 1 })
+
+    const fakeDb = {
+      collection: (name) => {
+        if (name === 'state__grant_application_locks') {
+          return { findOneAndUpdate: lockAcquire, deleteOne: lockRelease }
+        }
+        return {
+          find: () => ({
+            sort: () => ({ limit: () => ({ next: () => Promise.resolve(existingState) }) })
+          }),
+          findOneAndUpdate: stateUpdate
+        }
+      }
+    }
+
+    return { fakeDb, stateUpdate, lockAcquire, lockRelease }
+  }
+
+  afterEach(() => {
+    jest.clearAllMocks()
+    initStateRepository(null)
+  })
+
+  test('no state + latest definition exists -> returns { definition, state: null } with no state write but a lock acquired', async () => {
+    const definition = { grantCode: 'EGWA', major: 2, minor: 1, patch: 0 }
+    resolveLatestVersion.mockResolvedValue(definition)
+    const { fakeDb, stateUpdate, lockAcquire } = buildStateDb(null)
+    initStateRepository(fakeDb)
+
+    const result = await getStateWithFormDefinition(baseParams)
+
+    expect(resolveLatestVersion).toHaveBeenCalledWith('EGWA')
+    expect(result).toEqual({ definition, state: null, upgraded: false })
+    expect(stateUpdate).not.toHaveBeenCalled()
+    // Lock acquired against the resolved version even though no state was written.
+    expect(lockAcquire).toHaveBeenCalledWith(
+      expect.objectContaining({ grantCode: 'EGWA', grantVersion: '2.1.0', sbi: '123456789' }),
+      expect.anything(),
+      expect.anything()
+    )
+  })
+
+  test('no state + no definition -> returns null without acquiring a lock', async () => {
+    resolveLatestVersion.mockResolvedValue(null)
+    const { fakeDb, lockAcquire } = buildStateDb(null)
+    initStateRepository(fakeDb)
+
+    const result = await getStateWithFormDefinition(baseParams)
+
+    expect(result).toBeNull()
+    expect(lockAcquire).not.toHaveBeenCalled()
+  })
+
+  test('existing state + version unchanged -> read-only, acquires lock and returns stored state', async () => {
+    const existingState = { _id: 'state-1', grantVersion: '1.3.0', pinnedMajor: 1, major: 1, minor: 3, patch: 0 }
+    const definition = { grantCode: 'EGWA', major: 1, minor: 3, patch: 0 }
+    resolveLatestVersionWithinMajor.mockResolvedValue(definition)
+    const { fakeDb, stateUpdate, lockAcquire, lockRelease } = buildStateDb(existingState)
+    initStateRepository(fakeDb)
+
+    const result = await getStateWithFormDefinition(baseParams)
+
+    expect(resolveLatestVersionWithinMajor).toHaveBeenCalledWith('EGWA', 1)
+    expect(result).toEqual({ definition, state: existingState, upgraded: false })
+    expect(stateUpdate).not.toHaveBeenCalled()
+    expect(lockAcquire).toHaveBeenCalledWith(
+      expect.objectContaining({ grantCode: 'EGWA', grantVersion: '1.3.0', sbi: '123456789' }),
+      expect.anything(),
+      expect.anything()
+    )
+    // No upgrade -> no old-version lock to release.
+    expect(lockRelease).not.toHaveBeenCalled()
+  })
+
+  test('existing state + version changed -> acquires lock on resolved version and persists upgrade', async () => {
+    const existingState = { _id: 'state-1', grantVersion: '1.0.0', pinnedMajor: 1, major: 1, minor: 0, patch: 0 }
+    const definition = { grantCode: 'EGWA', major: 1, minor: 4, patch: 2 }
+    resolveLatestVersionWithinMajor.mockResolvedValue(definition)
+    const { fakeDb, stateUpdate, lockAcquire, lockRelease } = buildStateDb(existingState)
+    initStateRepository(fakeDb)
+
+    const result = await getStateWithFormDefinition(baseParams)
+
+    expect(stateUpdate).toHaveBeenCalledWith(
+      { _id: 'state-1' },
+      {
+        $set: { grantVersion: '1.4.2', major: 1, minor: 4, patch: 2 },
+        $currentDate: { updatedAt: true }
+      },
+      { returnDocument: 'after' }
+    )
+    // The lock is acquired directly against the resolved version.
+    expect(lockAcquire).toHaveBeenCalledWith(
+      expect.objectContaining({ grantCode: 'EGWA', grantVersion: '1.4.2', sbi: '123456789' }),
+      expect.anything(),
+      expect.anything()
+    )
+    expect(result.definition).toBe(definition)
+    expect(result.state.grantVersion).toBe('1.4.2')
+    expect(result.upgraded).toBe(true)
+    expect(result.fromVersion).toBe('1.0.0')
+    expect(result.toVersion).toBe('1.4.2')
+    // Best-effort release of the now-orphaned lock on the previous version.
+    expect(lockRelease).toHaveBeenCalledWith(
+      expect.objectContaining({ grantCode: 'EGWA', grantVersion: '1.0.0', sbi: '123456789', ownerId: 'user-1' })
+    )
+    // The version upgrade is logged.
+    expect(log).toHaveBeenCalledWith(LogCodes.STATE.STATE_VERSION_UPGRADED, {
+      sbi: '123456789',
+      grantCode: 'EGWA',
+      fromVersion: '1.0.0',
+      toVersion: '1.4.2'
+    })
+  })
+
+  test('existing state + version changed -> upgrade still succeeds if old-lock release fails', async () => {
+    const existingState = { _id: 'state-1', grantVersion: '1.0.0', pinnedMajor: 1, major: 1, minor: 0, patch: 0 }
+    const definition = { grantCode: 'EGWA', major: 1, minor: 4, patch: 2 }
+    resolveLatestVersionWithinMajor.mockResolvedValue(definition)
+    const { fakeDb, lockRelease } = buildStateDb(existingState)
+    // Simulate the old-version lock release throwing -> must be swallowed.
+    lockRelease.mockRejectedValue(new Error('release boom'))
+    initStateRepository(fakeDb)
+
+    const result = await getStateWithFormDefinition(baseParams)
+
+    expect(result.upgraded).toBe(true)
+    expect(result.toVersion).toBe('1.4.2')
+    expect(lockRelease).toHaveBeenCalled()
+  })
+
+  test('lock held by another owner -> throws 423 Locked', async () => {
+    const definition = { grantCode: 'EGWA', major: 2, minor: 1, patch: 0 }
+    resolveLatestVersion.mockResolvedValue(definition)
+    // Acquisition resolves to null -> the lock is held by someone else.
+    const { fakeDb, stateUpdate } = buildStateDb(null, null)
+    initStateRepository(fakeDb)
+
+    await expect(getStateWithFormDefinition(baseParams)).rejects.toMatchObject({
+      isBoom: true,
+      output: { statusCode: 423 }
+    })
+    expect(stateUpdate).not.toHaveBeenCalled()
+  })
+
+  test('existing state with no pinnedMajor falls back to major', async () => {
+    const existingState = { _id: 'state-1', grantVersion: '2.0.0', major: 2, minor: 0, patch: 0 }
+    const definition = { grantCode: 'EGWA', major: 2, minor: 0, patch: 0 }
+    resolveLatestVersionWithinMajor.mockResolvedValue(definition)
+    const { fakeDb } = buildStateDb(existingState)
+    initStateRepository(fakeDb)
+
+    await getStateWithFormDefinition(baseParams)
+
+    expect(resolveLatestVersionWithinMajor).toHaveBeenCalledWith('EGWA', 2)
+  })
+
+  test('existing state + no definition within major -> returns null without acquiring a lock', async () => {
+    const existingState = { _id: 'state-1', grantVersion: '1.0.0', pinnedMajor: 1, major: 1, minor: 0, patch: 0 }
+    resolveLatestVersionWithinMajor.mockResolvedValue(null)
+    const { fakeDb, stateUpdate, lockAcquire } = buildStateDb(existingState)
+    initStateRepository(fakeDb)
+
+    const result = await getStateWithFormDefinition(baseParams)
+
+    expect(result).toBeNull()
+    expect(stateUpdate).not.toHaveBeenCalled()
+    expect(lockAcquire).not.toHaveBeenCalled()
+  })
+
+  describe('includeDefinition: false (state-only)', () => {
+    test('existing state -> returns the stored state with no definition, skipping all definition resolution', async () => {
+      const existingState = { _id: 'state-1', grantVersion: '1.3.0', pinnedMajor: 1, major: 1, minor: 3, patch: 0 }
+      const { fakeDb, stateUpdate, lockAcquire, lockRelease } = buildStateDb(existingState)
+      initStateRepository(fakeDb)
+
+      const result = await getStateWithFormDefinition({ ...baseParams, includeDefinition: false })
+
+      // No definition resolution happens at all in state-only mode.
+      expect(resolveLatestVersion).not.toHaveBeenCalled()
+      expect(resolveLatestVersionWithinMajor).not.toHaveBeenCalled()
+      // The result omits `definition` entirely and reports no upgrade.
+      expect(result).toEqual({ state: existingState, upgraded: false })
+      expect(result).not.toHaveProperty('definition')
+      // No version-upgrade write occurs.
+      expect(stateUpdate).not.toHaveBeenCalled()
+      expect(lockRelease).not.toHaveBeenCalled()
+      // The lock is acquired against the state's own existing version.
+      expect(lockAcquire).toHaveBeenCalledWith(
+        expect.objectContaining({ grantCode: 'EGWA', grantVersion: '1.3.0', sbi: '123456789' }),
+        expect.anything(),
+        expect.anything()
+      )
+    })
+
+    test('no state -> returns { state: null } without resolving a definition or acquiring a lock', async () => {
+      const { fakeDb, stateUpdate, lockAcquire } = buildStateDb(null)
+      initStateRepository(fakeDb)
+
+      const result = await getStateWithFormDefinition({ ...baseParams, includeDefinition: false })
+
+      expect(resolveLatestVersion).not.toHaveBeenCalled()
+      expect(resolveLatestVersionWithinMajor).not.toHaveBeenCalled()
+      expect(result).toEqual({ state: null, upgraded: false })
+      expect(result).not.toHaveProperty('definition')
+      expect(stateUpdate).not.toHaveBeenCalled()
+      expect(lockAcquire).not.toHaveBeenCalled()
+    })
+
+    test('existing state but lock held by another owner -> throws 423 Locked', async () => {
+      const existingState = { _id: 'state-1', grantVersion: '1.3.0', pinnedMajor: 1, major: 1, minor: 3, patch: 0 }
+      // Acquisition resolves to null -> the lock is held by someone else.
+      const { fakeDb } = buildStateDb(existingState, null)
+      initStateRepository(fakeDb)
+
+      await expect(getStateWithFormDefinition({ ...baseParams, includeDefinition: false })).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 423 }
+      })
+    })
   })
 })
