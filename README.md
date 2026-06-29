@@ -274,6 +274,8 @@ curl --header 'x-api-key: <cdp-api-key>' \
   'https://grants-ui-backend.dev.cdp-int.defra.cloud/documentation'
 ```
 
+To browse the Swagger UI in a browser on a deployed instance, use a browser extension that injects custom request headers and add `x-api-key: <cdp-api-key>` before navigating to the `/documentation` URL.
+
 The docs are not accessible in production because CDP does not issue API keys for the production environment.
 
 ### Spec file
