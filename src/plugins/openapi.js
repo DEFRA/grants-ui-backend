@@ -40,6 +40,8 @@ const openapi = {
 
       delete spec.servers
 
+      const swaggerIndexHtml = readFileSync(`${swaggerUiPath}/index.html`, 'utf-8').replace('<head>', '<head><base href="/documentation/">')
+
       await server.register(Inert)
 
       server.route({
@@ -53,15 +55,7 @@ const openapi = {
         method: 'GET',
         path: '/documentation',
         options: { auth: false },
-        handler: (_request, h) =>
-          h
-            .response(
-              readFileSync(`${swaggerUiPath}/index.html`, 'utf-8').replace(
-                '<head>',
-                '<head><base href="/documentation/">'
-              )
-            )
-            .type('text/html')
+        handler: (_request, h) => h.response(swaggerIndexHtml).type('text/html')
       })
 
       server.route({
