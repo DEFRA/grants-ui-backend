@@ -1,5 +1,57 @@
 import { TEST_AUTH_TOKEN, TEST_ENCRYPTION_KEY, APPLICATION_LOCK_TOKEN_SECRET } from '../test-helpers/auth-constants.js'
 
+describe('openapi plugin registration', () => {
+  const actualFs = jest.requireActual('node:fs')
+
+  beforeEach(() => {
+    jest.resetModules()
+    jest.doMock('node:fs', () => ({
+      ...actualFs,
+      readFileSync: jest.fn(actualFs.readFileSync)
+    }))
+  })
+
+  afterEach(() => {
+    jest.dontMock('node:fs')
+    jest.resetModules()
+  })
+
+  test('throws a clear error when openapi.yaml cannot be read', async () => {
+    const { readFileSync } = await import('node:fs')
+    readFileSync.mockImplementation(() => {
+      throw Object.assign(new Error('no such file'), { code: 'ENOENT' })
+    })
+    const { openapi } = await import('./openapi.js')
+    const fakeServer = { register: jest.fn(), route: jest.fn() }
+    await expect(openapi.plugin.register(fakeServer)).rejects.toThrow('Failed to load OpenAPI spec')
+  })
+
+  test('throws a clear error when openapi.yaml is empty', async () => {
+    const { readFileSync } = await import('node:fs')
+    readFileSync.mockImplementation(() => '')
+    const { openapi } = await import('./openapi.js')
+    const fakeServer = { register: jest.fn(), route: jest.fn() }
+    await expect(openapi.plugin.register(fakeServer)).rejects.toThrow('Failed to load OpenAPI spec')
+  })
+
+  test('sets spec version from SERVICE_VERSION when provided', async () => {
+    process.env.SERVICE_VERSION = 'v2.3.4'
+    const { openapi } = await import('./openapi.js')
+    const routes = []
+    const fakeServer = {
+      register: jest.fn(),
+      route: jest.fn((r) => routes.push(r))
+    }
+    await openapi.plugin.register(fakeServer)
+    const specRoute = routes.find((r) => r.path === '/swagger.json')
+    const fakeH = { response: jest.fn().mockReturnValue({ type: jest.fn() }) }
+    specRoute.handler(null, fakeH)
+    const spec = fakeH.response.mock.calls[0][0]
+    expect(spec.info.version).toBe('v2.3.4')
+    delete process.env.SERVICE_VERSION
+  })
+})
+
 describe('OpenAPI documentation routes', () => {
   let server
 
