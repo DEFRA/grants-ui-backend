@@ -41,6 +41,16 @@ components:
       bearerFormat: JWT
       description: |
         Service-to-service authentication.
+    lockToken:
+      type: apiKey
+      in: header
+      name: x-application-lock-owner
+      description: Application lock JWT token.
+    encryptedAuth:
+      type: apiKey
+      in: header
+      name: x-encrypted-auth
+      description: JWT containing crn and sbi claims, used by the allowlist endpoint.
   schemas:
     ErrorResponse:
       type: object
@@ -313,6 +323,9 @@ paths:
     post:
       tags: [State]
       summary: Create or update application state
+      security:
+        - bearerAuth: []
+          lockToken: []
       requestBody:
         required: true
         content:
@@ -353,6 +366,9 @@ paths:
     get:
       tags: [State]
       summary: Retrieve application state for an SBI, grant code and version
+      security:
+        - bearerAuth: []
+          lockToken: []
       parameters:
         - in: query
           name: sbi
@@ -399,6 +415,9 @@ paths:
     delete:
       tags: [State]
       summary: Delete application state for an SBI, grant code and version
+      security:
+        - bearerAuth: []
+          lockToken: []
       parameters:
         - in: query
           name: sbi
@@ -446,6 +465,9 @@ paths:
     post:
       tags: [State]
       summary: Retrieve an application's form definition and state together
+      security:
+        - bearerAuth: []
+          lockToken: []
       description: |
         Returns the resolved form definition and the matching application state in a single call.
         When no state exists, the latest active definition is returned with `state: null` (the
@@ -472,16 +494,6 @@ paths:
         stored state (and its version) with no `definition` payload. In that mode the lock is
         acquired against the state's existing version, and a `404` is never returned (a missing
         state simply yields `state: null`).
-      parameters:
-        - in: header
-          name: x-application-lock-owner
-          description: >-
-            Application lock JWT identifying the owner. Carries the owner, sbi and grantCode
-            claims; the grantVersion claim is optional here because the endpoint resolves the
-            version itself and acquires the lock against the resolved version.
-          required: true
-          schema:
-            type: string
       requestBody:
         required: true
         content:
@@ -577,6 +589,9 @@ paths:
     patch:
       tags: [State]
       summary: Patch application status on the state for an SBI, grant code and grant version
+      security:
+        - bearerAuth: []
+          lockToken: []
       parameters:
         - in: path
           name: sbi
@@ -632,6 +647,9 @@ paths:
   /submissions:
     post:
       tags: [Submissions]
+      security:
+        - bearerAuth: []
+          lockToken: []
       summary: Record an application submission
       requestBody:
         required: true
@@ -661,6 +679,8 @@ paths:
     get:
       tags: [Submissions]
       summary: Retrieve submissions matching the given identifiers
+      security:
+        - bearerAuth: []
       parameters:
         - in: query
           name: sbi
@@ -733,13 +753,9 @@ paths:
           sbis:
             - '123456789'
         ```
-      parameters:
-        - in: header
-          name: x-encrypted-auth
-          required: true
-          schema:
-            type: string
-          description: JWT signed with ENCRYPTED_AUTH_JWT_SECRET containing crn and sbi claims
+      security:
+        - bearerAuth: []
+          encryptedAuth: []
       responses:
         '200':
           description: List of grants the user may access

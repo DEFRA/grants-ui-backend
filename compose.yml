@@ -37,6 +37,7 @@ services:
     volumes:
       - ./src:/home/node/src
       - ./package.json:/home/node/package.json
+      - ./openapi.yaml:/home/node/openapi.yaml
 
   grants-config-broker:
     image: defradigital/grants-config-broker:latest
