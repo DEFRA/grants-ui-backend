@@ -40,7 +40,10 @@ const openapi = {
 
       delete spec.servers
 
-      const swaggerIndexHtml = readFileSync(`${swaggerUiPath}/index.html`, 'utf-8').replace('<head>', '<head><base href="/documentation/">')
+      const swaggerIndexHtml = readFileSync(`${swaggerUiPath}/index.html`, 'utf-8').replace(
+        '<head>',
+        '<head><base href="/documentation/">'
+      )
 
       await server.register(Inert)
 
