@@ -94,12 +94,13 @@ describe('OpenAPI documentation routes', () => {
   })
 
   describe('GET /documentation', () => {
-    test('serves the Swagger UI index page', async () => {
+    test('serves the Swagger UI index page with absolute asset paths', async () => {
       const response = await server.inject({ method: 'GET', url: '/documentation' })
 
       expect(response.statusCode).toBe(200)
       expect(response.headers['content-type']).toMatch('text/html')
       expect(response.payload).toContain('swagger-ui')
+      expect(response.payload).toContain('<base href="/documentation/">')
     })
 
     test('serves the initializer pointing at /swagger.json', async () => {

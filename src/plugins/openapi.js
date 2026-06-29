@@ -51,6 +51,21 @@ const openapi = {
 
       server.route({
         method: 'GET',
+        path: '/documentation',
+        options: { auth: false },
+        handler: (_request, h) =>
+          h
+            .response(
+              readFileSync(`${swaggerUiPath}/index.html`, 'utf-8').replace(
+                '<head>',
+                '<head><base href="/documentation/">'
+              )
+            )
+            .type('text/html')
+      })
+
+      server.route({
+        method: 'GET',
         path: '/documentation/swagger-initializer.js',
         options: { auth: false },
         handler: (_request, h) => h.response(swaggerInitializer).type('application/javascript')
