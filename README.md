@@ -251,17 +251,44 @@ git config --global core.autocrlf false
 
 ## OpenAPI Specification
 
-An OpenAPI 3.1 specification is available at the repository root:
+The service exposes a live documentation endpoint alongside the static spec file.
+
+### Documentation UI
+
+When the service is running, an interactive Swagger UI is available at:
+
+```
+http://localhost:3001/documentation
+```
+
+The OpenAPI specification is also available as JSON at:
+
+```
+http://localhost:3001/swagger.json
+```
+
+Both endpoints are unauthenticated at the application level. In deployed non-production environments the CDP platform requires an `x-api-key` header to reach any endpoint:
+
+```bash
+curl --header 'x-api-key: <cdp-api-key>' \
+  'https://grants-ui-backend.dev.cdp-int.defra.cloud/documentation'
+```
+
+To browse the Swagger UI in a browser on a deployed instance, use a browser extension that injects custom request headers and add `x-api-key: <cdp-api-key>` before navigating to the `/documentation` URL.
+
+The docs are not accessible in production because CDP does not issue API keys for the production environment.
+
+### Spec file
+
+The authoritative OpenAPI 3.1 specification lives at the repository root:
 
 - File: [openapi.yaml](./openapi.yaml)
 
-How to view it:
+It can be viewed with any OpenAPI-compatible tool (e.g. the Swagger Viewer extension for VS Code, or natively in IntelliJ). The live `/swagger.json` endpoint serves this file directly, so the two are always in sync.
 
-- Use any OpenAPI viewer or IDE plugin/extension (e.g. Swagger Viewer for VS Code or natively in IntelliJ).
+### Keeping the spec up-to-date
 
-Keeping the spec up-to-date:
-
-- When you add or change routes (see src/plugins/router.js and src/routes/\*), update openapi.yaml accordingly.
+When you add or change routes (see [src/plugins/router.js](./src/plugins/router.js) and the module route files), update `openapi.yaml` accordingly. The HTTP clients and the spec should be kept in step — see [Keeping the requests up to date](#keeping-the-requests-up-to-date).
 
 ## Development helpers
 

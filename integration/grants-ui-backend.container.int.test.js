@@ -1196,6 +1196,25 @@ describe('GET /allowlist/grants', () => {
   })
 })
 
+describe('GET /documentation', () => {
+  it('serves the Swagger UI page', async () => {
+    const response = await Wreck.get(`${apiUrl}/documentation`, {
+      headers: { accept: 'text/html' }
+    })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.res.headers['content-type']).toContain('text/html')
+  })
+
+  it('serves the OpenAPI spec', async () => {
+    const response = await Wreck.get(`${apiUrl}/swagger.json`, { json: true })
+
+    expect(response.res.statusCode).toBe(200)
+    expect(response.res.headers['content-type']).toContain('application/json')
+    expect(response.payload.openapi).toBe('3.1.0')
+  })
+})
+
 describe('Observability', () => {
   it('returns successful health response', async () => {
     const response = await Wreck.get(`${apiUrl}/health`, {

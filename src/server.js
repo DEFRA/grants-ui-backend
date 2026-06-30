@@ -15,6 +15,7 @@ import { requestTracing } from './common/helpers/request-tracing.js'
 import { setupProxy } from './common/helpers/proxy/setup-proxy.js'
 import { applicationLockPlugin } from './modules/state/lock-enforcement.js'
 import { sqsConsumerPlugin } from './modules/config/ingest/sqs-consumer.js'
+import { openapi } from './plugins/openapi.js'
 
 async function createServer() {
   setupProxy()
@@ -51,6 +52,7 @@ async function createServer() {
   // pulse          - provides shutdown handlers
   // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
   // auth           - provides service-to-service authentication
+  // openapi        - serves /documentation (Swagger UI) and /swagger.json
   // router         - routes used in the app
   await server.register([
     requestLogger,
@@ -82,6 +84,7 @@ async function createServer() {
     auth,
     applicationLockPlugin,
     sqsConsumerPlugin,
+    openapi,
     router
   ])
 

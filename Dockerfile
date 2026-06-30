@@ -18,6 +18,7 @@ COPY --chown=node:node migrations ./migrations
 
 RUN npm ci
 COPY --chown=node:node ./src ./src
+COPY --chown=node:node openapi.yaml ./
 
 CMD [ "npm", "run", "docker:dev" ]
 
@@ -36,6 +37,7 @@ COPY --from=development /home/node/migrate-mongo-config.config.js ./
 COPY --from=development /home/node/migrate-mongo-config.state.js ./
 COPY --from=development /home/node/migrations ./migrations
 COPY --from=development /home/node/src ./src/
+COPY --from=development /home/node/openapi.yaml ./
 
 RUN npm ci --omit=dev
 
