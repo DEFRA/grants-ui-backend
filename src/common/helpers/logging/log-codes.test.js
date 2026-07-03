@@ -456,6 +456,12 @@ describe('LogCodes', () => {
         'No allowlist.yaml in manifest, clearing entries to open grant to all | grantCode=woodland | version=1.0.0'
       ],
       [
+        'INGEST_ENV_MISSING',
+        'warn',
+        { grantCode: 'woodland', version: '1.0.0' },
+        'No allowlist entries found for environment, grant will be closed to all users | grantCode=woodland | version=1.0.0'
+      ],
+      [
         'GRANTS_CHECKED',
         'debug',
         { crn: '1234567890', sbi: '123456789', matchedCount: 2 },
