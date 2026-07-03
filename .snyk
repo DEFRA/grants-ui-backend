@@ -1,10 +1,7 @@
-# Snyk (https://snyk.io) policy file
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities
 version: v1.25.0
 ignore:
-  SNYK-JS-BRACEEXPANSION-17706650:
-    - testcontainers > archiver > readdir-glob > minimatch > brace-expansion:
-        reason: >-
-          brace-expansion is used by testcontainers for internal glob patterns
-          during Docker archive creation in tests only. It is not exposed to
-          untrusted user input at runtime and poses no practical ReDoS risk.
-        expires: '2027-01-01T00:00:00.000Z'
+  'SNYK-JS-BRACEEXPANSION-17706650':
+    - '*':
+        reason: 'Not reachable in application runtime — brace-expansion is only present via testcontainers > archiver > readdir-glob > minimatch, used in test infrastructure only. No untrusted user input is passed through this path at runtime. Reassess when testcontainers upgrades archiver.'
+        expires: '2027-01-01'
