@@ -28,8 +28,10 @@ tags:
     description: Service health endpoint
   - name: State
     description: Manage persisted grant application state
+    x-internal: true
   - name: Submissions
     description: Record grant application submissions
+    x-internal: true
   - name: Allowlist
     description: Resolve grants a user is permitted to access
 
@@ -46,6 +48,7 @@ components:
       in: header
       name: x-application-lock-owner
       description: Application lock JWT token.
+      x-internal: true
     encryptedAuth:
       type: apiKey
       in: header
