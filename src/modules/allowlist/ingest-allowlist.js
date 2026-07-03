@@ -2,6 +2,7 @@ import { replaceAllowlistEntries } from './allowlist.repository.js'
 import { buildAllowlistEntries } from './allowlist.transform.js'
 import { getYamlObject } from '../../common/helpers/s3.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
+import { config } from '../../config.js'
 
 /**
  * Fetches allowlist.yaml from S3 for the given grant version and replaces all
@@ -26,8 +27,9 @@ export async function ingestAllowlist({ grantCode, version, bucket, manifest }) 
     return
   }
 
+  const env = config.get('cdpEnvironment')
   const allowlist = await getYamlObject(bucket, allowlistPath)
-  const entries = buildAllowlistEntries(grantCode, allowlist)
+  const entries = buildAllowlistEntries(grantCode, allowlist[env])
   await replaceAllowlistEntries(grantCode, entries)
 
   log(LogCodes.ALLOWLIST.INGEST_UPSERTED, { grantCode, version, status: 'active', entryCount: entries.length })
