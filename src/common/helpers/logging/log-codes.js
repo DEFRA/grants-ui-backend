@@ -258,10 +258,15 @@ export const LogCodes = {
       messageFunc: ({ grantCode, version }) =>
         `No allowlist.yaml in manifest, clearing entries to open grant to all | grantCode=${grantCode} | version=${version}`
     },
+    INGEST_ENV_MISSING: {
+      level: 'warn',
+      messageFunc: ({ grantCode, version }) =>
+        `No allowlist entries found for environment, grant will be closed to all users | grantCode=${grantCode} | version=${version}`
+    },
     GRANTS_CHECKED: {
       level: 'debug',
-      messageFunc: ({ crn, sbi, env, matchedCount }) =>
-        `Allowlist grants checked | crn=${crn} | sbi=${sbi} | env=${env} | matchedCount=${matchedCount}`
+      messageFunc: ({ crn, sbi, matchedCount }) =>
+        `Allowlist grants checked | crn=${crn} | sbi=${sbi} | matchedCount=${matchedCount}`
     },
     GRANTS_UNAUTHORIZED: {
       level: 'warn',

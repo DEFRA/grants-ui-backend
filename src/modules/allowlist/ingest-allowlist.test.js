@@ -2,6 +2,7 @@ import { ingestAllowlist } from './ingest-allowlist.js'
 import { replaceAllowlistEntries } from './allowlist.repository.js'
 import { buildAllowlistEntries } from './allowlist.transform.js'
 import { getYamlObject } from '../../common/helpers/s3.js'
+import { log } from '../../common/helpers/logging/log.js'
 
 jest.mock('./allowlist.repository.js', () => ({
   replaceAllowlistEntries: jest.fn()
@@ -21,7 +22,13 @@ jest.mock('../../config.js', () => ({
 
 jest.mock('../../common/helpers/logging/log.js', () => ({
   log: jest.fn(),
-  LogCodes: { ALLOWLIST: { INGEST_CLEARED: 'INGEST_CLEARED', INGEST_UPSERTED: 'INGEST_UPSERTED' } }
+  LogCodes: {
+    ALLOWLIST: {
+      INGEST_CLEARED: 'INGEST_CLEARED',
+      INGEST_UPSERTED: 'INGEST_UPSERTED',
+      INGEST_ENV_MISSING: 'INGEST_ENV_MISSING'
+    }
+  }
 }))
 
 beforeEach(() => {
@@ -64,6 +71,16 @@ describe('ingestAllowlist', () => {
     await ingestAllowlist({ ...baseParams, manifest: [] })
 
     expect(getYamlObject).not.toHaveBeenCalled()
+    expect(replaceAllowlistEntries).toHaveBeenCalledWith('woodland', [])
+  })
+
+  test('warns and clears entries when allowlist.yaml has no block for the current env', async () => {
+    getYamlObject.mockResolvedValue({ prod: { crns: ['111'] } })
+    buildAllowlistEntries.mockReturnValue([])
+
+    await ingestAllowlist(baseParams)
+
+    expect(log).toHaveBeenCalledWith('INGEST_ENV_MISSING', { grantCode: 'woodland', version: '1.0.0' })
     expect(replaceAllowlistEntries).toHaveBeenCalledWith('woodland', [])
   })
 })

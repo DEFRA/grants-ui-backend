@@ -29,7 +29,13 @@ export async function ingestAllowlist({ grantCode, version, bucket, manifest }) 
 
   const env = config.get('cdpEnvironment')
   const allowlist = await getYamlObject(bucket, allowlistPath)
-  const entries = buildAllowlistEntries(grantCode, allowlist[env])
+  const envBlock = allowlist[env]
+
+  if (!envBlock) {
+    log(LogCodes.ALLOWLIST.INGEST_ENV_MISSING, { grantCode, version })
+  }
+
+  const entries = buildAllowlistEntries(grantCode, envBlock)
   await replaceAllowlistEntries(grantCode, entries)
 
   log(LogCodes.ALLOWLIST.INGEST_UPSERTED, { grantCode, version, status: 'active', entryCount: entries.length })
