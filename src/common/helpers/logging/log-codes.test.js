@@ -458,8 +458,8 @@ describe('LogCodes', () => {
       [
         'GRANTS_CHECKED',
         'debug',
-        { crn: '1234567890', sbi: '123456789', env: 'local', matchedCount: 2 },
-        'Allowlist grants checked | crn=1234567890 | sbi=123456789 | env=local | matchedCount=2'
+        { crn: '1234567890', sbi: '123456789', matchedCount: 2 },
+        'Allowlist grants checked | crn=1234567890 | sbi=123456789 | matchedCount=2'
       ],
       [
         'GRANTS_UNAUTHORIZED',
