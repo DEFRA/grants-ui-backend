@@ -4,6 +4,20 @@ const emptyArrayWhenMissingOrNotArray = (value) => ({
   $cond: [{ $isArray: value }, value, []]
 })
 
+const objectValuesWhenStrictObject = (value) => ({
+  $cond: [
+    { $eq: [{ $type: value }, 'object'] },
+    {
+      $map: {
+        input: { $objectToArray: value },
+        as: 'entry',
+        in: '$$entry.v'
+      }
+    },
+    []
+  ]
+})
+
 const needsNormalising = (value) => ({
   $and: [{ $isNumber: value }, { $ne: [value, { $round: [value, 0] }] }]
 })
@@ -54,13 +68,42 @@ const normalisePayment = (payment) => ({
   ]
 })
 
+const normaliseParcelItem = (item) => ({
+  $cond: [
+    { $eq: [{ $type: item }, 'object'] },
+    {
+      $mergeObjects: [
+        item,
+        normalisedFieldPatch('rateInPence', `${item}.rateInPence`),
+        normalisedFieldPatch('annualPaymentPence', `${item}.annualPaymentPence`)
+      ]
+    },
+    item
+  ]
+})
+
+const normaliseParcelItemsObject = (items) => ({
+  $arrayToObject: {
+    $map: {
+      input: { $objectToArray: items },
+      as: 'entry',
+      in: {
+        k: '$$entry.k',
+        v: normaliseParcelItem('$$entry.v')
+      }
+    }
+  }
+})
+
 const normaliseAgreementLevelItem = (item) => ({
   $cond: [
     { $eq: [{ $type: item }, 'object'] },
     {
       $mergeObjects: [
         item,
+        normalisedFieldPatch('annualPaymentPence', `${item}.annualPaymentPence`),
         normalisedFieldPatch('activeTierRatePence', `${item}.activeTierRatePence`),
+        normalisedFieldPatch('activeTierFlatRatePence', `${item}.activeTierFlatRatePence`),
         normalisedFieldPatch('agreementTotalPence', `${item}.agreementTotalPence`)
       ]
     },
@@ -68,13 +111,57 @@ const normaliseAgreementLevelItem = (item) => ({
   ]
 })
 
+const normaliseAgreementLevelItemsObject = (items) => ({
+  $arrayToObject: {
+    $map: {
+      input: { $objectToArray: items },
+      as: 'entry',
+      in: {
+        k: '$$entry.k',
+        v: normaliseAgreementLevelItem('$$entry.v')
+      }
+    }
+  }
+})
+
+const parcelItemValues = {
+  $concatArrays: [
+    emptyArrayWhenMissingOrNotArray('$state.payment.parcelItems'),
+    objectValuesWhenStrictObject('$state.payment.parcelItems')
+  ]
+}
+
+const agreementLevelItemValues = {
+  $concatArrays: [
+    emptyArrayWhenMissingOrNotArray('$state.payment.agreementLevelItems'),
+    objectValuesWhenStrictObject('$state.payment.agreementLevelItems')
+  ]
+}
+
+const anyNormalisableParcelItem = {
+  $anyElementTrue: {
+    $map: {
+      input: parcelItemValues,
+      as: 'item',
+      in: {
+        $or: [needsNormalising('$$item.rateInPence'), needsNormalising('$$item.annualPaymentPence')]
+      }
+    }
+  }
+}
+
 const anyNormalisableAgreementLevelItem = {
   $anyElementTrue: {
     $map: {
-      input: emptyArrayWhenMissingOrNotArray('$state.payment.agreementLevelItems'),
+      input: agreementLevelItemValues,
       as: 'item',
       in: {
-        $or: [needsNormalising('$$item.activeTierRatePence'), needsNormalising('$$item.agreementTotalPence')]
+        $or: [
+          needsNormalising('$$item.annualPaymentPence'),
+          needsNormalising('$$item.activeTierRatePence'),
+          needsNormalising('$$item.activeTierFlatRatePence'),
+          needsNormalising('$$item.agreementTotalPence')
+        ]
       }
     }
   }
@@ -108,6 +195,8 @@ const filter = {
     $or: [
       needsNormalising('$state.totalPence'),
       needsNormalising('$state.payment.agreementTotalPence'),
+      needsNormalising('$state.payment.annualTotalPence'),
+      anyNormalisableParcelItem,
       anyNormalisableAgreementLevelItem,
       anyNormalisablePayment
     ]
@@ -129,6 +218,30 @@ const update = [
                   $mergeObjects: [
                     '$state.payment',
                     normalisedFieldPatch('agreementTotalPence', '$state.payment.agreementTotalPence'),
+                    normalisedFieldPatch('annualTotalPence', '$state.payment.annualTotalPence'),
+                    {
+                      $cond: [
+                        { $isArray: '$state.payment.parcelItems' },
+                        {
+                          parcelItems: {
+                            $map: {
+                              input: '$state.payment.parcelItems',
+                              as: 'item',
+                              in: normaliseParcelItem('$$item')
+                            }
+                          }
+                        },
+                        {
+                          $cond: [
+                            { $eq: [{ $type: '$state.payment.parcelItems' }, 'object'] },
+                            {
+                              parcelItems: normaliseParcelItemsObject('$state.payment.parcelItems')
+                            },
+                            {}
+                          ]
+                        }
+                      ]
+                    },
                     {
                       $cond: [
                         { $isArray: '$state.payment.agreementLevelItems' },
@@ -141,7 +254,17 @@ const update = [
                             }
                           }
                         },
-                        {}
+                        {
+                          $cond: [
+                            { $eq: [{ $type: '$state.payment.agreementLevelItems' }, 'object'] },
+                            {
+                              agreementLevelItems: normaliseAgreementLevelItemsObject(
+                                '$state.payment.agreementLevelItems'
+                              )
+                            },
+                            {}
+                          ]
+                        }
                       ]
                     },
                     {
@@ -171,12 +294,38 @@ const update = [
   }
 ]
 
+const stringifyRecordId = (id) => {
+  if (id && typeof id.toHexString === 'function') {
+    return id.toHexString()
+  }
+
+  return String(id)
+}
+
+const logAffectedRecords = (affectedIds) => {
+  console.info(
+    `normalise-pence-values migration affected records: count=${affectedIds.length}; ids=${JSON.stringify(
+      affectedIds.map(stringifyRecordId)
+    )}`
+  )
+}
+
 /**
  * @param db {import('mongodb').Db}
  * @returns {Promise<void>}
  */
 export const up = async (db) => {
-  await db.collection(COLLECTION).updateMany(filter, update)
+  const collection = db.collection(COLLECTION)
+  const affectedRecords = await collection.find(filter).project({ _id: 1 }).sort({ _id: 1 }).toArray()
+  const affectedIds = affectedRecords.map(({ _id }) => _id)
+
+  logAffectedRecords(affectedIds)
+
+  if (affectedIds.length === 0) {
+    return
+  }
+
+  await collection.updateMany({ _id: { $in: affectedIds } }, update)
 }
 
 /**
