@@ -48,6 +48,7 @@ components:
       in: header
       name: x-application-lock-owner
       description: Application lock JWT token.
+      x-internal: true
     encryptedAuth:
       type: apiKey
       in: header

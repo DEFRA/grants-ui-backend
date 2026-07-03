@@ -118,6 +118,11 @@ describe('OpenAPI documentation routes', () => {
       expect(schemaNames).not.toContain('Submission')
       expect(schemaNames).toContain('AllowlistGrantsResponse')
       expect(schemaNames).toContain('Grant')
+
+      const securitySchemes = Object.keys(payload.components?.securitySchemes ?? {})
+      expect(securitySchemes).not.toContain('lockToken')
+      expect(securitySchemes).toContain('bearerAuth')
+      expect(securitySchemes).toContain('encryptedAuth')
     })
 
     test('is accessible without authentication', async () => {

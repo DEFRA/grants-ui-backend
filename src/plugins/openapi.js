@@ -33,11 +33,21 @@ const filterInternalEndpoints = (spec) => {
       })
     addRefs(paths)
   }
-  const schemas = spec.components?.schemas
-    ? Object.fromEntries(Object.entries(spec.components.schemas).filter(([name]) => reachable.has(name)))
+  const components = spec.components
+    ? {
+        ...spec.components,
+        ...(spec.components.schemas && {
+          schemas: Object.fromEntries(Object.entries(spec.components.schemas).filter(([name]) => reachable.has(name)))
+        }),
+        ...(spec.components.securitySchemes && {
+          securitySchemes: Object.fromEntries(
+            Object.entries(spec.components.securitySchemes).filter(([, scheme]) => !isInternal(scheme))
+          )
+        })
+      }
     : undefined
 
-  return { ...spec, paths, tags, ...(schemas && { components: { ...spec.components, schemas } }) }
+  return { ...spec, paths, tags, ...(components && { components }) }
 }
 
 const swaggerInitializer = `window.onload = function () {
