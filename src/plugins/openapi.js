@@ -7,6 +7,49 @@ import { config } from '../config.js'
 
 const swaggerUiPath = getSwaggerUiPath()
 
+const filterInternalEndpoints = (spec) => {
+  const isInternal = (tag) => tag['x-internal'] === true
+
+  const internalTags = new Set((spec.tags ?? []).filter(isInternal).map((t) => t.name))
+  const paths = Object.fromEntries(
+    Object.entries(spec.paths).filter(([, methods]) =>
+      Object.values(methods).every((op) => !op.tags?.some((t) => internalTags.has(t)))
+    )
+  )
+  const tags = (spec.tags ?? []).filter((t) => !isInternal(t))
+
+  const reachable = new Set()
+  if (spec.components?.schemas) {
+    const addRefs = (obj) =>
+      JSON.stringify(obj, (k, v) => {
+        if (k === '$ref') {
+          const name = v.replace('#/components/schemas/', '')
+          if (!reachable.has(name)) {
+            reachable.add(name)
+            addRefs(spec.components.schemas[name])
+          }
+        }
+        return v
+      })
+    addRefs(paths)
+  }
+  const components = spec.components
+    ? {
+        ...spec.components,
+        ...(spec.components.schemas && {
+          schemas: Object.fromEntries(Object.entries(spec.components.schemas).filter(([name]) => reachable.has(name)))
+        }),
+        ...(spec.components.securitySchemes && {
+          securitySchemes: Object.fromEntries(
+            Object.entries(spec.components.securitySchemes).filter(([, scheme]) => !isInternal(scheme))
+          )
+        })
+      }
+    : undefined
+
+  return { ...spec, paths, tags, ...(components && { components }) }
+}
+
 const swaggerInitializer = `window.onload = function () {
   window.ui = SwaggerUIBundle({
     url: '/swagger.json',
@@ -39,6 +82,8 @@ const openapi = {
       }
 
       delete spec.servers
+
+      spec = filterInternalEndpoints(spec)
 
       const swaggerIndexHtml = readFileSync(`${swaggerUiPath}/index.html`, 'utf-8').replace(
         '<head>',
