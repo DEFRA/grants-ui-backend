@@ -34,6 +34,17 @@ describe('openapi plugin registration', () => {
     await expect(openapi.plugin.register(fakeServer)).rejects.toThrow('Failed to load OpenAPI spec')
   })
 
+  test('does not throw when the spec has no tags block', async () => {
+    const { readFileSync } = await import('node:fs')
+    readFileSync.mockImplementation(
+      () =>
+        'openapi: "3.1.0"\ninfo:\n  title: T\n  version: "1"\npaths:\n  /foo:\n    get:\n      responses:\n        "200":\n          description: ok\n'
+    )
+    const { openapi } = await import('./openapi.js')
+    const fakeServer = { register: jest.fn(), route: jest.fn() }
+    await expect(openapi.plugin.register(fakeServer)).resolves.not.toThrow()
+  })
+
   test('sets spec version from SERVICE_VERSION when provided', async () => {
     process.env.SERVICE_VERSION = 'v2.3.4'
     const { openapi } = await import('./openapi.js')
@@ -84,6 +95,29 @@ describe('OpenAPI documentation routes', () => {
       expect(payload.openapi).toBe('3.1.0')
       expect(payload.info).toBeDefined()
       expect(payload.paths).toBeDefined()
+    })
+
+    test('excludes internal paths, tags, and schemas from the served spec', async () => {
+      const response = await server.inject({ method: 'GET', url: '/swagger.json' })
+      const payload = JSON.parse(response.payload)
+
+      expect(Object.keys(payload.paths)).not.toContain('/state')
+      expect(Object.keys(payload.paths)).not.toContain('/state/with-definition')
+      expect(Object.keys(payload.paths)).not.toContain('/submissions')
+      expect(Object.keys(payload.paths)).toContain('/allowlist/grants')
+      expect(Object.keys(payload.paths)).toContain('/health')
+
+      const tagNames = payload.tags.map((t) => t.name)
+      expect(tagNames).not.toContain('State')
+      expect(tagNames).not.toContain('Submissions')
+      expect(tagNames).toContain('Health')
+      expect(tagNames).toContain('Allowlist')
+
+      const schemaNames = Object.keys(payload.components?.schemas ?? {})
+      expect(schemaNames).not.toContain('StateSaveRequest')
+      expect(schemaNames).not.toContain('Submission')
+      expect(schemaNames).toContain('AllowlistGrantsResponse')
+      expect(schemaNames).toContain('Grant')
     })
 
     test('is accessible without authentication', async () => {
