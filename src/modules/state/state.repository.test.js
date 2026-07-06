@@ -7,7 +7,9 @@ import {
   insertSubmission,
   findSubmissions,
   getLatestApplicationStateForGrant,
-  updateApplicationStateVersion
+  updateApplicationStateVersion,
+  purgeApplicationStates,
+  findUnsubmittedApplicationStates
 } from './state.repository.js'
 
 // Note: index creation is owned by migrate-mongo migrations and is verified in
@@ -168,5 +170,168 @@ describe('state.repository cross-version helpers', () => {
       { returnDocument: 'after' }
     )
     expect(result).toBe(updated)
+  })
+
+  test('findUnsubmittedApplicationStates returns non-submitted applications', async () => {
+    const expected = [
+      {
+        _id: '1',
+        grantCode: 'ffc',
+        state: {
+          applicationStatus: 'DRAFT'
+        }
+      }
+    ]
+
+    const toArray = jest.fn().mockResolvedValue(expected)
+
+    initStateRepository({
+      collection: () => ({
+        find: jest.fn().mockReturnValue({
+          toArray
+        })
+      })
+    })
+
+    const result = await findUnsubmittedApplicationStates({
+      grantCode: 'ffc'
+    })
+
+    expect(result).toEqual(expected)
+  })
+
+  test('findUnsubmittedApplicationStates excludes submitted applications', async () => {
+    const toArray = jest.fn().mockResolvedValue([])
+
+    initStateRepository({
+      collection: () => ({
+        find: jest.fn().mockReturnValue({ toArray })
+      })
+    })
+
+    const result = await findUnsubmittedApplicationStates({
+      grantCode: 'ffc'
+    })
+
+    expect(result).toEqual([])
+  })
+
+  test('findUnsubmittedApplicationStates filters by grantCode', async () => {
+    const toArray = jest.fn().mockResolvedValue([])
+
+    const find = jest.fn().mockReturnValue({
+      toArray
+    })
+
+    initStateRepository({
+      collection: () => ({
+        find
+      })
+    })
+
+    await findUnsubmittedApplicationStates({
+      grantCode: 'ffc'
+    })
+
+    expect(find).toHaveBeenCalledWith({
+      grantCode: 'ffc',
+      'state.applicationStatus': {
+        $nin: ['SUBMITTED', 'PURGED']
+      }
+    })
+  })
+
+  test('purgeApplicationStates marks applications as PURGED', async () => {
+    const updateMany = jest.fn().mockResolvedValue({
+      modifiedCount: 1
+    })
+
+    initStateRepository({
+      collection: () => ({
+        updateMany
+      })
+    })
+
+    const ids = ['abc']
+
+    const result = await purgeApplicationStates(ids)
+
+    expect(updateMany).toHaveBeenCalledWith(
+      {
+        _id: { $in: ids }
+      },
+      {
+        $set: {
+          'state.applicationStatus': 'PURGED'
+        },
+        $currentDate: {
+          updatedAt: true
+        }
+      }
+    )
+
+    expect(result.modifiedCount).toBe(1)
+  })
+
+  test('purgeApplicationStates updates multiple applications', async () => {
+    const updateMany = jest.fn().mockResolvedValue({
+      modifiedCount: 2
+    })
+
+    initStateRepository({
+      collection: () => ({
+        updateMany
+      })
+    })
+
+    const ids = ['abc', 'efg']
+
+    const result = await purgeApplicationStates(ids)
+
+    expect(updateMany).toHaveBeenCalledWith(
+      {
+        _id: { $in: ids }
+      },
+      {
+        $set: {
+          'state.applicationStatus': 'PURGED'
+        },
+        $currentDate: {
+          updatedAt: true
+        }
+      }
+    )
+
+    expect(result.modifiedCount).toBe(2)
+  })
+
+  test('purgeApplicationStates handles empty id list', async () => {
+    const updateMany = jest.fn().mockResolvedValue({
+      modifiedCount: 0
+    })
+
+    initStateRepository({
+      collection: () => ({
+        updateMany
+      })
+    })
+
+    const result = await purgeApplicationStates([])
+
+    expect(updateMany).toHaveBeenCalledWith(
+      {
+        _id: { $in: [] }
+      },
+      {
+        $set: {
+          'state.applicationStatus': 'PURGED'
+        },
+        $currentDate: {
+          updatedAt: true
+        }
+      }
+    )
+
+    expect(result.modifiedCount).toBe(0)
   })
 })

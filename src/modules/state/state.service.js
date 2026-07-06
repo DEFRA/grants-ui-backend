@@ -11,6 +11,7 @@
  */
 
 import Boom from '@hapi/boom'
+import semver from 'semver'
 import {
   acquireOrRefreshApplicationLock as repoAcquireOrRefreshApplicationLock,
   releaseApplicationLock as repoReleaseApplicationLock,
@@ -22,7 +23,9 @@ import {
   insertSubmission as repoInsertSubmission,
   findSubmissions as repoFindSubmissions,
   getLatestApplicationStateForGrant as repoGetLatestApplicationStateForGrant,
-  updateApplicationStateVersion as repoUpdateApplicationStateVersion
+  updateApplicationStateVersion as repoUpdateApplicationStateVersion,
+  findUnsubmittedApplicationStates as repoFindUnsubmittedApplicationStates,
+  purgeApplicationStates as repoPurgeApplicationStates
 } from './state.repository.js'
 import { resolveLatestVersion, resolveLatestVersionWithinMajor } from '../config/config.service.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
@@ -268,4 +271,41 @@ export async function getStateWithFormDefinition({ sbi, grantCode, ownerId, incl
     fromVersion: existing.grantVersion,
     toVersion: newGrantVersion
   }
+}
+
+/**
+ * Purges unsubmitted application states for a grant that match a version rule.
+ *
+ * Retrieves all non-submitted application states for the specified grant,
+ * filters them using a semver version rule, and marks matching applications
+ * as PURGED.
+ *
+ * Supported version rules follow standard semver range syntax, for example:
+ * - `1.5.0`
+ * - `<2.0.0`
+ * - `>3.0.1`
+ * - `^2.1.0`
+ * - `~2.1.0`
+ * - `>=2.0.0 <3.0.0`
+ *
+ * @param {{ grantCode: string, versionRule: string }} params
+ * @returns {Promise<number>}
+ *   The number of application states successfully marked as PURGED.
+ */
+export async function purgeApplications({ grantCode, versionRule }) {
+  const applications = await repoFindUnsubmittedApplicationStates({
+    grantCode
+  })
+
+  const idsToPurge = applications
+    .filter((application) => semver.satisfies(application.grantVersion, versionRule))
+    .map((application) => application._id)
+
+  if (!idsToPurge.length) {
+    return 0
+  }
+
+  const result = await repoPurgeApplicationStates(idsToPurge)
+
+  return result.modifiedCount
 }

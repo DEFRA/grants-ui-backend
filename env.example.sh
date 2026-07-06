@@ -48,3 +48,13 @@ CONFIG_INGEST_SQS_VISIBILITY_TIMEOUT_SECONDS=30
 # Application lock configuration
 APPLICATION_LOCK_TOKEN_SECRET=  # 64-char hex string. Generate: openssl rand -hex 32. Must match value used by frontend/client
 APPLICATION_LOCK_TTL_MS=14400000  # Lock timeout in milliseconds (default: 4 hours)
+
+# Comma-separated list of grantCode:versionRule entries
+#
+# Examples:
+#   PURGE_APPLICATIONS=ffc:<2.0.0
+#   PURGE_APPLICATIONS=ffc:<2.0.0,sfi:1.5.0
+#   PURGE_APPLICATIONS=ffc:^2.1.0
+#
+# Version rules follow standard semver range syntax.
+PURGE_APPLICATIONS=

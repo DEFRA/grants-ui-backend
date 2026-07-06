@@ -27,6 +27,7 @@ Core delivery platform Node.js Backend Template.
   - [Database migrations](#database-migrations)
   - [Grant version (semver)](#grant-version-semver)
   - [MongoDB Locks](#application-locking)
+  - [Application purge](#application-purge)
   - [Proxy](#proxy)
 - [Docker](#docker)
   - [Development image](#development-image)
@@ -158,6 +159,44 @@ cp env.example.sh .env
 - `APPLICATION_LOCK_TOKEN_SECRET` – secret key for signing lock tokens (64 character hex string, generate with `openssl rand -hex 32`)
 - `APPLICATION_LOCK_TTL_MS` – lock timeout in milliseconds (default: `14400000` - 4 hours)
 
+**Application purge configuration** (optional):
+
+Used to mark obsolete unsubmitted applications as `PURGED` during service startup following a grant major-version change.
+
+- `PURGE_APPLICATIONS` – comma-separated list of grant/version rules
+
+Examples:
+
+```bash
+# Purge all FFC applications older than 2.0.0
+PURGE_APPLICATIONS=ffc:<2.0.0
+
+# Purge exactly version 1.5.0
+PURGE_APPLICATIONS=ffc:1.5.0
+
+# Multiple grants
+PURGE_APPLICATIONS=ffc:<2.0.0,sfi:1.5.0
+```
+
+Version matching uses standard semantic-version (semver) range expressions.
+
+Examples:
+
+| Rule             | Meaning                           |
+| ---------------- | --------------------------------- |
+| `1.5.0`          | Exactly version 1.5.0             |
+| `<2.0.0`         | Any version older than 2.0.0      |
+| `>3.0.1`         | Any version newer than 3.0.1      |
+| `^2.1.0`         | Any compatible 2.x version        |
+| `~2.1.0`         | Patch releases within 2.1.x       |
+| `>=2.0.0 <3.0.0` | Any version in the 2.x major line |
+
+Purged applications are not deleted from MongoDB. Instead, their
+`state.applicationStatus` is updated to `PURGED` so the frontend can
+display a reset journey and prompt the applicant to start a new application.
+
+````
+
 An extended reference with all available configuration options is available in `env.example.sh`.
 
 Keep these values in sync with the frontend configuration described in the [grants-ui environment guidance](https://github.com/DEFRA/grants-ui#environment-variables) so clients can authenticate successfully.
@@ -168,7 +207,7 @@ To run the application in `development` mode run:
 
 ```bash
 npm run dev
-```
+````
 
 #### Testing
 
@@ -383,6 +422,35 @@ Locks are scoped to a single application, identified by:
 - `sbi` (Single Business Identifier)
 
 Only one user from a given business may view/edit a given application at a time.
+
+### Application purge
+
+The backend supports startup-time purging of obsolete unsubmitted applications.
+
+This mechanism is intended for grant scheme changes that invalidate draft applications created against earlier versions of a form definition.
+
+When the service is configured with `PURGE_APPLICATIONS` it evaluates the configured rules during startup.
+
+Matching application state records:
+
+- must belong to the specified grant
+- must match the configured semver rule
+- must not already be submitted
+- are marked with `applicationStatus: 'PURGED'`
+
+Purged applications remain in MongoDB for audit and operational purposes. They are not physically deleted.
+
+Example:
+
+```bash
+PURGE_APPLICATIONS=ffc:<2.0.0
+```
+
+This marks all unsubmitted `ffc` applications created against versions older than `2.0.0` as `PURGED`.
+
+The operation is designed to be idempotent. Running the same purge multiple times has no additional effect on already-purged applications.
+
+In multi-instance deployments (for example ECS rolling deployments), multiple instances may execute the startup purge logic. Because purge updates are idempotent, repeated execution is safe.
 
 #### How locking works
 

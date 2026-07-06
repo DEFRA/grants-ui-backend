@@ -441,6 +441,55 @@ describe('LogCodes', () => {
     })
   })
 
+  describe('PURGE log codes', () => {
+    it.each([
+      [
+        'STARTED',
+        'info',
+        {
+          grantCode: 'woodland',
+          rule: 'older-than-90-days'
+        },
+        'Starting application purge | grantCode=woodland | rule=older-than-90-days'
+      ],
+      [
+        'COMPLETED',
+        'info',
+        {
+          grantCode: 'woodland',
+          rule: 'older-than-90-days',
+          purgedCount: 25
+        },
+        'Completed application purge | grantCode=woodland | rule=older-than-90-days | purgedCount=25'
+      ],
+      [
+        'FAILED',
+        'error',
+        {
+          grantCode: 'woodland',
+          rule: 'older-than-90-days',
+          errorName: 'MongoServerError',
+          errorMessage: 'Connection failed',
+          errorReason: 'Primary unavailable',
+          errorCode: 'ECONNREFUSED',
+          isMongoError: true,
+          stack: 'stack trace'
+        },
+        'Application purge failed | grantCode=woodland | rule=older-than-90-days | errorName=MongoServerError | errorMessage=Connection failed | errorReason=Primary unavailable | errorCode=ECONNREFUSED | isMongoError=true | stack=stack trace'
+      ],
+      [
+        'SKIPPED',
+        'info',
+        {
+          reason: 'purge disabled'
+        },
+        'Application purge skipped | reason=purge disabled'
+      ]
+    ])('should have valid %s log code', (logCodeName, expectedLevel, testParams, expectedMessage) => {
+      assertLogCode('PURGE', logCodeName, expectedLevel, testParams, expectedMessage)
+    })
+  })
+
   describe('ALLOWLIST log codes', () => {
     it.each([
       [

@@ -9,7 +9,8 @@ import {
   patchApplicationState,
   insertSubmission,
   findSubmissions,
-  getStateWithFormDefinition
+  getStateWithFormDefinition,
+  purgeApplications
 } from './state.service'
 import { initStateRepository } from './state.repository'
 import { resolveLatestVersion, resolveLatestVersionWithinMajor } from '../config/config.service.js'
@@ -561,5 +562,94 @@ describe('getStateWithFormDefinition orchestration', () => {
         output: { statusCode: 423 }
       })
     })
+  })
+})
+
+describe('purgeApplications', () => {
+  let server
+
+  beforeAll(async () => {
+    server = await createServer()
+    await server.initialize()
+  })
+
+  afterAll(async () => {
+    await server.stop({ timeout: 0 })
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+    initStateRepository(server.stateDb)
+  })
+
+  test('purges matching unsubmitted applications by versionRule', async () => {
+    let capturedIds
+
+    const fakeDb = {
+      collection: () => ({
+        find: () => ({
+          toArray: async () => [
+            { _id: '1', grantVersion: '1.0.0' },
+            { _id: '2', grantVersion: '1.5.0' },
+            { _id: '3', grantVersion: '2.0.0' }
+          ]
+        }),
+        updateMany: (filter) => {
+          capturedIds = filter._id.$in
+          return { modifiedCount: 2 }
+        }
+      })
+    }
+
+    initStateRepository(fakeDb)
+
+    const result = await purgeApplications({
+      grantCode: 'EGWA',
+      versionRule: '<2.0.0'
+    })
+
+    expect(capturedIds).toEqual(expect.arrayContaining(['1', '2']))
+    expect(result).toBe(2)
+  })
+
+  test('returns 0 when no applications match rule', async () => {
+    const fakeDb = {
+      collection: () => ({
+        find: () => ({
+          toArray: async () => [] // <- key fix
+        }),
+        updateMany: () => ({ modifiedCount: 10 })
+      })
+    }
+
+    initStateRepository(fakeDb)
+
+    const result = await purgeApplications({
+      grantCode: 'EGWA',
+      versionRule: '<2.0.0'
+    })
+
+    expect(result).toBe(0)
+  })
+
+  test('re-throws when repository fails', async () => {
+    const fakeDb = {
+      collection: () => ({
+        find: () => ({
+          toArray: async () => {
+            throw new Error('db exploded')
+          }
+        })
+      })
+    }
+
+    initStateRepository(fakeDb)
+
+    await expect(
+      purgeApplications({
+        grantCode: 'EGWA',
+        versionRule: '<2.0.0'
+      })
+    ).rejects.toThrow('db exploded')
   })
 })
