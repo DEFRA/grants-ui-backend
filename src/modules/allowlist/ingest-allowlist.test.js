@@ -83,4 +83,14 @@ describe('ingestAllowlist', () => {
     expect(log).toHaveBeenCalledWith('INGEST_ENV_MISSING', { grantCode: 'woodland', version: '1.0.0' })
     expect(replaceAllowlistEntries).toHaveBeenCalledWith('woodland', [])
   })
+
+  test('warns and clears entries when allowlist.yaml is empty or blank', async () => {
+    getYamlObject.mockResolvedValue(null)
+    buildAllowlistEntries.mockReturnValue([])
+
+    await ingestAllowlist(baseParams)
+
+    expect(log).toHaveBeenCalledWith('INGEST_ENV_MISSING', { grantCode: 'woodland', version: '1.0.0' })
+    expect(replaceAllowlistEntries).toHaveBeenCalledWith('woodland', [])
+  })
 })
