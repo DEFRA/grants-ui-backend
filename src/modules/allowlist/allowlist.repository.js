@@ -1,18 +1,17 @@
 /**
  * Allowlist module — MongoDB data access.
  *
- * One document per (grantCode, env, type, value). Normalised so every lookup
+ * One document per (grantCode, type, value). Normalised so every lookup
  * is O(log n) via a covered compound index — MongoDB never touches the
  * documents themselves, only the index — regardless of list size.
  *
- * Index: { type, value, env, grantCode }
- *   - type  : low cardinality prefix ('crn' | 'sbi') — narrows the scan quickly
- *   - value : the actual CRN/SBI string — highly selective
- *   - env   : environment key — further narrows
+ * Index: { type, value, grantCode }
+ *   - type      : low cardinality prefix ('crn' | 'sbi') — narrows the scan quickly
+ *   - value     : the actual CRN/SBI string — highly selective
  *   - grantCode : included last so distinct('grantCode', …) is fully covered
  *
- * The same index (prefix { env, grantCode }) also covers findGrantCodesWithAllowlist.
- * A second index { env, grantCode } is added for that query alone.
+ * Environment isolation is handled by infrastructure — each CDP environment
+ * has its own MongoDB instance, so no env field is needed in documents.
  */
 
 /**
@@ -20,7 +19,6 @@
  *
  * @typedef {Object} AllowlistEntry
  * @property {string} grantCode
- * @property {string} env
  * @property {AllowlistEntryType} type
  * @property {string} value
  * @property {Date} updatedAt
@@ -71,37 +69,30 @@ export async function replaceAllowlistEntries(grantCode, entries) {
 
 /**
  * Returns all distinct grantCodes that have at least one entry matching the
- * given type, value and env.
+ * given type and value.
  *
- * Backed by the covered index { type, value, env, grantCode } — no document
+ * Backed by the covered index { type, value, grantCode } — no document
  * reads, index-only scan.
  *
  * @param {AllowlistEntryType} type
  * @param {string} value
- * @param {string} env
  * @returns {Promise<string[]>}
  */
-export async function findGrantCodesByEntry(type, value, env) {
-  return allowlistDb.collection(COLLECTION).distinct('grantCode', { type, value, env })
+export async function findGrantCodesByEntry(type, value) {
+  return allowlistDb.collection(COLLECTION).distinct('grantCode', { type, value })
 }
 
 /**
  * Returns a Map of grantCode → { allowAll: boolean } for every grant that has
- * any allowlist entries for the given env. Grants absent from the map have no
- * allowlist and are closed to all users.
+ * any allowlist entries. Grants absent from the map have no allowlist and are
+ * closed to all users.
  *
- * Single aggregation pipeline — replaces the two separate distinct() queries.
- *
- * @param {string} env
  * @returns {Promise<Map<string, { allowAll: boolean }>>}
  */
-export async function findGrantCodesWithAllowlist(env) {
+export async function findGrantCodesWithAllowlist() {
   const rows = await allowlistDb
     .collection(COLLECTION)
-    .aggregate([
-      { $match: { env } },
-      { $group: { _id: '$grantCode', allowAll: { $max: { $eq: ['$type', 'allowAll'] } } } }
-    ])
+    .aggregate([{ $group: { _id: '$grantCode', allowAll: { $max: { $eq: ['$type', 'allowAll'] } } } }])
     .toArray()
 
   return new Map(rows.map(({ _id, allowAll }) => [_id, { allowAll }]))

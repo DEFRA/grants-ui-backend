@@ -1,8 +1,8 @@
 import { LRUCache } from 'lru-cache'
-import { config } from '../../config.js'
 import { findGrantCodesByEntry, findGrantCodesWithAllowlist } from './allowlist.repository.js'
 import { getAllActiveGrants } from '../config/config.repository.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
+import { config } from '../../config.js'
 
 export const allowlistCache = new LRUCache({ max: 500, ttl: 2 * 60 * 1000 })
 
@@ -11,11 +11,11 @@ export const allowlistCache = new LRUCache({ max: 500, ttl: 2 * 60 * 1000 })
  */
 
 /**
- * Returns the grants accessible to a user based on the allowlist for the
- * current environment, with title, description and resolved url.
+ * Returns the grants accessible to a user based on the allowlist, with title,
+ * description and resolved url.
  *
  * Rules:
- * - Grants with no allowlist entries for the current env are closed to all users.
+ * - Grants with no allowlist entries are closed to all users.
  * - Grants with allowAll: true are open to all users.
  * - Otherwise a user must appear in BOTH the crn list AND the sbi list.
  *
@@ -30,13 +30,11 @@ export async function resolveAllowedGrants(crn, sbi) {
     return cached
   }
 
-  const env = config.get('cdpEnvironment')
-
   const [allActiveGrants, crnMatches, sbiMatches, grantsWithAllowlist] = await Promise.all([
     getAllActiveGrants(),
-    findGrantCodesByEntry('crn', String(crn), env),
-    findGrantCodesByEntry('sbi', String(sbi), env),
-    findGrantCodesWithAllowlist(env)
+    findGrantCodesByEntry('crn', String(crn)),
+    findGrantCodesByEntry('sbi', String(sbi)),
+    findGrantCodesWithAllowlist()
   ])
 
   const crnSet = new Set(crnMatches)
@@ -53,7 +51,7 @@ export async function resolveAllowedGrants(crn, sbi) {
     return crnSet.has(grantCode) && sbiSet.has(grantCode)
   })
 
-  log(LogCodes.ALLOWLIST.GRANTS_CHECKED, { crn, sbi, env, matchedCount: allowed.length })
+  log(LogCodes.ALLOWLIST.GRANTS_CHECKED, { crn, sbi, matchedCount: allowed.length })
 
   const grantsUiBaseUrl = config.get('grantsUiBaseUrl')
 

@@ -13,7 +13,7 @@ jest.mock('../config/config.repository.js', () => ({
 }))
 
 jest.mock('../../config.js', () => ({
-  config: { get: jest.fn() }
+  config: { get: jest.fn((key) => (key === 'grantsUiBaseUrl' ? 'https://grants-ui.dev.cdp-int.defra.cloud' : null)) }
 }))
 
 jest.mock('../../common/helpers/logging/log.js', () => {
@@ -27,11 +27,9 @@ const farmPayments = { grantCode: 'farm-payments', title: 'Farm Payments', descr
 beforeEach(() => {
   jest.clearAllMocks()
   allowlistCache.clear()
-  config.get.mockImplementation((key) => {
-    if (key === 'cdpEnvironment') return 'dev'
-    if (key === 'grantsUiBaseUrl') return 'https://grants-ui.dev.cdp-int.defra.cloud'
-    return null
-  })
+  config.get.mockImplementation((key) =>
+    key === 'grantsUiBaseUrl' ? 'https://grants-ui.dev.cdp-int.defra.cloud' : null
+  )
   findGrantCodesWithAllowlist.mockResolvedValue(new Map())
 })
 
@@ -146,11 +144,7 @@ describe('resolveAllowedGrants', () => {
   })
 
   test('constructs url from GRANTS_UI_BASE_URL and grantCode', async () => {
-    config.get.mockImplementation((key) => {
-      if (key === 'cdpEnvironment') return 'prod'
-      if (key === 'grantsUiBaseUrl') return 'https://grants.defra.gov.uk'
-      return null
-    })
+    config.get.mockImplementation((key) => (key === 'grantsUiBaseUrl' ? 'https://grants.defra.gov.uk' : null))
     getAllActiveGrants.mockResolvedValue([woodland])
     findGrantCodesByEntry.mockImplementation((type) => {
       if (type === 'crn') return Promise.resolve(['woodland'])
@@ -164,11 +158,7 @@ describe('resolveAllowedGrants', () => {
   })
 
   test('returns null url when GRANTS_UI_BASE_URL is not set', async () => {
-    config.get.mockImplementation((key) => {
-      if (key === 'cdpEnvironment') return 'dev'
-      if (key === 'grantsUiBaseUrl') return ''
-      return null
-    })
+    config.get.mockImplementation((key) => (key === 'grantsUiBaseUrl' ? '' : null))
     getAllActiveGrants.mockResolvedValue([woodland])
     findGrantCodesByEntry.mockImplementation((type) => {
       if (type === 'crn') return Promise.resolve(['woodland'])
@@ -192,19 +182,14 @@ describe('resolveAllowedGrants', () => {
     expect(getAllActiveGrants).toHaveBeenCalledTimes(1)
   })
 
-  test('queries with the current cdpEnvironment', async () => {
-    config.get.mockImplementation((key) => {
-      if (key === 'cdpEnvironment') return 'prod'
-      if (key === 'grantsUiBaseUrl') return 'https://grants.defra.gov.uk'
-      return null
-    })
+  test('queries repository without env — environment isolation is handled by infrastructure', async () => {
     getAllActiveGrants.mockResolvedValue([woodland])
     findGrantCodesByEntry.mockResolvedValue([])
 
     await resolveAllowedGrants('1234567890', '123456789')
 
-    expect(findGrantCodesByEntry).toHaveBeenCalledWith('crn', '1234567890', 'prod')
-    expect(findGrantCodesByEntry).toHaveBeenCalledWith('sbi', '123456789', 'prod')
-    expect(findGrantCodesWithAllowlist).toHaveBeenCalledWith('prod')
+    expect(findGrantCodesByEntry).toHaveBeenCalledWith('crn', '1234567890')
+    expect(findGrantCodesByEntry).toHaveBeenCalledWith('sbi', '123456789')
+    expect(findGrantCodesWithAllowlist).toHaveBeenCalledWith()
   })
 })
