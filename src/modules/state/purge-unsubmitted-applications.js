@@ -1,7 +1,7 @@
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
 import { purgeApplications } from './state.service.js'
 import { config } from '../../config.js'
-import { parsePurgeConfig } from '~/src/common/helpers/version/version.js'
+import { parsePurgeConfig } from '../../common/helpers/version/version.js'
 
 export async function runStartupPurge() {
   const purgeRules = parsePurgeConfig(config.get('purge.applications'))
