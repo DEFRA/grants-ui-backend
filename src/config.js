@@ -216,10 +216,10 @@ const config = convict({
   },
   purge: {
     applications: {
-      doc: 'Comma-separated purge rules, e.g. "ffc:<2.0.0,sfi:1.5.0"',
+      doc: 'Semicolon-separated purge rules, e.g. "ffc:<2.0.0;sfi:1.5.0"',
       format: String,
       default: '',
-      env: 'PURGE_APPLICATIONS'
+      env: 'PURGE_UNSUBMITTED_APPLICATIONS'
     }
   }
 })

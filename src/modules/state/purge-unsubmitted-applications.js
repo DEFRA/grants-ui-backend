@@ -12,7 +12,6 @@ export async function runStartupPurge() {
     })
     return
   }
-  console.log(`Running startup purge for ${purgeRules.length} rules: ${JSON.stringify(purgeRules)}`)
 
   for (const { grantCode, rule } of purgeRules) {
     try {

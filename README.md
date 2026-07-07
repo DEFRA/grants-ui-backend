@@ -163,19 +163,19 @@ cp env.example.sh .env
 
 Used to mark obsolete unsubmitted applications as `PURGED` during service startup following a grant major-version change.
 
-- `PURGE_APPLICATIONS` – comma-separated list of grant/version rules
+- `PURGE_UNSUBMITTED_APPLICATIONS` – comma-separated list of grant/version rules
 
 Examples:
 
 ```bash
 # Purge all FFC applications older than 2.0.0
-PURGE_APPLICATIONS=ffc:<2.0.0
+PURGE_UNSUBMITTED_APPLICATIONS=ffc:<2.0.0
 
 # Purge exactly version 1.5.0
-PURGE_APPLICATIONS=ffc:1.5.0
+PURGE_UNSUBMITTED_APPLICATIONS=ffc:1.5.0
 
 # Multiple grants
-PURGE_APPLICATIONS=ffc:<2.0.0,sfi:1.5.0
+PURGE_UNSUBMITTED_APPLICATIONS=ffc:<2.0.0;sfi:1.5.0
 ```
 
 Version matching uses standard semantic-version (semver) range expressions.
@@ -427,7 +427,7 @@ The backend supports startup-time purging of obsolete unsubmitted applications.
 
 This mechanism is intended for grant scheme changes that invalidate draft applications created against earlier versions of a form definition.
 
-When the service is configured with `PURGE_APPLICATIONS` it evaluates the configured rules during startup.
+When the service is configured with `PURGE_UNSUBMITTED_APPLICATIONS` it evaluates the configured rules during startup.
 
 Matching application state records:
 
@@ -441,7 +441,7 @@ Purged applications remain in MongoDB for audit and operational purposes. They a
 Example:
 
 ```bash
-PURGE_APPLICATIONS=ffc:<2.0.0
+PURGE_UNSUBMITTED_APPLICATIONS=ffc:<2.0.0
 ```
 
 This marks all unsubmitted `ffc` applications created against versions older than `2.0.0` as `PURGED`.

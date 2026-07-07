@@ -479,7 +479,7 @@ describe('LogCodes', () => {
       ],
       [
         'SKIPPED',
-        'info',
+        'debug',
         {
           reason: 'purge disabled'
         },

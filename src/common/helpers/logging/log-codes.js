@@ -311,7 +311,7 @@ export const LogCodes = {
     },
 
     SKIPPED: {
-      level: 'info',
+      level: 'debug',
       messageFunc: ({ reason }) => `Application purge skipped | reason=${reason}`
     }
   }
