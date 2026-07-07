@@ -195,8 +195,6 @@ Purged applications are not deleted from MongoDB. Instead, their
 `state.applicationStatus` is updated to `PURGED` so the frontend can
 display a reset journey and prompt the applicant to start a new application.
 
-````
-
 An extended reference with all available configuration options is available in `env.example.sh`.
 
 Keep these values in sync with the frontend configuration described in the [grants-ui environment guidance](https://github.com/DEFRA/grants-ui#environment-variables) so clients can authenticate successfully.
@@ -207,7 +205,7 @@ To run the application in `development` mode run:
 
 ```bash
 npm run dev
-````
+```
 
 #### Testing
 
