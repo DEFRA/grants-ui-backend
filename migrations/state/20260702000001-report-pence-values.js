@@ -86,7 +86,14 @@ const filter = {
  * Logs the dry-run summary line followed by one line per affected record
  * detailing the offending `{ field, value }` entries.
  *
- * @param affectedRecords {Array<{ _id: unknown, problems: Array<{ field: string, value: number }> }>}
+ * @param affectedRecords {Array<{
+ *   _id: unknown,
+ *   sbi?: unknown,
+ *   grantCode?: unknown,
+ *   grantVersion?: unknown,
+ *   status?: unknown,
+ *   problems: Array<{ field: string, value: number }>
+ * }>}
  * @returns {void}
  */
 const logReport = (affectedRecords) => {
@@ -96,9 +103,13 @@ const logReport = (affectedRecords) => {
     `report-pence-values (dry run): affectedRecords=${affectedRecords.length}; totalProblemFields=${totalProblems}`
   )
 
-  for (const { _id, problems: recordProblems } of affectedRecords) {
+  for (const { _id, sbi, grantCode, grantVersion, status, problems: recordProblems } of affectedRecords) {
     console.info(
-      `report-pence-values (dry run): id=${stringifyRecordId(_id)}; problems=${JSON.stringify(recordProblems)}`
+      `report-pence-values (dry run): id=${stringifyRecordId(
+        _id
+      )}; SBI=${sbi}; grantCode=${grantCode}; grantVersion=${grantVersion}; status=${status}; problems=${JSON.stringify(
+        recordProblems
+      )}`
     )
   }
 }
@@ -114,7 +125,11 @@ const logReport = (affectedRecords) => {
 export const up = async (db) => {
   const collection = db.collection(COLLECTION)
   const affectedRecords = await collection
-    .aggregate([{ $match: filter }, { $project: { _id: 1, problems } }, { $sort: { _id: 1 } }])
+    .aggregate([
+      { $match: filter },
+      { $project: { _id: 1, sbi: 1, grantCode: 1, grantVersion: 1, status: 1, problems } },
+      { $sort: { _id: 1 } }
+    ])
     .toArray()
 
   logReport(affectedRecords)

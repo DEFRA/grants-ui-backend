@@ -6,7 +6,7 @@ import { MongoClient } from 'mongodb'
  * @returns {{ db: import('mongodb').Db, consoleInfo: import('@jest/globals').jest.SpyInstance }} the live test context
  */
 export const setupMigrationTestContext = ({ dbName, collection }) => {
-  const context = { db: undefined, consoleInfo: undefined }
+  const context = { db: null, consoleInfo: null }
   let connection
 
   beforeAll(async () => {
