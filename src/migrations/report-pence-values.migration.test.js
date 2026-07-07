@@ -39,9 +39,7 @@ describe('report-pence-values migration', () => {
       'report-pence-values (dry run): affectedRecords=1; totalProblemFields=2'
     )
     expect(context.consoleInfo).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'id=affected; SBI=300000001; grantCode=woodland; grantVersion=1.0.0; status=started'
-      )
+      expect.stringContaining('id=affected; SBI=300000001; grantCode=woodland; grantVersion=1.0.0; status=started')
     )
     expect(context.consoleInfo).toHaveBeenCalledWith(expect.stringContaining('"field":"totalPence"'))
     expect(context.consoleInfo).toHaveBeenCalledWith(
