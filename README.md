@@ -163,7 +163,7 @@ cp env.example.sh .env
 
 Used to mark obsolete unsubmitted applications as `PURGED` during service startup following a grant major-version change.
 
-- `PURGE_UNSUBMITTED_APPLICATIONS` – comma-separated list of grant/version rules
+- `PURGE_UNSUBMITTED_APPLICATIONS` – semicolon-separated list of grant/version rules
 
 Examples:
 
