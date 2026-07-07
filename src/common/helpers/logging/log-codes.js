@@ -296,6 +296,29 @@ export const LogCodes = {
       messageFunc: ({ collection, grantCode, version, defaultVersion }) =>
         `Cannot parse grantVersion; using safe default | collection=${collection} | grantCode=${grantCode} | version=${version} | defaultVersion=${defaultVersion}`
     }
+  },
+  PURGE: {
+    STARTED: {
+      level: 'info',
+      messageFunc: ({ grantCode, rule }) => `Starting application purge | grantCode=${grantCode} | rule=${rule}`
+    },
+
+    COMPLETED: {
+      level: 'info',
+      messageFunc: ({ grantCode, rule, purgedCount }) =>
+        `Completed application purge | grantCode=${grantCode} | rule=${rule} | purgedCount=${purgedCount}`
+    },
+
+    FAILED: {
+      level: 'error',
+      messageFunc: ({ grantCode, rule, errorName, errorMessage, errorReason, errorCode, isMongoError, stack }) =>
+        `Application purge failed | grantCode=${grantCode} | rule=${rule} | errorName=${errorName} | errorMessage=${errorMessage} | errorReason=${errorReason} | errorCode=${errorCode} | isMongoError=${isMongoError} | stack=${stack}`
+    },
+
+    SKIPPED: {
+      level: 'debug',
+      messageFunc: ({ reason }) => `Application purge skipped | reason=${reason}`
+    }
   }
 }
 

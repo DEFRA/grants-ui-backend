@@ -470,3 +470,43 @@ export async function findSubmissions(filter) {
     throw err
   }
 }
+
+/**
+ * Finds all application states for a given grantCode that have not been submitted yet.
+ *
+ * @param {{ grantCode: string }} params
+ * @returns {Promise<ApplicationState[]>}
+ */
+export async function findUnsubmittedApplicationStates({ grantCode }) {
+  return stateDb
+    .collection(STATE_COLLECTION)
+    .find({
+      grantCode,
+      'state.applicationStatus': {
+        $nin: ['SUBMITTED', 'PURGED']
+      }
+    })
+    .toArray()
+}
+
+/**
+ * Purges application states for a given grantCode by marking them as PURGED.
+ *
+ * @param {import('mongodb').ObjectId[]} ids
+ * @returns {Promise<import('mongodb').UpdateResult>}
+ */
+export async function purgeApplicationStates(ids) {
+  return stateDb.collection(STATE_COLLECTION).updateMany(
+    {
+      _id: { $in: ids }
+    },
+    {
+      $set: {
+        'state.applicationStatus': 'PURGED'
+      },
+      $currentDate: {
+        updatedAt: true
+      }
+    }
+  )
+}

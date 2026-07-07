@@ -213,6 +213,14 @@ const config = convict({
       default: fourHoursMs,
       env: 'APPLICATION_LOCK_TTL_MS'
     }
+  },
+  purge: {
+    applications: {
+      doc: 'Semicolon-separated purge rules, e.g. "ffc:<2.0.0;sfi:1.5.0"',
+      format: String,
+      default: '',
+      env: 'PURGE_UNSUBMITTED_APPLICATIONS'
+    }
   }
 })
 

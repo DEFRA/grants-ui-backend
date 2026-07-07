@@ -5,6 +5,7 @@ import { runStartupPull } from '../../modules/config/ingest/startup-pull.js'
 import { runMigrations } from './run-migrations.js'
 import stateMongoConfig from '../../../migrate-mongo-config.state.js'
 import configMongoConfig from '../../../migrate-mongo-config.config.js'
+import { runStartupPurge } from '../../modules/state/purge-unsubmitted-applications.js'
 
 async function startServer() {
   let server
@@ -17,6 +18,12 @@ async function startServer() {
     // the others back-off/poll until the lock clears, then start normally.
     await runMigrations(server.stateDb, stateMongoConfig)
     await runMigrations(server.configDb, configMongoConfig)
+
+    try {
+      await runStartupPurge()
+    } catch (err) {
+      server.logger.error({ err }, 'Startup purge failed; continuing with existing DB state')
+    }
 
     // Best-effort startup pull from the config broker. If the broker is not yet
     // ready (e.g. cold start), we log and continue with the existing DB state;
