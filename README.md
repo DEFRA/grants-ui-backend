@@ -527,7 +527,7 @@ Access is evaluated per grant, per environment:
 
 ```yaml
 dev:
-  allowAll: true        # open to everyone in dev
+  allowAll: true # open to everyone in dev
 test:
   crns:
     - '1234567890'
