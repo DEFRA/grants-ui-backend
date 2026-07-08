@@ -511,6 +511,43 @@ A unique index ensures only one active lock exists per application.
 - Lock contention is treated as an expected condition, not an error.
 - Lock release on submission or sign-out is handled at route / workflow level and is out of scope for this section.
 
+### Grant allowlist
+
+The allowlist controls which users can access which grants. The config broker uploads `allowlist.yaml` files to S3 alongside each grant's form definition; this service ingests them from S3 via the config broker and applies them per environment.
+
+#### Access rules
+
+Access is evaluated per grant, per environment:
+
+- Grants with **no allowlist entries** are **closed to all users**.
+- Grants with `allowAll: true` are **open to all users** in that environment.
+- Otherwise the user must appear in **both** the CRN list and the SBI list.
+
+#### allowlist.yaml format
+
+```yaml
+dev:
+  allowAll: true # open to everyone in dev
+test:
+  crns:
+    - '1234567890'
+  sbis:
+    - '123456789'
+```
+
+The file lives at `<grantCode>/<version>/grants-ui/allowlist.yaml` inside the config S3 bucket. If the file is absent for a grant version, all entries for that grant are cleared (closing access).
+
+#### Ingestion
+
+Allowlist entries are ingested automatically when a grant version is published via the config broker. The backend replaces all existing entries for the grant atomically on each ingest. Results are cached in memory per `crn:sbi` pair to reduce database load.
+
+#### Authentication
+
+The `GET /allowlist/grants` endpoint requires:
+
+- `Authorization: Bearer <token>` — standard service-to-service bearer token
+- `x-encrypted-auth: <jwt>` — a JWT signed with `ENCRYPTED_AUTH_JWT_SECRET` containing `crn` and `sbi` claims
+
 ### Proxy
 
 We are using forward-proxy which is set up by default. To make use of this: `import { fetch } from 'undici'` then
