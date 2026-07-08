@@ -17,3 +17,4 @@ globalConfig.json
 # Pact files are published/fetched via the Pact Broker in CI
 contracts/pacts
 /localstack/config-broker-local/
+AGENTS.local.md
