@@ -191,9 +191,9 @@ Examples:
 | `~2.1.0`         | Patch releases within 2.1.x       |
 | `>=2.0.0 <3.0.0` | Any version in the 2.x major line |
 
-Purged applications are not deleted from MongoDB. Instead, their
-`state.applicationStatus` is updated to `PURGED` so the frontend can
-display a reset journey and prompt the applicant to start a new application.
+Purged applications are kept in MongoDB with their
+`state.applicationStatus` updated to `PURGED` until the frontend
+displays a reset journey page (where aplicant is prompted to start a new application) at which point they are deleted permanently from MongoDB.
 
 An extended reference with all available configuration options is available in `env.example.sh`.
 
@@ -421,49 +421,6 @@ Locks are scoped to a single application, identified by:
 
 Only one user from a given business may view/edit a given application at a time.
 
-### Application purge
-
-The backend supports startup-time purging of obsolete unsubmitted applications.
-
-This mechanism is intended for grant scheme changes that invalidate draft applications created against earlier versions of a form definition.
-
-When the service is configured with `PURGE_UNSUBMITTED_APPLICATIONS` it evaluates the configured rules during startup.
-
-Matching application state records:
-
-- must belong to the specified grant
-- must match the configured semver rule
-- must not already be submitted
-- are marked with `applicationStatus: 'PURGED'`
-
-Purged applications remain in MongoDB for audit and operational purposes. They are not physically deleted.
-
-Example:
-
-```bash
-PURGE_UNSUBMITTED_APPLICATIONS=ffc:<2.0.0
-```
-
-The version rules are supported through node.js semver so all of the following are supported:
-
-```
-<1.2.0
-<=1.2.0
->1.2.0
->=1.2.0
-1.x
-1.2.x
-^1.2.0
-~1.2.0
-1.0.0 - 2.0.0
-```
-
-This marks all unsubmitted `ffc` applications created against versions older than `2.0.0` as `PURGED`.
-
-The operation is designed to be idempotent. Running the same purge multiple times has no additional effect on already-purged applications.
-
-In multi-instance deployments (for example ECS rolling deployments), multiple instances may execute the startup purge logic. Because purge updates are idempotent, repeated execution is safe.
-
 #### How locking works
 
 Lock-protected routes require a JWT token in the `x-application-lock-owner` header. This token identifies the user attempting to acquire the lock and includes the application scope (SBI, grantCode, grantVersion).
@@ -561,6 +518,61 @@ The `GET /allowlist/grants` endpoint requires:
 
 - `Authorization: Bearer <token>` — standard service-to-service bearer token
 - `x-encrypted-auth: <jwt>` — a JWT signed with `ENCRYPTED_AUTH_JWT_SECRET` containing `crn` and `sbi` claims
+
+### Application purge
+
+The backend supports startup-time purging of obsolete unsubmitted applications.
+
+This mechanism is intended for grant scheme changes that invalidate draft applications created against earlier versions of a form definition.
+
+When the service is configured with `PURGE_UNSUBMITTED_APPLICATIONS` it evaluates the configured rules during startup.
+
+Matching application state records:
+
+- must belong to the specified grant
+- must match the configured semver rule
+- must not already be submitted
+- are marked with `applicationStatus: 'PURGED'`
+
+Applications marked as `PURGED` remain in MongoDB until the user next accesses the application. The user is shown a "Your draft application has been deleted" page and, once displayed, the application state is permanently removed.
+
+Example:
+
+```bash
+PURGE_UNSUBMITTED_APPLICATIONS=ffc:<2.0.0
+```
+
+The example above marks all unsubmitted `ffc` applications created against versions earlier than `2.0.0` as `PURGED`.
+
+Multiple purge rules can be configured using semicolon-separated entries:
+
+```bash
+PURGE_UNSUBMITTED_APPLICATIONS=ffc:<2.0.0;water:<=1.5.0;trees:^1.0.0
+```
+
+Each rule is evaluated independently against applications for the specified grant.
+
+#### Supported version ranges
+
+Version matching uses the Node.js semver package, so expressions such as the following are supported:
+
+```
+<1.2.0
+<=1.2.0
+>1.2.0
+>=1.2.0
+1.x
+1.2.x
+^1.2.0
+~1.2.0
+1.0.0 - 2.0.0
+```
+
+#### Behaviour
+
+The operation is idempotent. Running the same purge multiple times has no additional effect on applications that have already been marked as PURGED.
+
+In multi-instance deployments (for example ECS rolling deployments), multiple instances may execute the startup purge logic. Because purge updates are idempotent, repeated execution is safe.
 
 ### Proxy
 
