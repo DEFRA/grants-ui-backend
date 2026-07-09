@@ -444,6 +444,20 @@ Example:
 PURGE_UNSUBMITTED_APPLICATIONS=ffc:<2.0.0
 ```
 
+The version rules are supported through node.js semver so all of the following are supported:
+
+```
+<1.2.0
+<=1.2.0
+>1.2.0
+>=1.2.0
+1.x
+1.2.x
+^1.2.0
+~1.2.0
+1.0.0 - 2.0.0
+```
+
 This marks all unsubmitted `ffc` applications created against versions older than `2.0.0` as `PURGED`.
 
 The operation is designed to be idempotent. Running the same purge multiple times has no additional effect on already-purged applications.
