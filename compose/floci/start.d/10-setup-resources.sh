@@ -43,3 +43,4 @@ aws $ENDPOINT sns subscribe \
 
 echo "Subscribed $QUEUE_ARN to $TOPIC_ARN"
 
+echo READY > /tmp/READY

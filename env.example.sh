@@ -35,12 +35,12 @@ GRANTS_CONFIG_BROKER_AUTH_TOKEN=config-broker-auth-token
 GRANTS_CONFIG_BROKER_ENCRYPTION_KEY=config-broker-encryption-key
 CONFIG_BROKER_REQUEST_TIMEOUT_MS=15000
 
-# AWS / LocalStack (used by config module SQS + S3)
+# AWS / Floci (used by config module SQS + S3)
 AWS_REGION=eu-west-2
-AWS_ENDPOINT_URL=http://localhost:4566
+AWS_ENDPOINT_URL=http://floci:4566
 
 # SQS consumer for grants-config-broker SNS notifications
-CONFIG_INGEST_SQS_QUEUE_URL=http://localhost:4566/000000000000/grants_ui_backend__sqs__config_updates
+CONFIG_INGEST_SQS_QUEUE_URL=http://floci:4566/000000000000/grants_ui_backend__sqs__config_updates
 CONFIG_INGEST_SQS_WAIT_TIME_SECONDS=20
 CONFIG_INGEST_SQS_MAX_MESSAGES=10
 CONFIG_INGEST_SQS_VISIBILITY_TIMEOUT_SECONDS=30

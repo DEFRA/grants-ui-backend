@@ -2,7 +2,7 @@ import { MongoClient } from 'mongodb'
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals'
 
 // These tests exercise the config-ingest event wiring end-to-end against the
-// running stack (LocalStack S3/SQS + Mongo).
+// running stack (Floci S3/SQS + Mongo).
 //
 // Event path: seed a YAML object in S3 and enqueue an SNS-shaped message on the
 // ingest SQS queue, then poll Mongo until the upserted definition lands. The
@@ -35,7 +35,7 @@ let queueUrl
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-// PUT an object into the LocalStack S3 bucket using path-style addressing.
+// PUT an object into the Floci S3 bucket using path-style addressing.
 const putS3Object = async (key, body) => {
   const res = await fetch(`${awsEndpoint}/${BUCKET}/${encodeURI(key)}`, {
     method: 'PUT',
@@ -60,7 +60,7 @@ const sendSqsMessage = async (messageBody) => {
     method: 'POST',
     headers: {
       'content-type': 'application/x-www-form-urlencoded',
-      // LocalStack derives the region (and thus the queue lookup) from the
+      // Floci derives the region (and thus the queue lookup) from the
       // credential scope; the signature itself is not verified.
       authorization: `AWS4-HMAC-SHA256 Credential=test/20200101/${REGION}/sqs/aws4_request, SignedHeaders=host, Signature=int-test`
     },
@@ -104,7 +104,7 @@ beforeAll(async () => {
   db = client.db(CONFIG_DB)
 
   awsEndpoint = process.env.AWS_ENDPOINT_URL
-  // LocalStack queue URLs follow the {endpoint}/{accountId}/{queueName} format.
+  // Floci queue URLs follow the {endpoint}/{accountId}/{queueName} format.
   queueUrl = `${awsEndpoint}/000000000000/${QUEUE_NAME}`
 })
 

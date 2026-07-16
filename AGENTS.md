@@ -31,4 +31,4 @@ Add or update colocated unit tests for route, plugin, and migration changes. Run
 
 ## Security & Configuration Tips
 
-Do not commit secrets, private HTTP client files, or local database credentials. Generated Pact files and localstack artifacts should remain disposable.
+Do not commit secrets, private HTTP client files, or local database credentials. Generated Pact files and floci artifacts should remain disposable.

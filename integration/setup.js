@@ -16,10 +16,10 @@ export default async function globalSetup() {
     .withEnvironmentFile('.env.test')
     // Use health-check based wait strategies for services that define a healthcheck.
     // The default strategy (Wait.forListeningPorts) waits for *every* bound host port,
-    // which hangs for localstack because it publishes the dynamic 4510-4559 range that
+    // which hangs for floci because it publishes the dynamic 4510-4559 range that
     // it never actually binds, causing the whole setup to time out.
     .withWaitStrategy('mongodb-1', Wait.forHealthCheck())
-    .withWaitStrategy('localstack-1', Wait.forHealthCheck())
+    .withWaitStrategy('floci-1', Wait.forHealthCheck())
     .withWaitStrategy('grants-config-broker-1', Wait.forHealthCheck())
     .withWaitStrategy('mongo-ready-1', Wait.forOneShotStartup())
     .withWaitStrategy(
@@ -48,11 +48,11 @@ export default async function globalSetup() {
   // and the client connect hangs.
   process.env.MONGO_URI = `mongodb://localhost:${mappedMongoPort}/grants-ui-backend?directConnection=true`
 
-  // Expose the LocalStack edge endpoint so integration tests can drive the
+  // Expose the Floci edge endpoint so integration tests can drive the
   // config-ingest pipeline directly (seed S3 objects, enqueue SQS messages).
   // Compose binds 4566, but testcontainers remaps it to a random host port.
-  const localstackContainer = environment.getContainer('localstack-1')
-  const mappedAwsPort = localstackContainer.getMappedPort(4566)
+  const flociContainer = environment.getContainer('floci-1')
+  const mappedAwsPort = flociContainer.getMappedPort(4566)
   process.env.AWS_ENDPOINT_URL = `http://localhost:${mappedAwsPort}`
 
   // export environment for teardown
