@@ -106,7 +106,7 @@ services:
     entrypoint: ['/bin/bash', '/wait-for-replicaset.sh']
 
   floci:
-    image: hectorvent/floci:latest-aws
+    image: floci/floci:latest-compat
     ports:
       - '4566:4566'
     env_file:
