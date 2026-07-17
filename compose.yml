@@ -12,12 +12,12 @@ services:
         condition: service_healthy
       mongo-ready:
         condition: service_completed_successfully
-      localstack:
+      floci:
         condition: service_healthy
       grants-config-broker:
         condition: service_healthy
     env_file:
-      - 'localstack/aws.env'
+      - 'compose/aws.env'
     environment:
       PORT: 3001
       NODE_ENV: development
@@ -26,11 +26,11 @@ services:
       GRANTS_UI_BACKEND_ENCRYPTION_KEY: '${GRANTS_UI_BACKEND_ENCRYPTION_KEY:-encryption-key}'
       APPLICATION_LOCK_TOKEN_SECRET: '${APPLICATION_LOCK_TOKEN_SECRET:-application-lock-token-secret}'
       PURGE_UNSUBMITTED_APPLICATIONS: '${PURGE_UNSUBMITTED_APPLICATIONS:-}'
-      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ENDPOINT_URL: http://floci:4566
       CONFIG_BROKER_BASE_URL: http://grants-config-broker:3012
       GRANTS_CONFIG_BROKER_AUTH_TOKEN: '${GRANTS_CONFIG_BROKER_AUTH_TOKEN:-config-broker-auth-token}'
       GRANTS_CONFIG_BROKER_ENCRYPTION_KEY: '${GRANTS_CONFIG_BROKER_ENCRYPTION_KEY:-config-broker-encryption-key}'
-      CONFIG_INGEST_SQS_QUEUE_URL: http://localstack:4566/000000000000/grants_ui_backend__sqs__config_updates
+      CONFIG_INGEST_SQS_QUEUE_URL: http://floci:4566/000000000000/grants_ui_backend__sqs__config_updates
       GRANTS_UI_BASE_URL: '${GRANTS_UI_BASE_URL:-http://localhost:3000}'
       ENCRYPTED_AUTH_JWT_SECRET: ${ENCRYPTED_AUTH_JWT_SECRET:-allowlist-jwt-secret}
     networks:
@@ -46,28 +46,28 @@ services:
     ports:
       - '3012:3012'
     depends_on:
-      localstack:
+      floci:
         condition: service_healthy
       mongodb:
         condition: service_healthy
       mongo-ready:
         condition: service_completed_successfully
     env_file:
-      - 'localstack/aws.env'
+      - 'compose/aws.env'
     environment:
       PORT: 3012
       NODE_ENV: development
-      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ENDPOINT_URL: http://floci:4566
       CONFIG_BUCKET_NAME: configs-bucket
       GRANTS_CONFIG_BROKER_AUTH_TOKEN: '${GRANTS_CONFIG_BROKER_AUTH_TOKEN:-config-broker-auth-token}'
       GRANTS_CONFIG_BROKER_ENCRYPTION_KEY: '${GRANTS_CONFIG_BROKER_ENCRYPTION_KEY:-config-broker-encryption-key}'
       MONGO_URI: mongodb://mongodb:27017/
       SERVICE_VERSION: 1.0.0
-      CONFIG_INPUT_QUEUE_URL: http://localstack:4566/000000000000/gfr__sqs___config_input
+      CONFIG_INPUT_QUEUE_URL: http://floci:4566/000000000000/gfr__sqs___config_input
     networks:
       - grants-ui-net
     volumes:
-      - ./localstack/config-broker-local:/home/node/config
+      - ./compose/config-broker-local:/home/node/config
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3012/health']
       interval: 10s
@@ -105,33 +105,27 @@ services:
       - ./scripts/wait-for-replicaset.sh:/wait-for-replicaset.sh:ro
     entrypoint: ['/bin/bash', '/wait-for-replicaset.sh']
 
-  localstack:
-    image: localstack/localstack:4.14.0
+  floci:
+    image: floci/floci:latest-compat
     ports:
       - '4566:4566'
-      - '4510-4559:4510-4559'
     env_file:
-      - 'localstack/aws.env'
+      - 'compose/aws.env'
     environment:
-      DEBUG: ${DEBUG:-1}
-      LS_LOG: WARN
-      SERVICES: s3,sqs,sns,firehose
-      LOCALSTACK_HOST: 127.0.0.1
+      FLOCI_DEFAULT_REGION: eu-west-2
     volumes:
-      - localstack-data:/var/lib/localstack
-      - ./localstack/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
+      - ./compose/floci/start.d:/etc/floci/init/start.d:ro
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:4566/_localstack/health']
-      interval: 5s
+      test: ['CMD', 'stat', '/tmp/READY']
+      interval: 3s
       start_period: 5s
-      retries: 3
+      retries: 20
     networks:
       - grants-ui-net
 
 volumes:
   mongodb-data:
   mongodb-config:
-  localstack-data:
 
 networks:
   grants-ui-net:
