@@ -490,6 +490,81 @@ export async function findUnsubmittedApplicationStates({ grantCode }) {
 }
 
 /**
+ * Deletes all application state documents for an (sbi, grantCode) pair, across every grantVersion.
+ *
+ * @param {{ sbi: string, grantCode: string }} params
+ * @returns {Promise<import('mongodb').DeleteResult>}
+ */
+export async function deleteAllApplicationStatesForGrant({ sbi, grantCode }) {
+  try {
+    return await stateDb.collection(STATE_COLLECTION).deleteMany({ sbi, grantCode })
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.STATE.STATE_DELETE_FAILED, {
+      sbi,
+      grantCode,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Deletes all submission records for an (sbi, grantCode) pair.
+ *
+ * @param {{ sbi: string, grantCode: string }} params
+ * @returns {Promise<import('mongodb').DeleteResult>}
+ */
+export async function deleteAllSubmissionsForGrant({ sbi, grantCode }) {
+  try {
+    return await stateDb.collection(SUBMISSIONS_COLLECTION).deleteMany({ sbi, grantCode })
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.SUBMISSIONS.SUBMISSIONS_RETRIEVE_FAILED, {
+      sbi,
+      grantCode,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
+ * Deletes all application locks for an (sbi, grantCode) pair, across every grantVersion.
+ *
+ * @param {{ sbi: string, grantCode: string }} params
+ * @returns {Promise<import('mongodb').DeleteResult>}
+ */
+export async function deleteAllApplicationLocksForGrant({ sbi, grantCode }) {
+  try {
+    return await stateDb.collection(LOCKS_COLLECTION).deleteMany({ sbi, grantCode })
+  } catch (err) {
+    const isMongoError = err?.name?.startsWith('Mongo')
+    log(LogCodes.APPLICATION_LOCK.RELEASE_FAILED, {
+      sbi,
+      grantCode,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorReason: err.reason,
+      errorCode: err.code,
+      isMongoError,
+      stack: err.stack?.split('\n')[0]
+    })
+    throw err
+  }
+}
+
+/**
  * Purges application states for a given grantCode by marking them as PURGED.
  *
  * @param {import('mongodb').ObjectId[]} ids
