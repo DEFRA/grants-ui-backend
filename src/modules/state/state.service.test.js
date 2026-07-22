@@ -10,7 +10,8 @@ import {
   insertSubmission,
   findSubmissions,
   getStateWithFormDefinition,
-  purgeApplications
+  purgeApplications,
+  clearTestData
 } from './state.service'
 import { initStateRepository } from './state.repository'
 import { resolveLatestVersion, resolveLatestVersionWithinMajor } from '../config/config.service.js'
@@ -651,5 +652,66 @@ describe('purgeApplications', () => {
         versionRule: '<2.0.0'
       })
     ).rejects.toThrow('db exploded')
+  })
+})
+
+describe('clearTestData', () => {
+  let server
+
+  beforeAll(async () => {
+    server = await createServer()
+    await server.initialize()
+  })
+
+  afterAll(async () => {
+    await server.stop({ timeout: 0 })
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+    initStateRepository(server.stateDb)
+  })
+
+  test('deletes state, submissions, and locks for the given sbi/grantCode and reports counts', async () => {
+    const deleteManyCalls = []
+    const fakeDb = {
+      collection: (name) => ({
+        deleteMany: (filter) => {
+          deleteManyCalls.push({ name, filter })
+          return { deletedCount: name === 'state__grant_application_state' ? 2 : 1 }
+        }
+      })
+    }
+
+    initStateRepository(fakeDb)
+
+    const result = await clearTestData({ sbi: '123456789', grantCode: 'EGWA' })
+
+    expect(deleteManyCalls).toEqual(
+      expect.arrayContaining([
+        { name: 'state__grant_application_state', filter: { sbi: '123456789', grantCode: 'EGWA' } },
+        { name: 'state__grant_application_submissions', filter: { sbi: '123456789', grantCode: 'EGWA' } },
+        { name: 'state__grant_application_locks', filter: { sbi: '123456789', grantCode: 'EGWA' } }
+      ])
+    )
+    expect(result).toEqual({
+      stateDeletedCount: 2,
+      submissionsDeletedCount: 1,
+      locksDeletedCount: 1
+    })
+  })
+
+  test('re-throws when a repository call fails', async () => {
+    const fakeDb = {
+      collection: () => ({
+        deleteMany: () => {
+          throw new Error('db exploded')
+        }
+      })
+    }
+
+    initStateRepository(fakeDb)
+
+    await expect(clearTestData({ sbi: '123456789', grantCode: 'EGWA' })).rejects.toThrow('db exploded')
   })
 })

@@ -179,6 +179,23 @@ export const LogCodes = {
         `Failed to add submission | crn=${messageOptions.crn} | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | grantVersion=${messageOptions.grantVersion} | referenceNumber=${messageOptions.referenceNumber} | previousReferenceNumber=${messageOptions.previousReferenceNumber} | submittedAt=${messageOptions.submittedAt} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
     }
   },
+  TEST_DATA: {
+    CLEARED: {
+      level: 'info',
+      messageFunc: ({ sbi, grantCode, stateDeletedCount, submissionsDeletedCount, locksDeletedCount }) =>
+        `Cleared test data | sbi=${sbi} | grantCode=${grantCode} | stateDeletedCount=${stateDeletedCount} | submissionsDeletedCount=${submissionsDeletedCount} | locksDeletedCount=${locksDeletedCount}`
+    },
+    CLEAR_FAILED: {
+      level: 'error',
+      messageFunc: (messageOptions) =>
+        `Failed to clear test data | sbi=${messageOptions.sbi} | grantCode=${messageOptions.grantCode} | errorName=${messageOptions.errorName} | errorMessage=${messageOptions.errorMessage} | errorReason=${messageOptions.errorReason} | errorCode=${messageOptions.errorCode} | isMongoError=${messageOptions.isMongoError} | stack=${messageOptions.stack}`
+    },
+    CLEAR_FORBIDDEN: {
+      level: 'warn',
+      messageFunc: ({ sbi, grantCode, cdpEnvironment }) =>
+        `Rejected test-data clear outside permitted environments | sbi=${sbi} | grantCode=${grantCode} | cdpEnvironment=${cdpEnvironment}`
+    }
+  },
   CONFIG: {
     INGEST_MISSING_PARAMS: {
       level: 'error',

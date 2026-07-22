@@ -114,3 +114,10 @@ export const applicationLockReleaseSchema = Joi.object({
   grantCode: Joi.string().required(),
   grantVersion: grantVersion().required()
 })
+
+// --- admin/test-data route ---
+
+export const clearTestDataSchema = Joi.object({
+  sbi: Joi.string().required(),
+  grantCode: Joi.string().required()
+})

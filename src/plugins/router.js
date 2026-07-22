@@ -9,6 +9,7 @@ import {
 } from '../modules/state/state.routes.js'
 import { addSubmission, retrieveSubmissions } from '../modules/state/submissions.routes.js'
 import { allowlistGrants } from '../modules/allowlist/allowlist.routes.js'
+import { clearTestDataRoute } from '../modules/state/test-data.routes.js'
 
 const router = {
   plugin: {
@@ -25,7 +26,8 @@ const router = {
         statePatch,
         applicationLockRelease,
         applicationLocksRelease,
-        allowlistGrants
+        allowlistGrants,
+        clearTestDataRoute
       ])
     }
   }

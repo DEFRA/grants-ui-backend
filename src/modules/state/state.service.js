@@ -25,7 +25,10 @@ import {
   getLatestApplicationStateForGrant as repoGetLatestApplicationStateForGrant,
   updateApplicationStateVersion as repoUpdateApplicationStateVersion,
   findUnsubmittedApplicationStates as repoFindUnsubmittedApplicationStates,
-  purgeApplicationStates as repoPurgeApplicationStates
+  purgeApplicationStates as repoPurgeApplicationStates,
+  deleteAllApplicationStatesForGrant as repoDeleteAllApplicationStatesForGrant,
+  deleteAllSubmissionsForGrant as repoDeleteAllSubmissionsForGrant,
+  deleteAllApplicationLocksForGrant as repoDeleteAllApplicationLocksForGrant
 } from './state.repository.js'
 import { resolveLatestVersion, resolveLatestVersionWithinMajor } from '../config/config.service.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
@@ -308,4 +311,28 @@ export async function purgeApplications({ grantCode, versionRule }) {
   const result = await repoPurgeApplicationStates(idsToPurge)
 
   return result.modifiedCount
+}
+
+/**
+ * Deletes all test data for an (sbi, grantCode) pair: application state, submissions,
+ * and application locks, across every grantVersion.
+ *
+ * Intended for use by automated test suites to reset a known test SBI/grantCode
+ * between runs; not exposed outside non-production environments.
+ *
+ * @param {{ sbi: string, grantCode: string }} params
+ * @returns {Promise<{ stateDeletedCount: number, submissionsDeletedCount: number, locksDeletedCount: number }>}
+ */
+export async function clearTestData({ sbi, grantCode }) {
+  const [stateResult, submissionsResult, locksResult] = await Promise.all([
+    repoDeleteAllApplicationStatesForGrant({ sbi, grantCode }),
+    repoDeleteAllSubmissionsForGrant({ sbi, grantCode }),
+    repoDeleteAllApplicationLocksForGrant({ sbi, grantCode })
+  ])
+
+  return {
+    stateDeletedCount: stateResult.deletedCount,
+    submissionsDeletedCount: submissionsResult.deletedCount,
+    locksDeletedCount: locksResult.deletedCount
+  }
 }
