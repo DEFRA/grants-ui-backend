@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Grants UI Backend API
-  version: "0.1.0"
+  version: '0.1.0'
   description: |
     OpenAPI specification for the Grants UI Backend service.
 
@@ -9,6 +9,9 @@ info:
     - This API uses Bearer token authentication for service-to-service auth.
     - Supply the header as: `Authorization: Bearer <base64(encryptedToken)>`
     - The token is encrypted using AES-256-GCM and then base64 encoded.
+    - The `/allowlist/grants` endpoint additionally requires the
+      `x-encrypted-auth` header. This contains a JWT containing the user's
+      `crn` and `sbi` claims, signed using the shared `ENCRYPTED_AUTH_JWT_SECRET`.
 
   contact:
     name: DEFRA DDTS
@@ -53,7 +56,10 @@ components:
       type: apiKey
       in: header
       name: x-encrypted-auth
-      description: JWT containing crn and sbi claims, used by the allowlist endpoint.
+      description: |
+        JWT containing the user's `crn` and `sbi` claims, signed using the
+        `ENCRYPTED_AUTH_JWT_SECRET` shared secret. The token must be supplied
+        in the `x-encrypted-auth` header.
   schemas:
     ErrorResponse:
       type: object
