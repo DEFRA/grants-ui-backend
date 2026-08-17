@@ -98,29 +98,29 @@ function validateAuthToken(authHeader) {
 }
 
 /**
- * Decodes an x-encrypted-auth JWT and returns its claims.
+ * Verifies an x-user-context JWT and returns its claims.
  * Returns an empty object if the token is absent, the secret is missing,
  * or verification fails.
  *
- * @param {string|undefined} encryptedAuth
+ * @param {string|undefined} userContext
  * @param {string} jwtSecret
  * @returns {Record<string, unknown>}
  */
-export function decodeEncryptedAuthHeader(encryptedAuth, jwtSecret) {
-  if (!encryptedAuth) {
+export function decodeUserContextHeader(userContext, jwtSecret) {
+  if (!userContext) {
     return {}
   }
 
   if (!jwtSecret) {
     log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
       errorName: 'JWT secret not configured',
-      errorMessage: 'Cannot decode x-encrypted-auth header — JWT secret is missing'
+      errorMessage: 'Cannot decode x-user-context header — JWT secret is missing'
     })
     return {}
   }
 
   try {
-    return jwt.verify(encryptedAuth, jwtSecret)
+    return jwt.verify(userContext, jwtSecret)
   } catch (err) {
     log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
       errorName: err.name,
@@ -152,7 +152,7 @@ const auth = {
             })
 
             const jwtSecret = config.get('encryptedAuthJwtSecret')
-            const payload = decodeEncryptedAuthHeader(request.headers['x-encrypted-auth'], jwtSecret)
+            const payload = decodeUserContextHeader(request.headers['x-user-context'], jwtSecret)
             const crn =
               typeof payload.crn === 'string' || typeof payload.crn === 'number' ? `${payload.crn}` : undefined
             const sbi =

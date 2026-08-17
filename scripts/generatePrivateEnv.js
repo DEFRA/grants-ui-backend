@@ -70,7 +70,7 @@ const applicationLockOwnerToken = generateLockOwnerToken(lockSecret, userId, sbi
 const applicationLockReleaseToken = generateLockReleaseToken(lockSecret, userId)
 
 const { default: jwt } = await import('jsonwebtoken')
-const encryptedAuthToken = jwt.sign({ crn, sbi }, encryptedAuthJwtSecret)
+const userContextToken = jwt.sign({ crn, sbi }, encryptedAuthJwtSecret)
 
 // ---------------------------------------------------------------------------
 // 4. Write results into the local section of http-client.private.env.json
@@ -90,7 +90,7 @@ if (!privateEnv.local) privateEnv.local = {}
 privateEnv.local.backendAuthToken = backendAuthToken
 privateEnv.local.applicationLockOwnerToken = applicationLockOwnerToken
 privateEnv.local.applicationLockReleaseToken = applicationLockReleaseToken
-privateEnv.local.encryptedAuthToken = encryptedAuthToken
+privateEnv.local.userContextToken = userContextToken
 
 if (!privateEnv.local.configBrokerAuthToken) {
   privateEnv.local.configBrokerAuthToken = configBrokerAuthToken
@@ -109,7 +109,7 @@ console.log('✓ http/http-client.private.env.json (local) updated:')
 console.log('  backendAuthToken')
 console.log('  applicationLockOwnerToken')
 console.log('  applicationLockReleaseToken')
-console.log('  encryptedAuthToken')
+console.log('  userContextToken')
 console.log('  configBrokerAuthToken (if absent)')
 console.log('  configBrokerEncryptionKey (if absent)')
 console.log('  xApiKey (if absent)')

@@ -122,7 +122,7 @@ describe('OpenAPI documentation routes', () => {
       const securitySchemes = Object.keys(payload.components?.securitySchemes ?? {})
       expect(securitySchemes).not.toContain('lockToken')
       expect(securitySchemes).toContain('bearerAuth')
-      expect(securitySchemes).toContain('encryptedAuth')
+      expect(securitySchemes).toContain('userContext')
     })
 
     test('is accessible without authentication', async () => {
