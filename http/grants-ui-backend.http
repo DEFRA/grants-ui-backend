@@ -127,11 +127,11 @@ Authorization: Bearer {{backendAuthToken}}
 
 ### Resolve grants accessible to a user
 # @name getAllowedGrants
-# encryptedAuthToken is a JWT signed with ENCRYPTED_AUTH_JWT_SECRET containing crn and sbi.
+# userContextToken is a JWT signed with ENCRYPTED_AUTH_JWT_SECRET containing crn and sbi.
 # Run `npm run generate:env` to regenerate it.
 GET {{backendBaseUrl}}/allowlist/grants
 Authorization: Bearer {{backendAuthToken}}
-x-encrypted-auth: {{encryptedAuthToken}}
+x-user-context: {{userContextToken}}
 
 
 ### --- Release lock ---

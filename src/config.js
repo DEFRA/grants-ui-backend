@@ -193,7 +193,7 @@ const config = convict({
     env: 'GRANTS_UI_BASE_URL'
   },
   encryptedAuthJwtSecret: {
-    doc: 'Secret used to verify the x-encrypted-auth JWT sent by grants-ui',
+    doc: 'Secret used to verify the x-user-context JWT sent by grants-ui',
     format: String,
     default: '',
     env: 'ENCRYPTED_AUTH_JWT_SECRET',

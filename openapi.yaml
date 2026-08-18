@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Grants UI Backend API
-  version: "0.1.0"
+  version: '0.1.0'
   description: |
     OpenAPI specification for the Grants UI Backend service.
 
@@ -9,6 +9,9 @@ info:
     - This API uses Bearer token authentication for service-to-service auth.
     - Supply the header as: `Authorization: Bearer <base64(encryptedToken)>`
     - The token is encrypted using AES-256-GCM and then base64 encoded.
+    - The `/allowlist/grants` endpoint additionally requires the
+      `x-user-context` header. This contains a JWT containing the user's
+      `crn` and `sbi` claims, signed using the shared `ENCRYPTED_AUTH_JWT_SECRET`.
 
   contact:
     name: DEFRA DDTS
@@ -40,7 +43,6 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
       description: |
         Service-to-service authentication.
     lockToken:
@@ -49,11 +51,14 @@ components:
       name: x-application-lock-owner
       description: Application lock JWT token.
       x-internal: true
-    encryptedAuth:
+    userContext:
       type: apiKey
       in: header
-      name: x-encrypted-auth
-      description: JWT containing crn and sbi claims, used by the allowlist endpoint.
+      name: x-user-context
+      description: >
+        JWT containing the crn and sbi claims identifying the user. The JWT is
+        signed using the ENCRYPTED_AUTH_JWT_SECRET shared between the calling
+        service and this service.
   schemas:
     ErrorResponse:
       type: object
@@ -737,19 +742,22 @@ paths:
       summary: Resolve grants accessible to a user
       description: |
         Returns the list of active grants the user identified by `crn` and `sbi`
-        is permitted to access. The user identity is read from the `x-encrypted-auth`
-        JWT header (signed with `ENCRYPTED_AUTH_JWT_SECRET`), which must contain `crn`
-        and `sbi` claims.
+        is permitted to access.
+
+        The user's identity is supplied in the `x-user-context` header as a JWT
+        containing `crn` and `sbi` claims. The JWT is signed by the calling service
+        using the shared `ENCRYPTED_AUTH_JWT_SECRET`.
 
         Access rules (evaluated per environment):
         - Grants with **no allowlist entries** are **closed to all users**.
         - Grants with `allowAll: true` in their `allowlist.yaml` are **open to all users**.
         - Otherwise the user must appear in **both** the CRN and SBI lists.
 
-        The `allowlist.yaml` format (per environment, per grant config):
+         The `allowlist.yaml` format (per environment, per grant config):
+
         ```yaml
         dev:
-          allowAll: true        # open to everyone in dev
+          allowAll: true
         test:
           crns:
             - '1234567890'
@@ -758,7 +766,7 @@ paths:
         ```
       security:
         - bearerAuth: []
-          encryptedAuth: []
+          userContext: []
       responses:
         '200':
           description: List of grants the user may access

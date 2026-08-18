@@ -14,7 +14,7 @@ export const allowlistGrants = {
 
     if (!crn || !sbi) {
       log(LogCodes.ALLOWLIST.GRANTS_UNAUTHORIZED, { errorMessage: 'crn and sbi missing from token' })
-      throw Boom.unauthorized('crn and sbi are required in the x-encrypted-auth token')
+      throw Boom.unauthorized('crn and sbi are required in the x-user-context token')
     }
 
     const grants = await resolveAllowedGrants(crn, sbi)
