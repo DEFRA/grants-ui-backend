@@ -1077,7 +1077,7 @@ describe('POST /submissions', () => {
 })
 
 describe('GET /allowlist/grants', () => {
-  const createUserContexthHeader = ({ crn, sbi }) => jwt.sign({ crn, sbi }, ENCRYPTED_AUTH_JWT_SECRET)
+  const createUserContextHeader = ({ crn, sbi }) => jwt.sign({ crn, sbi }, ENCRYPTED_AUTH_JWT_SECRET)
 
   beforeEach(async () => {
     await db.collection('config__allowlist_entries').deleteMany({})
@@ -1105,7 +1105,7 @@ describe('GET /allowlist/grants', () => {
       json: true,
       headers: {
         authorization: createAuthHeader(),
-        'x-user-context': createUserContexthHeader({ crn: '1100946179', sbi: '115371673' })
+        'x-user-context': createUserContextHeader({ crn: '1100946179', sbi: '115371673' })
       }
     })
 
@@ -1135,7 +1135,7 @@ describe('GET /allowlist/grants', () => {
       json: true,
       headers: {
         authorization: createAuthHeader(),
-        'x-user-context': createUserContexthHeader({ crn: '9999999999', sbi: '999999999' })
+        'x-user-context': createUserContextHeader({ crn: '9999999999', sbi: '999999999' })
       }
     })
 
@@ -1167,7 +1167,7 @@ describe('GET /allowlist/grants', () => {
       json: true,
       headers: {
         authorization: createAuthHeader(),
-        'x-user-context': createUserContexthHeader({ crn: 'any-crn', sbi: 'any-sbi' })
+        'x-user-context': createUserContextHeader({ crn: 'any-crn', sbi: 'any-sbi' })
       }
     })
 
