@@ -10,7 +10,7 @@ info:
     - Supply the header as: `Authorization: Bearer <base64(encryptedToken)>`
     - The token is encrypted using AES-256-GCM and then base64 encoded.
     - The `/allowlist/grants` endpoint additionally requires the
-      `x-encrypted-auth` header. This contains a JWT containing the user's
+      `x-user-context` header. This contains a JWT containing the user's
       `crn` and `sbi` claims, signed using the shared `ENCRYPTED_AUTH_JWT_SECRET`.
 
   contact:
