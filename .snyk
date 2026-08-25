@@ -1,7 +1,4 @@
 # Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities
 version: v1.25.0
-ignore:
-  'SNYK-JS-BRACEEXPANSION-17706650':
-    - '*':
-        reason: 'Not reachable in application runtime — brace-expansion (GHSA-mh99-v99m-4gvg, DoS via unbounded expansion length) is only pulled transitively through minimatch by test/build tooling: eslint, jest via test-exclude, @pact-foundation/pact, babel, and testcontainers. Nothing under src/ imports these; the only near-production consumer is testcontainers, which despite being listed under dependencies is used solely by the integration test harness (integration/setup.js) and never by the running server. The only patched release (5.0.8) is a named-export-only build that is incompatible with the callable-minimatch consumers in that toolchain (e.g. test-exclude@6, minimatch <10), so it cannot be forced via overrides without breaking lint and coverage. No untrusted input flows through this path at runtime. Reassess when the test/lint toolchain (test-exclude / minimatch) adopts brace-expansion >=5.0.8.'
-        expires: '2027-01-01'
+ignore: {}
+patch: {}
