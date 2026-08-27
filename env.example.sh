@@ -29,6 +29,15 @@ TRACING_HEADER=x-cdp-request-id
 GRANTS_UI_BACKEND_AUTH_TOKEN=  # 64-char alphanumeric string (no capitals). Generate: openssl rand -hex 32
 GRANTS_UI_BACKEND_ENCRYPTION_KEY=  # 64-char alphanumeric string. Generate: openssl rand -hex 32
 
+# Secret used to verify the x-user-context JWT sent by grants-ui (crn/sbi claims).
+# Required for GET /allowlist/grants to authenticate the calling user. Must match
+# the value used by the calling service to sign the JWT.
+ENCRYPTED_AUTH_JWT_SECRET=
+
+# Base URL of the Grants UI frontend, used to build the `url` field on each grant
+# returned from GET /allowlist/grants. Left empty, `url` is returned as null.
+GRANTS_UI_BASE_URL=http://localhost:3000
+
 # Grants Config Broker — source of form definitions
 CONFIG_BROKER_BASE_URL=http://localhost:3012
 GRANTS_CONFIG_BROKER_AUTH_TOKEN=config-broker-auth-token
