@@ -26,7 +26,8 @@ Core delivery platform Node.js Backend Template.
   - [Mongo configuration](#mongo-configuration)
   - [Database migrations](#database-migrations)
   - [Grant version (semver)](#grant-version-semver)
-  - [MongoDB Locks](#application-locking)
+  - [Application locking](#application-locking)
+  - [Grant allowlist](#grant-allowlist)
   - [Application purge](#application-purge)
   - [Proxy](#proxy)
 - [Docker](#docker)
@@ -66,7 +67,7 @@ Use this README for backend-specific setup; refer to the frontend README when yo
 
 ### Node.js
 
-Please install [Node.js](http://nodejs.org/) version 24 or higher and [npm](https://nodejs.org/) `=v11.x.x` (the project is routinely tested with npm v11). The exact minimum version requirement is specified in `package.json` (`engines.node`). You will find it
+Please install [Node.js](http://nodejs.org/) `>=24.15.0 <25.0.0` and [npm](https://nodejs.org/) `>=11.12.1` (the project is routinely tested with npm v11). The exact version requirements are specified in `package.json` (`engines`). You will find it
 easier to use the Node Version Manager [nvm](https://github.com/creationix/nvm)
 
 To use the correct version of Node.js for this application, via nvm:
@@ -128,12 +129,12 @@ cp env.example.sh .env
 - `GRANTS_UI_BACKEND_ENCRYPTION_KEY` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
 - `APPLICATION_LOCK_TOKEN_SECRET` – 64 character lowercase hexadecimal string (generate with `openssl rand -hex 32`)
 
-**Optional MongoDB configuration** (sensible defaults are provided):
+**Optional MongoDB configuration** (sensible defaults are provided). `mongoState` and `mongoConfig` point at the same physical database and share these same env vars — there is no separate `MONGO_CONFIG_*` set:
 
-- `MONGO_DATABASE` – state database name (default: `grants-ui-backend`)
-- `MONGO_MAX_POOL_SIZE` / `MONGO_CONFIG_MAX_POOL_SIZE` – maximum connection pool size (default: `25`)
-- `MONGO_MIN_POOL_SIZE` / `MONGO_CONFIG_MIN_POOL_SIZE` – minimum connection pool size (default: `5`)
-- `MONGO_MAX_IDLE_TIME_MS` / `MONGO_CONFIG_MAX_IDLE_TIME_MS` – idle connection timeout in milliseconds (default: `60000`)
+- `MONGO_DATABASE` – database name (default: `grants-ui-backend`)
+- `MONGO_MAX_POOL_SIZE` – maximum connection pool size (default: `25`)
+- `MONGO_MIN_POOL_SIZE` – minimum connection pool size (default: `5`)
+- `MONGO_MAX_IDLE_TIME_MS` – idle connection timeout in milliseconds (default: `60000`)
 
 **Grants config broker** (source of form definitions, see [Config ingestion from grants-config-broker](#config-ingestion-from-grants-config-broker)):
 
@@ -158,6 +159,11 @@ cp env.example.sh .env
 
 - `APPLICATION_LOCK_TOKEN_SECRET` – secret key for signing lock tokens (64 character hex string, generate with `openssl rand -hex 32`)
 - `APPLICATION_LOCK_TTL_MS` – lock timeout in milliseconds (default: `14400000` - 4 hours)
+
+**User context / grant allowlist** (required for [`GET /allowlist/grants`](#grant-allowlist)):
+
+- `ENCRYPTED_AUTH_JWT_SECRET` – secret used to verify the `x-user-context` JWT sent by the calling service (must match the value used by that service to sign the token). Without it, the `x-user-context` header fails to decode and the request is treated as unauthenticated.
+- `GRANTS_UI_BASE_URL` – base URL of the [grants-ui frontend](https://github.com/DEFRA/grants-ui), used to build the `url` field on each grant returned from the allowlist endpoint. If unset, `url` is returned as `null`.
 
 **Application purge configuration** (optional):
 
@@ -221,6 +227,12 @@ Integration tests rely on Docker (via Testcontainers) and can be run with:
 npm run test:integration
 ```
 
+Pact contract tests (provider verification) can be run with:
+
+```bash
+npm run test:contracts
+```
+
 The frontend documents complementary UI testing patterns in its [testing framework section](https://github.com/DEFRA/grants-ui#testing-framework).
 
 #### Git hooks
@@ -256,6 +268,7 @@ npm run
 - `npm test` – Run unit tests with coverage
 - `npm run test:watch` – Run tests in watch mode
 - `npm run test:integration` – Run integration tests (requires Docker)
+- `npm run test:contracts` – Run Pact contract tests
 - `npm run lint` – Check code for linting errors
 - `npm run lint:fix` – Automatically fix linting errors
 - `npm run format` – Auto-format code with Prettier
@@ -401,10 +414,11 @@ This creates a timestamped file (e.g. `migrations/state/20240101120000-my-migrat
 
 `grantVersion` is always a [semver](https://semver.org/) string of the form `x.y.z` (e.g. `1.0.0`). It is part of the identity of a grant application across state documents, submissions and locks.
 
-Input contract:
+Input contract (enforced by a custom Joi validator in `src/modules/state/state.schema.js`):
 
 - When omitted from a request, `grantVersion` defaults to `'1.0.0'`.
-- A non-semver value (e.g. an integer `1`, or a malformed string) is rejected by Joi validation in `src/modules/state/state.schema.js` with a `400` response — the value is validated against `Joi.string().pattern(/^\d+\.\d+\.\d+$/)`.
+- The legacy integer `1` (or the string `'1'`) is temporarily coerced to `'1.0.0'` for backward compatibility with older grants-ui clients that have not yet migrated to semver — this tolerance is expected to be removed once grants-ui always sends semver strings.
+- Any other non-semver string (i.e. not matching `/^\d+\.\d+\.\d+$/`) is rejected with a `400` response.
 - Locks, state and submissions always persist `grantVersion` as a semver string.
 
 The state migration `migrations/state/20260603163942-use-semver.js` performs a one-way data normalisation: it rewrites any legacy `grantVersion` values (e.g. integers) to semver strings and, on state documents, decomposes the version into `pinnedMajor` / `major` / `minor` / `patch` fields used for version-aware querying. Its `down` is an intentional no-op — to roll back, restore the database from a backup.
@@ -671,7 +685,7 @@ HTTP clients are the **primary, recommended way to exercise and test every endpo
 
 ### Files
 
-- `http/grants-ui-backend.http` – requests for this backend: health check, application `state` save/get/delete/patch, `submissions`, the admin application-lock release, and `DELETE /application-locks` (release all locks for an owner).
+- `http/grants-ui-backend.http` – requests for this backend: health check, application `state` save/get/delete/patch, `state/with-definition`, `submissions`, `allowlist/grants`, the admin application-lock release, and `DELETE /application-locks` (release all locks for an owner).
 - `http/grants-config-broker.http` – requests against the grants-config-broker: `GET /api/allGrants`, `GET /api/version`, and `GET /api/latestVersion`.
 - `http/http-client.env.json` – public, checked-in environment variables (`backendBaseUrl`, `configBrokerBaseUrl`) for the `local` and `dev` environments.
 - `http/http-client.private.env.json` – generated secrets/tokens (`backendAuthToken`, `userContextToken`, `applicationLockOwnerToken`, `applicationLockReleaseToken`, `configBrokerAuthToken`, etc.). This file is produced by `npm run generate:env` and must **not** be committed.
@@ -693,7 +707,7 @@ Before making requests for the `local` environment, generate the private tokens:
 npm run generate:env
 ```
 
-This runs `scripts/generatePrivateEnv.js`, which generates the local service-to-service bearer token, user-context JWT and application lock tokens and writes them into `http/http-client.private.env.json`. It does **not** require a `.env` file — it derives the values it needs directly. Re-run it whenever the underlying secrets or the lock-scope variables (`grantCode`, `grantVersion`, `sbi`, `userId`) at the top of `grants-ui-backend.http` change.
+This runs `scripts/generatePrivateEnv.js`, which generates the local service-to-service bearer token, user-context JWT and application lock tokens and writes them into `http/http-client.private.env.json`. It does **not** require a `.env` file — it derives the values it needs directly. Re-run it whenever the underlying secrets or the lock-scope/user-context variables (`grantCode`, `grantVersion`, `sbi`, `crn`, `userId`) at the top of `grants-ui-backend.http` change.
 
 ### Running requests
 
@@ -729,8 +743,8 @@ The project includes a Postman collection to make it easier to test and interact
 3. **Import the Environment (Optional)**
    If the project includes an environment file:
    - Go to **File > Import**.
-   - Select the file `postman/grants-ui-backend.dev.postman_environment.json`.
-   - Update variables like `base_url`, `api_key` or `grant_type` as needed.
+   - Select the file `postman/grants-ui-backend.dev.postman_environment.json` (or the `.local` / `.test` variants also under `postman/`).
+   - Update variables like `grants-ui-backend_base_url`, `grants-ui-backend-bearer_token`, `grants-ui-backend-lock_owner_token` and `grants-ui-backend-lock_release_token` as needed.
 
 4. **Set the Active Environment**
    - In Postman, click on the environment dropdown in the top right corner.
@@ -827,6 +841,15 @@ When a valid lock-release token is presented, the backend:
 This operation is idempotent.
 
 > Note: Lock release tokens are intentionally distinct from application lock tokens and must not be used for lock acquisition or enforcement.
+
+#### Lock release environment variables
+
+Set these in your `.env` file before running the script:
+
+```
+APPLICATION_LOCK_TOKEN_SECRET=<64-character hex key, same as grants-ui-backend>
+OWNER_ID=<Defra contactId of the user whose locks should be released>
+```
 
 #### Generate the Lock Release Token (Sign-out)
 
