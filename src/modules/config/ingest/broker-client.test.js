@@ -83,7 +83,6 @@ describe('broker-client', () => {
       expect(getBrokerServiceToken).toHaveBeenCalled()
       expect(options.headers.Authorization).toBe('Bearer a-web-identity-token')
 
-      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('authMethod=web_identity'))
       expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('request succeeded'))
     })
 
@@ -108,7 +107,7 @@ describe('broker-client', () => {
       await expect(fetchAllGrants()).rejects.toThrow(/Broker request failed: GET .* -> 503 unavailable/)
     })
 
-    test('logs the status and authMethod when the broker rejects the request', async () => {
+    test('logs the status when the broker rejects the request', async () => {
       getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       global.fetch.mockResolvedValue({
         ok: false,
@@ -118,9 +117,7 @@ describe('broker-client', () => {
 
       await expect(fetchAllGrants()).rejects.toThrow()
 
-      const [loggedMessage] = mockLogger.error.mock.calls[0]
-      expect(loggedMessage).toEqual(expect.stringContaining('authMethod=web_identity'))
-      expect(loggedMessage).toEqual(expect.stringContaining('status=403'))
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('status=403'))
     })
   })
 

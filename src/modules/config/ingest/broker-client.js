@@ -69,7 +69,7 @@ async function brokerGet(pathAndQuery) {
   const timeout = setTimeout(() => controller.abort(), config.get('configBroker.requestTimeoutMs'))
 
   try {
-    logger.info(`[config-broker] GET ${pathAndQuery} (authMethod=web_identity)`)
+    logger.info(`[config-broker] GET ${pathAndQuery}`)
 
     const response = await fetch(url, {
       method: 'GET',
@@ -79,13 +79,11 @@ async function brokerGet(pathAndQuery) {
 
     if (!response.ok) {
       const body = await response.text().catch(() => '')
-      logger.error(
-        `[config-broker] request failed | authMethod=web_identity | status=${response.status} | GET ${pathAndQuery} -> ${body}`
-      )
+      logger.error(`[config-broker] request failed | status=${response.status} | GET ${pathAndQuery} -> ${body}`)
       throw new Error(`Broker request failed: GET ${pathAndQuery} -> ${response.status} ${body}`)
     }
 
-    logger.info(`[config-broker] request succeeded | authMethod=web_identity | GET ${pathAndQuery}`)
+    logger.info(`[config-broker] request succeeded | GET ${pathAndQuery}`)
     return await response.json()
   } finally {
     clearTimeout(timeout)
