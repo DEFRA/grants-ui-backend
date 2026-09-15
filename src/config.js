@@ -143,6 +143,20 @@ const config = convict({
       format: Number,
       default: 15_000,
       env: 'CONFIG_BROKER_REQUEST_TIMEOUT_MS'
+    },
+    authMethod: {
+      doc: 'How this service authenticates to grants-config-broker. "shared_token" sends configBroker.authToken (AES-256-GCM encrypted with configBroker.encryptionKey), as before. "web_identity" instead sends an AWS STS Web Identity token as a plain Bearer token - no stored secret - which the broker validates itself against CDP_JWT_ISSUER/CDP_JWT_JWKS_URI (see CDP Service-to-Service Authentication guidance). This is being rolled out environment by environment, so this must stay "shared_token" for any environment the broker team hasn\'t allow-listed yet.',
+      format: ['shared_token', 'web_identity'],
+      default: 'shared_token',
+      env: 'CONFIG_BROKER_AUTH_METHOD'
+    },
+    webIdentity: {
+      audience: {
+        doc: 'Audience requested on the STS Web Identity token sent to grants-config-broker when configBroker.authMethod is "web_identity". Set by the config-broker team, not chosen by us.',
+        format: String,
+        default: 'grants-config-broker',
+        env: 'CONFIG_BROKER_WEB_IDENTITY_AUDIENCE'
+      }
     }
   },
   aws: {

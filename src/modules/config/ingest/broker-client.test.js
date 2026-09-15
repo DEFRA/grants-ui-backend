@@ -1,5 +1,6 @@
 import { config } from '../../../config.js'
 import { buildBrokerBearerHeader } from './broker-auth.js'
+import { getBrokerServiceToken } from './broker-service-token.js'
 import { fetchAllGrants, fetchVersion, fetchLatestActiveVersion } from './broker-client.js'
 
 jest.mock('../../../config.js', () => ({
@@ -12,9 +13,22 @@ jest.mock('./broker-auth.js', () => ({
   buildBrokerBearerHeader: jest.fn()
 }))
 
+jest.mock('./broker-service-token.js', () => ({
+  getBrokerServiceToken: jest.fn()
+}))
+
+jest.mock('../../../common/helpers/logging/logger.js', () => {
+  const singletonLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+  return { createLogger: () => singletonLogger }
+})
+
+const { createLogger } = jest.requireMock('../../../common/helpers/logging/logger.js')
+const mockLogger = createLogger()
+
 const configValues = {
   'configBroker.baseUrl': 'https://broker.example/',
   'configBroker.requestTimeoutMs': 5000,
+  'configBroker.authMethod': 'shared_token',
   'configBroker.authToken': undefined,
   'configBroker.encryptionKey': undefined
 }
@@ -28,9 +42,13 @@ describe('broker-client', () => {
   beforeEach(() => {
     config.get.mockImplementation((key) => configValues[key])
     global.fetch = jest.fn()
+    mockLogger.info.mockClear()
+    mockLogger.warn.mockClear()
+    mockLogger.error.mockClear()
   })
 
   afterEach(() => {
+    configValues['configBroker.authMethod'] = 'shared_token'
     configValues['configBroker.authToken'] = undefined
     configValues['configBroker.encryptionKey'] = undefined
     delete global.fetch
@@ -86,6 +104,33 @@ describe('broker-client', () => {
       expect(options.headers.Authorization).toBe('Bearer encrypted')
     })
 
+    test('sends a Web Identity token as a plain Bearer token when authMethod is web_identity', async () => {
+      configValues['configBroker.authMethod'] = 'web_identity'
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
+      global.fetch.mockResolvedValue(okResponse([]))
+
+      await fetchAllGrants()
+
+      const [, options] = global.fetch.mock.calls[0]
+      expect(getBrokerServiceToken).toHaveBeenCalled()
+      expect(buildBrokerBearerHeader).not.toHaveBeenCalled()
+      expect(options.headers.Authorization).toBe('Bearer a-web-identity-token')
+
+      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('authMethod=web_identity'))
+      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('request succeeded'))
+    })
+
+    test('omits the Authorization header when authMethod is web_identity but no token is available', async () => {
+      configValues['configBroker.authMethod'] = 'web_identity'
+      getBrokerServiceToken.mockResolvedValue(undefined)
+      global.fetch.mockResolvedValue(okResponse([]))
+
+      await fetchAllGrants()
+
+      const [, options] = global.fetch.mock.calls[0]
+      expect(options.headers.Authorization).toBeUndefined()
+    })
+
     test('throws when the broker responds with a non-ok status', async () => {
       global.fetch.mockResolvedValue({
         ok: false,
@@ -94,6 +139,22 @@ describe('broker-client', () => {
       })
 
       await expect(fetchAllGrants()).rejects.toThrow(/Broker request failed: GET .* -> 503 unavailable/)
+    })
+
+    test('logs the status and authMethod when the broker rejects the request', async () => {
+      configValues['configBroker.authMethod'] = 'web_identity'
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
+      global.fetch.mockResolvedValue({
+        ok: false,
+        status: 403,
+        text: jest.fn().mockResolvedValue('subject not allow-listed')
+      })
+
+      await expect(fetchAllGrants()).rejects.toThrow()
+
+      const [loggedMessage] = mockLogger.error.mock.calls[0]
+      expect(loggedMessage).toEqual(expect.stringContaining('authMethod=web_identity'))
+      expect(loggedMessage).toEqual(expect.stringContaining('status=403'))
     })
   })
 
