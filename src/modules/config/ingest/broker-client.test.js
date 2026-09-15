@@ -94,6 +94,21 @@ describe('broker-client', () => {
       expect(options.headers.Authorization).toBeUndefined()
     })
 
+    test('fails within the request timeout when token acquisition stalls, without calling the broker', async () => {
+      jest.useFakeTimers()
+      try {
+        getBrokerServiceToken.mockReturnValue(new Promise(() => {}))
+
+        const pending = fetchAllGrants()
+        jest.advanceTimersByTime(configValues['configBroker.requestTimeoutMs'])
+
+        await expect(pending).rejects.toThrow(/timed out acquiring Web Identity token: GET \/api\/allGrants/)
+        expect(global.fetch).not.toHaveBeenCalled()
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
     test('throws when the broker responds with a non-ok status', async () => {
       getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       global.fetch.mockResolvedValue({

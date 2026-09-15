@@ -5,6 +5,10 @@ import { createLogger } from '../../../common/helpers/logging/logger.js'
 
 const logger = createLogger()
 
+// The broker checks the token's exp on receipt, so refresh early enough that a
+// token can't expire mid-request: one request budget plus some clock-skew slack.
+const EARLY_REFRESH_SKEW_MS = 5_000
+
 /** @type {WebIdentityTokenProvider | MockProvider | null} */
 let webIdentityTokenProvider = null
 
@@ -20,7 +24,8 @@ function getWebIdentityTokenProvider() {
       config.get('cdpEnvironment') === 'local'
         ? new MockProvider({})
         : new WebIdentityTokenProvider({
-            audience: [config.get('configBroker.webIdentity.audience')]
+            audience: [config.get('configBroker.webIdentity.audience')],
+            earlyRefreshMs: config.get('configBroker.requestTimeoutMs') + EARLY_REFRESH_SKEW_MS
           })
   }
   return webIdentityTokenProvider

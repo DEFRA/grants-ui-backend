@@ -37,6 +37,29 @@ async function buildAuthHeader() {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+/**
+ * Resolves `promise`, or rejects as soon as `signal` aborts - so a stalled
+ * STS call can't hold a broker request (and therefore startup) past the
+ * configured timeout. The STS request itself is left to finish; the token
+ * provider caches its result for the next call.
+ * @template T
+ * @param {Promise<T>} promise
+ * @param {AbortSignal} signal
+ * @param {string} abortMessage
+ * @returns {Promise<T>}
+ */
+function abortable(promise, signal, abortMessage) {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(new Error(abortMessage))
+    if (signal.aborted) {
+      onAbort()
+      return
+    }
+    signal.addEventListener('abort', onAbort, { once: true })
+    promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort))
+  })
+}
+
 const SLASH_CHAR_CODE = 47 // '/'
 
 /**
@@ -68,9 +91,14 @@ async function brokerGet(pathAndQuery) {
   const timeout = setTimeout(() => controller.abort(), config.get('configBroker.requestTimeoutMs'))
 
   try {
+    const authHeader = await abortable(
+      buildAuthHeader(),
+      controller.signal,
+      `Broker request timed out acquiring Web Identity token: GET ${pathAndQuery}`
+    )
     const response = await fetch(url, {
       method: 'GET',
-      headers: { accept: 'application/json', ...(await buildAuthHeader()) },
+      headers: { accept: 'application/json', ...authHeader },
       signal: controller.signal
     })
 

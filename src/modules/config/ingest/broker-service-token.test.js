@@ -30,6 +30,7 @@ const mockLogger = createLogger()
 
 const configValues = {
   'configBroker.webIdentity.audience': 'grants-config-broker',
+  'configBroker.requestTimeoutMs': 15_000,
   cdpEnvironment: 'test'
 }
 
@@ -51,13 +52,14 @@ describe('broker-service-token', () => {
   })
 
   describe('getBrokerServiceToken', () => {
-    test('creates the provider with the configured audience', async () => {
+    test('creates the provider with the configured audience and an early-refresh window covering a request', async () => {
       mockGetCredentials.mockResolvedValue('a-token')
 
       await getBrokerServiceToken()
 
       expect(WebIdentityTokenProvider).toHaveBeenCalledWith({
-        audience: ['grants-config-broker']
+        audience: ['grants-config-broker'],
+        earlyRefreshMs: 20_000
       })
     })
 
