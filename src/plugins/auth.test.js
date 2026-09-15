@@ -88,6 +88,10 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
     process.env.GRANTS_UI_BACKEND_AUTH_TOKEN = TEST_AUTH_TOKEN
     process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
     process.env.APPLICATION_LOCK_TOKEN_SECRET = APPLICATION_LOCK_TOKEN_SECRET
+    // Pin these so a developer's local .env (loaded by .jest/setup-files.js)
+    // can't switch on the service-JWT path or the local auth bypass under test.
+    process.env.SERVICE_AUTH_ENABLED = 'false'
+    process.env.ENVIRONMENT = 'test'
 
     const { createServer } = await import('../server.js')
     server = await createServer()
@@ -739,6 +743,7 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
         if (key === 'serviceAuth.issuer') return 'https://example.test'
         if (key === 'serviceAuth.audience') return 'grants-ui-backend'
         if (key === 'serviceAuth.allowedServices') return overrides.allowedServices ?? ''
+        if (key === 'cdpEnvironment') return 'test'
         return originalConfigGet.call(config, key)
       })
 

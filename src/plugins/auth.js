@@ -140,7 +140,8 @@ async function validateServiceJwt(server, request) {
   try {
     const { credentials } = await server.auth.test('service-jwt', request)
     return credentials
-  } catch {
+  } catch (error) {
+    log(LogCodes.AUTH.SERVICE_JWT_REJECTED, { reason: error.message })
     return null
   }
 }
@@ -151,7 +152,9 @@ const auth = {
     register: async (server, _options) => {
       await server.register(Jwt)
 
-      if (config.get('serviceAuth.enabled')) {
+      const isLocalEnvironment = config.get('cdpEnvironment') === 'local'
+
+      if (config.get('serviceAuth.enabled') && !isLocalEnvironment) {
         const allowedServices = config
           .get('serviceAuth.allowedServices')
           .split(',')
@@ -168,11 +171,13 @@ const auth = {
           validate: (artifacts) => {
             const sub = artifacts.decoded.payload.sub
             if (!sub) {
+              log(LogCodes.AUTH.SERVICE_JWT_REJECTED, { reason: 'missing sub claim' })
               return { isValid: false }
             }
 
             const serviceName = sub.split('/').pop()
             if (allowedServices.length > 0 && !allowedServices.includes(serviceName)) {
+              log(LogCodes.AUTH.SERVICE_JWT_REJECTED, { reason: 'service not in allowed list', serviceName })
               return { isValid: false }
             }
 
@@ -200,7 +205,9 @@ const auth = {
 
             log(LogCodes.AUTH.TOKEN_VERIFICATION_SUCCESS, {
               path: request.path,
-              method: request.method
+              method: request.method,
+              authMethod: serviceCredentials ? 'web_identity' : 'shared_token',
+              serviceName: serviceCredentials?.serviceName
             })
 
             const jwtSecret = config.get('encryptedAuthJwtSecret')

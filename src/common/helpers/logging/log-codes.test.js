@@ -73,10 +73,33 @@ describe('LogCodes', () => {
         `Server auth token verified successfully | path=${TEST_PATHS.AUTH_SIGN_IN_OIDC} | method=${TEST_METHODS.POST}`
       ],
       [
+        'TOKEN_VERIFICATION_SUCCESS',
+        'info',
+        {
+          path: TEST_PATHS.AUTH_SIGN_IN_OIDC,
+          method: TEST_METHODS.POST,
+          authMethod: 'web_identity',
+          serviceName: 'grants-ui'
+        },
+        `Server auth token verified successfully | path=${TEST_PATHS.AUTH_SIGN_IN_OIDC} | method=${TEST_METHODS.POST} | authMethod=web_identity | serviceName=grants-ui`
+      ],
+      [
         'TOKEN_VERIFICATION_FAILURE',
         'error',
         { errorName: TEST_ERRORS.INVALID_TOKEN, errorMessage: TEST_ERRORS.INVALID_CREDENTIALS },
         `Server auth token invalid | errorName: ${TEST_ERRORS.INVALID_TOKEN} | errorMessage: ${TEST_ERRORS.INVALID_CREDENTIALS} | stack: N/A`
+      ],
+      [
+        'SERVICE_JWT_REJECTED',
+        'warn',
+        { reason: 'service not in allowed list', serviceName: 'some-other-service' },
+        'Service-to-service Web Identity token rejected | reason=service not in allowed list | serviceName=some-other-service'
+      ],
+      [
+        'SERVICE_JWT_REJECTED',
+        'warn',
+        { reason: 'Invalid token signature' },
+        'Service-to-service Web Identity token rejected | reason=Invalid token signature'
       ]
     ])('should have valid %s log code', (logCodeName, expectedLevel, testParams, expectedMessage) => {
       assertLogCode('AUTH', logCodeName, expectedLevel, testParams, expectedMessage)
