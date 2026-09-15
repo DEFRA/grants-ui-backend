@@ -59,11 +59,11 @@
     "dotenv": "17.4.2",
     "global-agent": "3.0.0",
     "hapi-pino": "13.0.0",
-    "hapi-pulse": "3.0.1",
+    "hapi-pulse": "4.0.0",
     "http-status-codes": "2.3.0",
     "https-proxy-agent": "7.0.6",
-    "joi": "18.2.5",
-    "js-yaml": "4.3.1",
+    "joi": "18.2.9",
+    "js-yaml": "4.3.2",
     "jsonwebtoken": "9.0.3",
     "lru-cache": "11.5.2",
     "migrate-mongo": "14.0.7",
@@ -74,10 +74,10 @@
     "semver": "7.8.5",
     "swagger-ui-dist": "5.32.14",
     "testcontainers": "12.1.0",
-    "undici": "8.10.0"
+    "undici": "8.10.2"
   },
   "overrides": {
-    "joi": "18.2.5",
+    "joi": "18.2.9",
     "underscore": "1.13.8"
   },
   "devDependencies": {
