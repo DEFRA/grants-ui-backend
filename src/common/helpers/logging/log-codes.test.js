@@ -75,13 +75,8 @@ describe('LogCodes', () => {
       [
         'TOKEN_VERIFICATION_SUCCESS',
         'info',
-        {
-          path: TEST_PATHS.AUTH_SIGN_IN_OIDC,
-          method: TEST_METHODS.POST,
-          authMethod: 'web_identity',
-          serviceName: 'grants-ui'
-        },
-        `Server auth token verified successfully | path=${TEST_PATHS.AUTH_SIGN_IN_OIDC} | method=${TEST_METHODS.POST} | authMethod=web_identity | serviceName=grants-ui`
+        { path: TEST_PATHS.AUTH_SIGN_IN_OIDC, method: TEST_METHODS.POST, authMethod: 'web_identity' },
+        `Server auth token verified successfully | path=${TEST_PATHS.AUTH_SIGN_IN_OIDC} | method=${TEST_METHODS.POST} | authMethod=web_identity`
       ],
       [
         'TOKEN_VERIFICATION_FAILURE',
@@ -92,8 +87,8 @@ describe('LogCodes', () => {
       [
         'SERVICE_JWT_REJECTED',
         'warn',
-        { reason: 'service not in allowed list', serviceName: 'some-other-service' },
-        'Service-to-service Web Identity token rejected | reason=service not in allowed list | serviceName=some-other-service'
+        { reason: 'service not in allowed list' },
+        'Service-to-service Web Identity token rejected | reason=service not in allowed list'
       ],
       [
         'SERVICE_JWT_REJECTED',

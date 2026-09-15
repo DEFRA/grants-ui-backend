@@ -177,7 +177,7 @@ const auth = {
 
             const serviceName = sub.split('/').pop()
             if (allowedServices.length > 0 && !allowedServices.includes(serviceName)) {
-              log(LogCodes.AUTH.SERVICE_JWT_REJECTED, { reason: 'service not in allowed list', serviceName })
+              log(LogCodes.AUTH.SERVICE_JWT_REJECTED, { reason: 'service not in allowed list' })
               return { isValid: false }
             }
 
@@ -206,8 +206,7 @@ const auth = {
             log(LogCodes.AUTH.TOKEN_VERIFICATION_SUCCESS, {
               path: request.path,
               method: request.method,
-              authMethod: serviceCredentials ? 'web_identity' : 'shared_token',
-              serviceName: serviceCredentials?.serviceName
+              authMethod: serviceCredentials ? 'web_identity' : 'shared_token'
             })
 
             const jwtSecret = config.get('encryptedAuthJwtSecret')

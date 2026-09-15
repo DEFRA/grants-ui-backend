@@ -45,8 +45,17 @@ export const LogCodes = {
   AUTH: {
     TOKEN_VERIFICATION_SUCCESS: {
       level: 'info',
-      messageFunc: (messageOptions) =>
-        `Server auth token verified successfully | path=${messageOptions.path} | method=${messageOptions.method}${messageOptions.authMethod ? ` | authMethod=${messageOptions.authMethod}` : ''}${messageOptions.serviceName ? ` | serviceName=${messageOptions.serviceName}` : ''}`
+      messageFunc: (messageOptions) => {
+        const parts = [
+          'Server auth token verified successfully',
+          `path=${messageOptions.path}`,
+          `method=${messageOptions.method}`
+        ]
+        if (messageOptions.authMethod) {
+          parts.push(`authMethod=${messageOptions.authMethod}`)
+        }
+        return parts.join(' | ')
+      }
     },
     TOKEN_VERIFICATION_FAILURE: {
       level: 'error',
@@ -61,7 +70,7 @@ export const LogCodes = {
     SERVICE_JWT_REJECTED: {
       level: 'warn',
       messageFunc: (messageOptions) =>
-        `Service-to-service Web Identity token rejected | reason=${messageOptions.reason}${messageOptions.serviceName ? ` | serviceName=${messageOptions.serviceName}` : ''}`
+        `Service-to-service Web Identity token rejected | reason=${messageOptions.reason}`
     }
   },
   SYSTEM: {
