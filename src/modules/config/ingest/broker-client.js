@@ -1,5 +1,4 @@
 import { config } from '../../../config.js'
-import { buildBrokerBearerHeader } from './broker-auth.js'
 import { getBrokerServiceToken } from './broker-service-token.js'
 import { createLogger } from '../../../common/helpers/logging/logger.js'
 
@@ -29,27 +28,14 @@ const logger = createLogger()
  */
 
 /**
- * Returns the Authorization header used to call the broker.
- *
- * "web_identity" sends a raw AWS STS Web Identity token as the Bearer token
- * - the broker validates it itself, there is no encryption step involved.
- * "shared_token" (the default) sends the pre-shared token encrypted with
- * configBroker.encryptionKey, as before. See configBroker.authMethod.
+ * Returns the Authorization header used to call the broker: a raw AWS STS
+ * Web Identity token as the Bearer token - the broker validates it itself,
+ * there is no encryption step or stored secret involved.
  * @returns {Promise<Record<string, string>>}
  */
 async function buildAuthHeader() {
-  if (config.get('configBroker.authMethod') === 'web_identity') {
-    const token = await getBrokerServiceToken()
-    return token ? { Authorization: `Bearer ${token}` } : {}
-  }
-
-  const headers = {}
-  const token = config.get('configBroker.authToken')
-  const key = config.get('configBroker.encryptionKey')
-  if (token && key) {
-    headers.Authorization = buildBrokerBearerHeader(token, key)
-  }
-  return headers
+  const token = await getBrokerServiceToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 const SLASH_CHAR_CODE = 47 // '/'
@@ -78,13 +64,12 @@ function stripTrailingSlashes(url) {
 async function brokerGet(pathAndQuery) {
   const baseUrl = stripTrailingSlashes(config.get('configBroker.baseUrl'))
   const url = `${baseUrl}${pathAndQuery}`
-  const authMethod = config.get('configBroker.authMethod')
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), config.get('configBroker.requestTimeoutMs'))
 
   try {
-    logger.info(`[config-broker] GET ${pathAndQuery} (authMethod=${authMethod})`)
+    logger.info(`[config-broker] GET ${pathAndQuery} (authMethod=web_identity)`)
 
     const response = await fetch(url, {
       method: 'GET',
@@ -95,12 +80,12 @@ async function brokerGet(pathAndQuery) {
     if (!response.ok) {
       const body = await response.text().catch(() => '')
       logger.error(
-        `[config-broker] request failed | authMethod=${authMethod} | status=${response.status} | GET ${pathAndQuery} -> ${body}`
+        `[config-broker] request failed | authMethod=web_identity | status=${response.status} | GET ${pathAndQuery} -> ${body}`
       )
       throw new Error(`Broker request failed: GET ${pathAndQuery} -> ${response.status} ${body}`)
     }
 
-    logger.info(`[config-broker] request succeeded | authMethod=${authMethod} | GET ${pathAndQuery}`)
+    logger.info(`[config-broker] request succeeded | authMethod=web_identity | GET ${pathAndQuery}`)
     return await response.json()
   } finally {
     clearTimeout(timeout)

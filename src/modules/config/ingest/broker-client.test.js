@@ -1,5 +1,4 @@
 import { config } from '../../../config.js'
-import { buildBrokerBearerHeader } from './broker-auth.js'
 import { getBrokerServiceToken } from './broker-service-token.js'
 import { fetchAllGrants, fetchVersion, fetchLatestActiveVersion } from './broker-client.js'
 
@@ -7,10 +6,6 @@ jest.mock('../../../config.js', () => ({
   config: {
     get: jest.fn()
   }
-}))
-
-jest.mock('./broker-auth.js', () => ({
-  buildBrokerBearerHeader: jest.fn()
 }))
 
 jest.mock('./broker-service-token.js', () => ({
@@ -27,10 +22,7 @@ const mockLogger = createLogger()
 
 const configValues = {
   'configBroker.baseUrl': 'https://broker.example/',
-  'configBroker.requestTimeoutMs': 5000,
-  'configBroker.authMethod': 'shared_token',
-  'configBroker.authToken': undefined,
-  'configBroker.encryptionKey': undefined
+  'configBroker.requestTimeoutMs': 5000
 }
 
 const okResponse = (body) => ({
@@ -45,17 +37,16 @@ describe('broker-client', () => {
     mockLogger.info.mockClear()
     mockLogger.warn.mockClear()
     mockLogger.error.mockClear()
+    getBrokerServiceToken.mockReset()
   })
 
   afterEach(() => {
-    configValues['configBroker.authMethod'] = 'shared_token'
-    configValues['configBroker.authToken'] = undefined
-    configValues['configBroker.encryptionKey'] = undefined
     delete global.fetch
   })
 
   describe('fetchAllGrants', () => {
     test('requests all grants including drafts and returns the parsed body', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       const grants = [{ grant: 'farm-payments', versions: [] }]
       global.fetch.mockResolvedValue(okResponse(grants))
 
@@ -69,6 +60,7 @@ describe('broker-client', () => {
     })
 
     test('strips trailing slashes from the base URL', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       configValues['configBroker.baseUrl'] = 'https://broker.example///'
       global.fetch.mockResolvedValue(okResponse([]))
 
@@ -81,31 +73,7 @@ describe('broker-client', () => {
       configValues['configBroker.baseUrl'] = 'https://broker.example/'
     })
 
-    test('omits the Authorization header when no token/key is configured', async () => {
-      global.fetch.mockResolvedValue(okResponse([]))
-
-      await fetchAllGrants()
-
-      const [, options] = global.fetch.mock.calls[0]
-      expect(options.headers.Authorization).toBeUndefined()
-      expect(buildBrokerBearerHeader).not.toHaveBeenCalled()
-    })
-
-    test('adds the Authorization header when token and key are configured', async () => {
-      configValues['configBroker.authToken'] = 'token'
-      configValues['configBroker.encryptionKey'] = 'key'
-      buildBrokerBearerHeader.mockReturnValue('Bearer encrypted')
-      global.fetch.mockResolvedValue(okResponse([]))
-
-      await fetchAllGrants()
-
-      const [, options] = global.fetch.mock.calls[0]
-      expect(buildBrokerBearerHeader).toHaveBeenCalledWith('token', 'key')
-      expect(options.headers.Authorization).toBe('Bearer encrypted')
-    })
-
-    test('sends a Web Identity token as a plain Bearer token when authMethod is web_identity', async () => {
-      configValues['configBroker.authMethod'] = 'web_identity'
+    test('sends the Web Identity token as a plain Bearer token', async () => {
       getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       global.fetch.mockResolvedValue(okResponse([]))
 
@@ -113,15 +81,13 @@ describe('broker-client', () => {
 
       const [, options] = global.fetch.mock.calls[0]
       expect(getBrokerServiceToken).toHaveBeenCalled()
-      expect(buildBrokerBearerHeader).not.toHaveBeenCalled()
       expect(options.headers.Authorization).toBe('Bearer a-web-identity-token')
 
       expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('authMethod=web_identity'))
       expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('request succeeded'))
     })
 
-    test('omits the Authorization header when authMethod is web_identity but no token is available', async () => {
-      configValues['configBroker.authMethod'] = 'web_identity'
+    test('omits the Authorization header when no token is available', async () => {
       getBrokerServiceToken.mockResolvedValue(undefined)
       global.fetch.mockResolvedValue(okResponse([]))
 
@@ -132,6 +98,7 @@ describe('broker-client', () => {
     })
 
     test('throws when the broker responds with a non-ok status', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       global.fetch.mockResolvedValue({
         ok: false,
         status: 503,
@@ -142,7 +109,6 @@ describe('broker-client', () => {
     })
 
     test('logs the status and authMethod when the broker rejects the request', async () => {
-      configValues['configBroker.authMethod'] = 'web_identity'
       getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       global.fetch.mockResolvedValue({
         ok: false,
@@ -160,6 +126,7 @@ describe('broker-client', () => {
 
   describe('fetchVersion', () => {
     test('requests a specific grant version', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       const version = { grant: 'farm-payments', version: '1.0.0' }
       global.fetch.mockResolvedValue(okResponse(version))
 
@@ -175,6 +142,7 @@ describe('broker-client', () => {
 
   describe('fetchLatestActiveVersion', () => {
     test('requests the latest active version for a grant', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       const version = { grant: 'farm-payments', version: '2.0.0', status: 'active' }
       global.fetch.mockResolvedValue(okResponse(version))
 
