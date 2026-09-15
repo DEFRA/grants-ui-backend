@@ -115,6 +115,40 @@ const config = convict({
       sensitive: true
     }
   },
+  serviceAuth: {
+    enabled: {
+      doc: 'Enable service-to-service JWT authentication as an alternative to the legacy encrypted bearer token',
+      format: Boolean,
+      default: false,
+      env: 'SERVICE_AUTH_ENABLED'
+    },
+    jwksUri: {
+      doc: 'JWKS endpoint URI for verifying service JWT tokens (CDP_JWT_JWKS_URI)',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'CDP_JWT_JWKS_URI'
+    },
+    issuer: {
+      doc: 'Expected JWT issuer (CDP_JWT_ISSUER)',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'CDP_JWT_ISSUER'
+    },
+    audience: {
+      doc: 'Expected JWT audience - should match this service name',
+      format: String,
+      default: 'grants-ui-backend',
+      env: 'SERVICE_AUTH_AUDIENCE'
+    },
+    allowedServices: {
+      doc: 'Comma-separated list of service names permitted to call this API. Leave empty to allow any valid JWT.',
+      format: String,
+      default: '',
+      env: 'SERVICE_AUTH_ALLOWED_SERVICES'
+    }
+  },
   mongoState: mongoStateSchema,
   mongoConfig: mongoConfigSchema,
   configBroker: {

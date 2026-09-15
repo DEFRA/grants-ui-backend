@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import Jwt from '@hapi/jwt'
 import crypto from 'node:crypto'
 import jwt from 'jsonwebtoken'
 import { config } from '../config.js'
@@ -13,9 +14,6 @@ const EXPECTED_TOKEN_PARTS = 3
 function decryptToken(encryptedToken) {
   const encryptionKey = config.get('auth.encryptionKey')
   if (!encryptionKey) {
-    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
-      errorName: 'Encryption key not configured'
-    })
     return null
   }
 
@@ -41,12 +39,7 @@ function decryptToken(encryptedToken) {
     decrypted += decipher.final('utf8')
 
     return decrypted
-  } catch (error) {
-    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
-      errorName: 'Token decryption failed',
-      errorMessage: error.message,
-      stack: error.stack
-    })
+  } catch {
     return null
   }
 }
@@ -61,9 +54,6 @@ function validateAuthToken(authHeader) {
 
   const expectedToken = config.get('auth.token')
   if (!expectedToken) {
-    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
-      errorName: `Server auth token not configured`
-    })
     return {
       isValid: false,
       error: 'Server authentication token not configured'
@@ -72,9 +62,6 @@ function validateAuthToken(authHeader) {
 
   const encryptionKey = config.get('auth.encryptionKey')
   if (!encryptionKey) {
-    log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
-      errorName: `Encryption key not configured - encrypted tokens are required`
-    })
     return { isValid: false, error: 'Server encryption not configured' }
   }
 
@@ -131,18 +118,83 @@ export function decodeUserContextHeader(userContext, jwtSecret) {
   }
 }
 
+/**
+ * Verifies a CDP service-to-service Web Identity JWT (issued via AWS STS,
+ * no stored secret) against the CDP-provided JWKS endpoint. Locally, floci
+ * has no GetWebIdentityToken support so callers send a MockProvider token
+ * instead of a real JWT - accept any Bearer token as-is rather than trying
+ * (and failing) to verify it against a JWKS endpoint.
+ * @param {import('@hapi/hapi').Server} server
+ * @param {import('@hapi/hapi').Request} request
+ * @returns {Promise<{serviceName: string} | null>}
+ */
+async function validateServiceJwt(server, request) {
+  if (!config.get('serviceAuth.enabled')) {
+    return null
+  }
+
+  if (config.get('cdpEnvironment') === 'local') {
+    return { serviceName: 'local' }
+  }
+
+  try {
+    const { credentials } = await server.auth.test('service-jwt', request)
+    return credentials
+  } catch {
+    return null
+  }
+}
+
 const auth = {
   plugin: {
     name: 'auth',
-    register: (server, _options) => {
+    register: async (server, _options) => {
+      await server.register(Jwt)
+
+      if (config.get('serviceAuth.enabled')) {
+        const allowedServices = config
+          .get('serviceAuth.allowedServices')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+
+        server.auth.strategy('service-jwt', 'jwt', {
+          keys: { uri: config.get('serviceAuth.jwksUri') },
+          verify: {
+            aud: config.get('serviceAuth.audience'),
+            iss: config.get('serviceAuth.issuer'),
+            sub: false
+          },
+          validate: (artifacts) => {
+            const sub = artifacts.decoded.payload.sub
+            if (!sub) {
+              return { isValid: false }
+            }
+
+            const serviceName = sub.split('/').pop()
+            if (allowedServices.length > 0 && !allowedServices.includes(serviceName)) {
+              return { isValid: false }
+            }
+
+            return { isValid: true, credentials: { serviceName } }
+          }
+        })
+      }
+
       server.auth.scheme('bearer', (_server, _opts) => {
         return {
-          authenticate: (request, h) => {
+          authenticate: async (request, h) => {
             const authHeader = request.headers.authorization
 
-            const validation = validateAuthToken(authHeader)
+            const legacyValidation = validateAuthToken(authHeader)
+            const shouldTryServiceJwt = !legacyValidation.isValid && authHeader?.startsWith('Bearer ')
+            const serviceCredentials = shouldTryServiceJwt ? await validateServiceJwt(server, request) : null
 
-            if (!validation.isValid) {
+            if (!legacyValidation.isValid && !serviceCredentials) {
+              log(LogCodes.AUTH.TOKEN_VERIFICATION_FAILURE, {
+                errorName: 'Invalid authentication credentials',
+                errorMessage: legacyValidation.error
+              })
               throw Boom.unauthorized('Invalid authentication credentials')
             }
 
@@ -157,7 +209,9 @@ const auth = {
               typeof payload.crn === 'string' || typeof payload.crn === 'number' ? `${payload.crn}` : undefined
             const sbi =
               typeof payload.sbi === 'string' || typeof payload.sbi === 'number' ? `${payload.sbi}` : undefined
-            return h.authenticated({ credentials: { authenticated: true, crn, sbi } })
+            return h.authenticated({
+              credentials: { authenticated: true, crn, sbi, serviceName: serviceCredentials?.serviceName }
+            })
           }
         }
       })

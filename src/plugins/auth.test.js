@@ -726,4 +726,77 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
       }
     })
   })
+
+  describe('service-jwt validate callback', () => {
+    let capturedValidate
+
+    const captureValidateCallback = async (overrides = {}) => {
+      const { config } = await import('../config.js')
+      const originalConfigGet = config.get
+      config.get = jest.fn().mockImplementation((key) => {
+        if (key === 'serviceAuth.enabled') return true
+        if (key === 'serviceAuth.jwksUri') return 'https://example.test/.well-known/jwks.json'
+        if (key === 'serviceAuth.issuer') return 'https://example.test'
+        if (key === 'serviceAuth.audience') return 'grants-ui-backend'
+        if (key === 'serviceAuth.allowedServices') return overrides.allowedServices ?? ''
+        return originalConfigGet.call(config, key)
+      })
+
+      const mockServer = {
+        register: jest.fn(),
+        auth: {
+          strategy: jest.fn((name, _type, options) => {
+            if (name === 'service-jwt') capturedValidate = options.validate
+          }),
+          scheme: jest.fn(),
+          test: jest.fn()
+        }
+      }
+
+      const { auth: authPlugin } = await import('./auth.js')
+      await authPlugin.plugin.register(mockServer, {})
+
+      return { config, originalConfigGet }
+    }
+
+    it('accepts a token with a recognised sub claim', async () => {
+      const { config, originalConfigGet } = await captureValidateCallback()
+
+      try {
+        const result = capturedValidate({
+          decoded: { payload: { sub: 'arn:aws:iam::000000000000:role/grants-ui' } }
+        })
+
+        expect(result).toEqual({ isValid: true, credentials: { serviceName: 'grants-ui' } })
+      } finally {
+        config.get = originalConfigGet
+      }
+    })
+
+    it('rejects a token missing the sub claim', async () => {
+      const { config, originalConfigGet } = await captureValidateCallback()
+
+      try {
+        const result = capturedValidate({ decoded: { payload: {} } })
+
+        expect(result).toEqual({ isValid: false })
+      } finally {
+        config.get = originalConfigGet
+      }
+    })
+
+    it('rejects a service not present in the allowed list', async () => {
+      const { config, originalConfigGet } = await captureValidateCallback({ allowedServices: 'some-other-service' })
+
+      try {
+        const result = capturedValidate({
+          decoded: { payload: { sub: 'arn:aws:iam::000000000000:role/grants-ui' } }
+        })
+
+        expect(result).toEqual({ isValid: false })
+      } finally {
+        config.get = originalConfigGet
+      }
+    })
+  })
 })
