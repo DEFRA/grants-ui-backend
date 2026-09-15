@@ -82,8 +82,6 @@ describe('broker-client', () => {
       const [, options] = global.fetch.mock.calls[0]
       expect(getBrokerServiceToken).toHaveBeenCalled()
       expect(options.headers.Authorization).toBe('Bearer a-web-identity-token')
-
-      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('request succeeded'))
     })
 
     test('omits the Authorization header when no token is available', async () => {

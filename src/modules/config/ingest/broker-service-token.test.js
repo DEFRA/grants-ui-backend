@@ -1,12 +1,16 @@
-import { WebIdentityTokenProvider } from '@defra/hapi-auth-oidc'
+import { MockProvider, WebIdentityTokenProvider } from '@defra/hapi-auth-oidc'
 import { config } from '../../../config.js'
 import { clearCachedBrokerServiceToken, getBrokerServiceToken } from './broker-service-token.js'
 
 const mockGetCredentials = jest.fn()
+const mockMockProviderGetCredentials = jest.fn()
 
 jest.mock('@defra/hapi-auth-oidc', () => ({
   WebIdentityTokenProvider: jest.fn().mockImplementation(function WebIdentityTokenProvider() {
     this.getCredentials = mockGetCredentials
+  }),
+  MockProvider: jest.fn().mockImplementation(function MockProvider() {
+    this.getCredentials = mockMockProviderGetCredentials
   })
 }))
 
@@ -25,7 +29,8 @@ const { createLogger } = jest.requireMock('../../../common/helpers/logging/logge
 const mockLogger = createLogger()
 
 const configValues = {
-  'configBroker.webIdentity.audience': 'grants-config-broker'
+  'configBroker.webIdentity.audience': 'grants-config-broker',
+  cdpEnvironment: 'test'
 }
 
 describe('broker-service-token', () => {
@@ -33,10 +38,16 @@ describe('broker-service-token', () => {
     clearCachedBrokerServiceToken()
     config.get.mockImplementation((key) => configValues[key])
     mockGetCredentials.mockReset()
+    mockMockProviderGetCredentials.mockReset()
     WebIdentityTokenProvider.mockClear()
+    MockProvider.mockClear()
     mockLogger.info.mockClear()
     mockLogger.warn.mockClear()
     mockLogger.error.mockClear()
+  })
+
+  afterEach(() => {
+    configValues.cdpEnvironment = 'test'
   })
 
   describe('getBrokerServiceToken', () => {
@@ -90,6 +101,17 @@ describe('broker-service-token', () => {
       mockGetCredentials.mockResolvedValue(undefined)
 
       await expect(getBrokerServiceToken()).resolves.toBeUndefined()
+    })
+
+    test('uses MockProvider instead of WebIdentityTokenProvider when running locally', async () => {
+      configValues.cdpEnvironment = 'local'
+      mockMockProviderGetCredentials.mockResolvedValue('a-mock-token')
+
+      const token = await getBrokerServiceToken()
+
+      expect(token).toBe('a-mock-token')
+      expect(MockProvider).toHaveBeenCalledTimes(1)
+      expect(WebIdentityTokenProvider).not.toHaveBeenCalled()
     })
   })
 })

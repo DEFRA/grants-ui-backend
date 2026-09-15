@@ -132,7 +132,7 @@ const config = convict({
     },
     webIdentity: {
       audience: {
-        doc: 'Audience requested on the STS Web Identity token sent to grants-config-broker to authenticate this service - an AWS STS Web Identity federated credential bound to the service IAM role, no stored secret. Set by the config-broker team, not chosen by us.',
+        doc: 'Audience on the STS Web Identity token sent to grants-config-broker. Set by the config-broker team.',
         format: String,
         default: 'grants-config-broker',
         env: 'CONFIG_BROKER_WEB_IDENTITY_AUDIENCE'

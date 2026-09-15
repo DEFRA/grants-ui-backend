@@ -28,9 +28,8 @@ const logger = createLogger()
  */
 
 /**
- * Returns the Authorization header used to call the broker: a raw AWS STS
- * Web Identity token as the Bearer token - the broker validates it itself,
- * there is no encryption step or stored secret involved.
+ * Returns the Authorization header used to call the broker: an AWS STS
+ * Web Identity token as the Bearer token - no stored secret.
  * @returns {Promise<Record<string, string>>}
  */
 async function buildAuthHeader() {
@@ -69,8 +68,6 @@ async function brokerGet(pathAndQuery) {
   const timeout = setTimeout(() => controller.abort(), config.get('configBroker.requestTimeoutMs'))
 
   try {
-    logger.info(`[config-broker] GET ${pathAndQuery}`)
-
     const response = await fetch(url, {
       method: 'GET',
       headers: { accept: 'application/json', ...(await buildAuthHeader()) },
@@ -83,7 +80,6 @@ async function brokerGet(pathAndQuery) {
       throw new Error(`Broker request failed: GET ${pathAndQuery} -> ${response.status} ${body}`)
     }
 
-    logger.info(`[config-broker] request succeeded | GET ${pathAndQuery}`)
     return await response.json()
   } finally {
     clearTimeout(timeout)
