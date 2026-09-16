@@ -1,5 +1,5 @@
 import { config } from '../../../config.js'
-import { buildBrokerBearerHeader } from './broker-auth.js'
+import { getBrokerServiceToken } from './broker-service-token.js'
 import { fetchAllGrants, fetchVersion, fetchLatestActiveVersion } from './broker-client.js'
 
 jest.mock('../../../config.js', () => ({
@@ -8,15 +8,21 @@ jest.mock('../../../config.js', () => ({
   }
 }))
 
-jest.mock('./broker-auth.js', () => ({
-  buildBrokerBearerHeader: jest.fn()
+jest.mock('./broker-service-token.js', () => ({
+  getBrokerServiceToken: jest.fn()
 }))
+
+jest.mock('../../../common/helpers/logging/logger.js', () => {
+  const singletonLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn() }
+  return { createLogger: () => singletonLogger }
+})
+
+const { createLogger } = jest.requireMock('../../../common/helpers/logging/logger.js')
+const mockLogger = createLogger()
 
 const configValues = {
   'configBroker.baseUrl': 'https://broker.example/',
-  'configBroker.requestTimeoutMs': 5000,
-  'configBroker.authToken': undefined,
-  'configBroker.encryptionKey': undefined
+  'configBroker.requestTimeoutMs': 5000
 }
 
 const okResponse = (body) => ({
@@ -28,16 +34,19 @@ describe('broker-client', () => {
   beforeEach(() => {
     config.get.mockImplementation((key) => configValues[key])
     global.fetch = jest.fn()
+    mockLogger.info.mockClear()
+    mockLogger.warn.mockClear()
+    mockLogger.error.mockClear()
+    getBrokerServiceToken.mockReset()
   })
 
   afterEach(() => {
-    configValues['configBroker.authToken'] = undefined
-    configValues['configBroker.encryptionKey'] = undefined
     delete global.fetch
   })
 
   describe('fetchAllGrants', () => {
     test('requests all grants including drafts and returns the parsed body', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       const grants = [{ grant: 'farm-payments', versions: [] }]
       global.fetch.mockResolvedValue(okResponse(grants))
 
@@ -51,6 +60,7 @@ describe('broker-client', () => {
     })
 
     test('strips trailing slashes from the base URL', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       configValues['configBroker.baseUrl'] = 'https://broker.example///'
       global.fetch.mockResolvedValue(okResponse([]))
 
@@ -63,30 +73,44 @@ describe('broker-client', () => {
       configValues['configBroker.baseUrl'] = 'https://broker.example/'
     })
 
-    test('omits the Authorization header when no token/key is configured', async () => {
+    test('sends the Web Identity token as a plain Bearer token', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
+      global.fetch.mockResolvedValue(okResponse([]))
+
+      await fetchAllGrants()
+
+      const [, options] = global.fetch.mock.calls[0]
+      expect(getBrokerServiceToken).toHaveBeenCalled()
+      expect(options.headers.Authorization).toBe('Bearer a-web-identity-token')
+    })
+
+    test('omits the Authorization header when no token is available', async () => {
+      getBrokerServiceToken.mockResolvedValue(undefined)
       global.fetch.mockResolvedValue(okResponse([]))
 
       await fetchAllGrants()
 
       const [, options] = global.fetch.mock.calls[0]
       expect(options.headers.Authorization).toBeUndefined()
-      expect(buildBrokerBearerHeader).not.toHaveBeenCalled()
     })
 
-    test('adds the Authorization header when token and key are configured', async () => {
-      configValues['configBroker.authToken'] = 'token'
-      configValues['configBroker.encryptionKey'] = 'key'
-      buildBrokerBearerHeader.mockReturnValue('Bearer encrypted')
-      global.fetch.mockResolvedValue(okResponse([]))
+    test('fails within the request timeout when token acquisition stalls, without calling the broker', async () => {
+      jest.useFakeTimers()
+      try {
+        getBrokerServiceToken.mockReturnValue(new Promise(() => {}))
 
-      await fetchAllGrants()
+        const pending = fetchAllGrants()
+        jest.advanceTimersByTime(configValues['configBroker.requestTimeoutMs'])
 
-      const [, options] = global.fetch.mock.calls[0]
-      expect(buildBrokerBearerHeader).toHaveBeenCalledWith('token', 'key')
-      expect(options.headers.Authorization).toBe('Bearer encrypted')
+        await expect(pending).rejects.toThrow(/timed out acquiring Web Identity token: GET \/api\/allGrants/)
+        expect(global.fetch).not.toHaveBeenCalled()
+      } finally {
+        jest.useRealTimers()
+      }
     })
 
     test('throws when the broker responds with a non-ok status', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       global.fetch.mockResolvedValue({
         ok: false,
         status: 503,
@@ -95,10 +119,24 @@ describe('broker-client', () => {
 
       await expect(fetchAllGrants()).rejects.toThrow(/Broker request failed: GET .* -> 503 unavailable/)
     })
+
+    test('logs the status when the broker rejects the request', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
+      global.fetch.mockResolvedValue({
+        ok: false,
+        status: 403,
+        text: jest.fn().mockResolvedValue('subject not allow-listed')
+      })
+
+      await expect(fetchAllGrants()).rejects.toThrow()
+
+      expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('status=403'))
+    })
   })
 
   describe('fetchVersion', () => {
     test('requests a specific grant version', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       const version = { grant: 'farm-payments', version: '1.0.0' }
       global.fetch.mockResolvedValue(okResponse(version))
 
@@ -114,6 +152,7 @@ describe('broker-client', () => {
 
   describe('fetchLatestActiveVersion', () => {
     test('requests the latest active version for a grant', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
       const version = { grant: 'farm-payments', version: '2.0.0', status: 'active' }
       global.fetch.mockResolvedValue(okResponse(version))
 

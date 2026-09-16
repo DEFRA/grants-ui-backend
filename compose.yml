@@ -28,11 +28,13 @@ services:
       PURGE_UNSUBMITTED_APPLICATIONS: '${PURGE_UNSUBMITTED_APPLICATIONS:-}'
       AWS_ENDPOINT_URL: http://floci:4566
       CONFIG_BROKER_BASE_URL: http://grants-config-broker:3012
-      GRANTS_CONFIG_BROKER_AUTH_TOKEN: '${GRANTS_CONFIG_BROKER_AUTH_TOKEN:-config-broker-auth-token}'
-      GRANTS_CONFIG_BROKER_ENCRYPTION_KEY: '${GRANTS_CONFIG_BROKER_ENCRYPTION_KEY:-config-broker-encryption-key}'
       CONFIG_INGEST_SQS_QUEUE_URL: http://floci:4566/000000000000/grants_ui_backend__sqs__config_updates
       GRANTS_UI_BASE_URL: '${GRANTS_UI_BASE_URL:-http://localhost:3000}'
       ENCRYPTED_AUTH_JWT_SECRET: ${ENCRYPTED_AUTH_JWT_SECRET:-allowlist-jwt-secret}
+      # Off by default - the legacy shared bearer token above keeps working either
+      # way. Set to true to also accept an AWS STS Web Identity token from
+      # grants-ui (see GRANTS_UI_BACKEND_AUTH_METHOD in grants-ui's compose).
+      SERVICE_AUTH_ENABLED: '${SERVICE_AUTH_ENABLED:-false}'
     networks:
       - grants-ui-net
     volumes:

@@ -1,0 +1,58 @@
+import { MockProvider, WebIdentityTokenProvider } from '@defra/hapi-auth-oidc'
+
+import { config } from '../../../config.js'
+import { createLogger } from '../../../common/helpers/logging/logger.js'
+
+const logger = createLogger()
+
+// The broker checks the token's exp on receipt, so refresh early enough that a
+// token can't expire mid-request: one request budget plus some clock-skew slack.
+const EARLY_REFRESH_SKEW_MS = 5_000
+
+/** @type {WebIdentityTokenProvider | MockProvider | null} */
+let webIdentityTokenProvider = null
+
+/**
+ * Lazily creates (and caches) the token provider. Binds directly to the
+ * service's IAM role via AWS STS - no stored secret. Locally, floci has no
+ * GetWebIdentityToken support, so a MockProvider stands in instead.
+ * @returns {WebIdentityTokenProvider | MockProvider}
+ */
+function getWebIdentityTokenProvider() {
+  if (!webIdentityTokenProvider) {
+    webIdentityTokenProvider =
+      config.get('cdpEnvironment') === 'local'
+        ? new MockProvider({})
+        : new WebIdentityTokenProvider({
+            audience: [config.get('configBroker.webIdentity.audience')],
+            earlyRefreshMs: config.get('configBroker.requestTimeoutMs') + EARLY_REFRESH_SKEW_MS
+          })
+  }
+  return webIdentityTokenProvider
+}
+
+/**
+ * Resets the cached token provider. Test-only.
+ * @returns {void}
+ */
+export function clearCachedBrokerServiceToken() {
+  webIdentityTokenProvider = null
+}
+
+/**
+ * Returns a valid AWS STS Web Identity token for grants-config-broker,
+ * refreshing it if expired. Sent to the broker as the raw Bearer token -
+ * no second exchange with an identity provider, unlike the Entra flow.
+ * @returns {Promise<string | undefined>} A valid Web Identity token
+ */
+export async function getBrokerServiceToken() {
+  const audience = config.get('configBroker.webIdentity.audience')
+
+  const token = await getWebIdentityTokenProvider().getCredentials(logger)
+  if (token) {
+    logger.info(`[config-broker] Web Identity token ready (audience=${audience})`)
+  } else {
+    logger.warn(`[config-broker] no Web Identity token available (audience=${audience})`)
+  }
+  return token ?? undefined
+}

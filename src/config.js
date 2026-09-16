@@ -115,6 +115,40 @@ const config = convict({
       sensitive: true
     }
   },
+  serviceAuth: {
+    enabled: {
+      doc: 'Enable service-to-service JWT authentication as an alternative to the legacy encrypted bearer token',
+      format: Boolean,
+      default: false,
+      env: 'SERVICE_AUTH_ENABLED'
+    },
+    jwksUri: {
+      doc: 'JWKS endpoint URI for verifying service JWT tokens (CDP_JWT_JWKS_URI)',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'CDP_JWT_JWKS_URI'
+    },
+    issuer: {
+      doc: 'Expected JWT issuer (CDP_JWT_ISSUER)',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'CDP_JWT_ISSUER'
+    },
+    audience: {
+      doc: 'Expected JWT audience - should match this service name',
+      format: String,
+      default: 'grants-ui-backend',
+      env: 'SERVICE_AUTH_AUDIENCE'
+    },
+    allowedServices: {
+      doc: 'Comma-separated list of service names permitted to call this API. Leave empty to allow any valid JWT.',
+      format: String,
+      default: '',
+      env: 'SERVICE_AUTH_ALLOWED_SERVICES'
+    }
+  },
   mongoState: mongoStateSchema,
   mongoConfig: mongoConfigSchema,
   configBroker: {
@@ -124,25 +158,19 @@ const config = convict({
       default: '',
       env: 'CONFIG_BROKER_BASE_URL'
     },
-    authToken: {
-      doc: 'Plain bearer token expected by the grants-config-broker',
-      format: String,
-      default: '',
-      env: 'GRANTS_CONFIG_BROKER_AUTH_TOKEN',
-      sensitive: true
-    },
-    encryptionKey: {
-      doc: 'AES-256-GCM key used to encrypt the broker bearer token',
-      format: String,
-      default: '',
-      env: 'GRANTS_CONFIG_BROKER_ENCRYPTION_KEY',
-      sensitive: true
-    },
     requestTimeoutMs: {
       doc: 'HTTP timeout for broker requests',
       format: Number,
       default: 15_000,
       env: 'CONFIG_BROKER_REQUEST_TIMEOUT_MS'
+    },
+    webIdentity: {
+      audience: {
+        doc: 'Audience on the STS Web Identity token sent to grants-config-broker. Set by the config-broker team.',
+        format: String,
+        default: 'grants-config-broker',
+        env: 'CONFIG_BROKER_WEB_IDENTITY_AUDIENCE'
+      }
     }
   },
   aws: {

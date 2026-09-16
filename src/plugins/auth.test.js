@@ -88,6 +88,10 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
     process.env.GRANTS_UI_BACKEND_AUTH_TOKEN = TEST_AUTH_TOKEN
     process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
     process.env.APPLICATION_LOCK_TOKEN_SECRET = APPLICATION_LOCK_TOKEN_SECRET
+    // Pin these so a developer's local .env (loaded by .jest/setup-files.js)
+    // can't switch on the service-JWT path or the local auth bypass under test.
+    process.env.SERVICE_AUTH_ENABLED = 'false'
+    process.env.ENVIRONMENT = 'test'
 
     const { createServer } = await import('../server.js')
     server = await createServer()
@@ -724,6 +728,155 @@ describe('Auth + Lock Enforcement Integration Tests', () => {
           delete process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY
         }
       }
+    })
+  })
+
+  describe('service-jwt validate callback', () => {
+    let capturedValidate
+
+    const captureValidateCallback = async (overrides = {}) => {
+      const { config } = await import('../config.js')
+      const originalConfigGet = config.get
+      config.get = jest.fn().mockImplementation((key) => {
+        if (key === 'serviceAuth.enabled') return true
+        if (key === 'serviceAuth.jwksUri') return 'https://example.test/.well-known/jwks.json'
+        if (key === 'serviceAuth.issuer') return 'https://example.test'
+        if (key === 'serviceAuth.audience') return 'grants-ui-backend'
+        if (key === 'serviceAuth.allowedServices') return overrides.allowedServices ?? ''
+        if (key === 'cdpEnvironment') return 'test'
+        return originalConfigGet.call(config, key)
+      })
+
+      const mockServer = {
+        register: jest.fn(),
+        auth: {
+          strategy: jest.fn((name, _type, options) => {
+            if (name === 'service-jwt') capturedValidate = options.validate
+          }),
+          scheme: jest.fn(),
+          test: jest.fn()
+        }
+      }
+
+      const { auth: authPlugin } = await import('./auth.js')
+      await authPlugin.plugin.register(mockServer, {})
+
+      return { config, originalConfigGet }
+    }
+
+    it('accepts a token with a recognised sub claim', async () => {
+      const { config, originalConfigGet } = await captureValidateCallback()
+
+      try {
+        const result = capturedValidate({
+          decoded: { payload: { sub: 'arn:aws:iam::000000000000:role/grants-ui' } }
+        })
+
+        expect(result).toEqual({ isValid: true, credentials: { serviceName: 'grants-ui' } })
+      } finally {
+        config.get = originalConfigGet
+      }
+    })
+
+    it('rejects a token missing the sub claim', async () => {
+      const { config, originalConfigGet } = await captureValidateCallback()
+
+      try {
+        const result = capturedValidate({ decoded: { payload: {} } })
+
+        expect(result).toEqual({ isValid: false })
+      } finally {
+        config.get = originalConfigGet
+      }
+    })
+
+    it('rejects a service not present in the allowed list', async () => {
+      const { config, originalConfigGet } = await captureValidateCallback({ allowedServices: 'some-other-service' })
+
+      try {
+        const result = capturedValidate({
+          decoded: { payload: { sub: 'arn:aws:iam::000000000000:role/grants-ui' } }
+        })
+
+        expect(result).toEqual({ isValid: false })
+      } finally {
+        config.get = originalConfigGet
+      }
+    })
+  })
+
+  describe('bearer scheme service-JWT fallback', () => {
+    // Drives the `bearer` scheme against a mocked server so the real @hapi/jwt
+    // strategy (which fetches JWKS on initialize) is never registered.
+    const setupScheme = async ({ cdpEnvironment = 'test', authTest = jest.fn() } = {}) => {
+      const { config } = await import('../config.js')
+      const originalConfigGet = config.get
+      config.get = jest.fn().mockImplementation((key) => {
+        if (key === 'serviceAuth.enabled') return true
+        if (key === 'serviceAuth.jwksUri') return 'https://example.test/.well-known/jwks.json'
+        if (key === 'serviceAuth.issuer') return 'https://example.test'
+        if (key === 'serviceAuth.audience') return 'grants-ui-backend'
+        if (key === 'serviceAuth.allowedServices') return ''
+        if (key === 'cdpEnvironment') return cdpEnvironment
+        return originalConfigGet.call(config, key)
+      })
+
+      let scheme
+      const mockServer = {
+        register: jest.fn(),
+        auth: {
+          strategy: jest.fn(),
+          scheme: jest.fn((name, factory) => {
+            if (name === 'bearer') scheme = factory(mockServer, {})
+          }),
+          test: authTest
+        }
+      }
+
+      const { auth: authPlugin } = await import('./auth.js')
+      const { log: freshLog, LogCodes: freshLogCodes } = await import('../common/helpers/logging/log.js')
+      await authPlugin.plugin.register(mockServer, {})
+
+      const h = { authenticated: jest.fn((result) => result) }
+      const request = {
+        headers: { authorization: 'Bearer not-a-legacy-token' },
+        path: STATE_URL,
+        method: 'post'
+      }
+
+      return { scheme, h, request, log: freshLog, LogCodes: freshLogCodes }
+    }
+
+    it('authenticates via the service-jwt strategy when the legacy token check fails', async () => {
+      const authTest = jest.fn().mockResolvedValue({ credentials: { serviceName: 'grants-ui' } })
+      const { scheme, h, request, log, LogCodes } = await setupScheme({ authTest })
+
+      const result = await scheme.authenticate(request, h)
+
+      expect(authTest).toHaveBeenCalledWith('service-jwt', request)
+      expect(result.credentials).toEqual(expect.objectContaining({ authenticated: true, serviceName: 'grants-ui' }))
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.AUTH.TOKEN_VERIFICATION_SUCCESS,
+        expect.objectContaining({ authMethod: 'web_identity' })
+      )
+    })
+
+    it('logs why the service-jwt strategy rejected the token and responds 401', async () => {
+      const authTest = jest.fn().mockRejectedValue(new Error('Invalid token signature'))
+      const { scheme, h, request, log, LogCodes } = await setupScheme({ authTest })
+
+      await expect(scheme.authenticate(request, h)).rejects.toThrow('Invalid authentication credentials')
+      expect(log).toHaveBeenCalledWith(LogCodes.AUTH.SERVICE_JWT_REJECTED, { reason: 'Invalid token signature' })
+    })
+
+    it('accepts any bearer token locally without consulting the service-jwt strategy', async () => {
+      const authTest = jest.fn()
+      const { scheme, h, request } = await setupScheme({ cdpEnvironment: 'local', authTest })
+
+      const result = await scheme.authenticate(request, h)
+
+      expect(authTest).not.toHaveBeenCalled()
+      expect(result.credentials).toEqual(expect.objectContaining({ authenticated: true, serviceName: 'local' }))
     })
   })
 })

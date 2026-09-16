@@ -1,5 +1,8 @@
 import { config } from '../../../config.js'
-import { buildBrokerBearerHeader } from './broker-auth.js'
+import { getBrokerServiceToken } from './broker-service-token.js'
+import { createLogger } from '../../../common/helpers/logging/logger.js'
+
+const logger = createLogger()
 
 /**
  * @typedef {Object} BrokerVersion
@@ -25,17 +28,36 @@ import { buildBrokerBearerHeader } from './broker-auth.js'
  */
 
 /**
- * Returns the Authorization header used to call the broker.
+ * Returns the Authorization header used to call the broker: an AWS STS
+ * Web Identity token as the Bearer token - no stored secret.
+ * @returns {Promise<Record<string, string>>}
  */
-function buildAuthHeader() {
-  const headers = {}
+async function buildAuthHeader() {
+  const token = await getBrokerServiceToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
-  const token = config.get('configBroker.authToken')
-  const key = config.get('configBroker.encryptionKey')
-  if (token && key) {
-    headers.Authorization = buildBrokerBearerHeader(token, key)
-  }
-  return headers
+/**
+ * Resolves `promise`, or rejects as soon as `signal` aborts - so a stalled
+ * STS call can't hold a broker request (and therefore startup) past the
+ * configured timeout. The STS request itself is left to finish; the token
+ * provider caches its result for the next call.
+ * @template T
+ * @param {Promise<T>} promise
+ * @param {AbortSignal} signal
+ * @param {string} abortMessage
+ * @returns {Promise<T>}
+ */
+function abortable(promise, signal, abortMessage) {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(new Error(abortMessage))
+    if (signal.aborted) {
+      onAbort()
+      return
+    }
+    signal.addEventListener('abort', onAbort, { once: true })
+    promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort))
+  })
 }
 
 const SLASH_CHAR_CODE = 47 // '/'
@@ -69,14 +91,20 @@ async function brokerGet(pathAndQuery) {
   const timeout = setTimeout(() => controller.abort(), config.get('configBroker.requestTimeoutMs'))
 
   try {
+    const authHeader = await abortable(
+      buildAuthHeader(),
+      controller.signal,
+      `Broker request timed out acquiring Web Identity token: GET ${pathAndQuery}`
+    )
     const response = await fetch(url, {
       method: 'GET',
-      headers: { accept: 'application/json', ...buildAuthHeader() },
+      headers: { accept: 'application/json', ...authHeader },
       signal: controller.signal
     })
 
     if (!response.ok) {
       const body = await response.text().catch(() => '')
+      logger.error(`[config-broker] request failed | status=${response.status} | GET ${pathAndQuery} -> ${body}`)
       throw new Error(`Broker request failed: GET ${pathAndQuery} -> ${response.status} ${body}`)
     }
 
