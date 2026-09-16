@@ -31,9 +31,12 @@ GRANTS_UI_BACKEND_ENCRYPTION_KEY=  # 64-char alphanumeric string. Generate: open
 
 # Grants Config Broker — source of form definitions
 CONFIG_BROKER_BASE_URL=http://localhost:3012
-GRANTS_CONFIG_BROKER_AUTH_TOKEN=config-broker-auth-token
-GRANTS_CONFIG_BROKER_ENCRYPTION_KEY=config-broker-encryption-key
+CONFIG_BROKER_WEB_IDENTITY_AUDIENCE=grants-config-broker  # Bearer token is an AWS STS Web Identity token bound to the service IAM role (mocked when ENVIRONMENT=local)
 CONFIG_BROKER_REQUEST_TIMEOUT_MS=15000
+
+# Inbound service-to-service auth from grants-ui. The legacy encrypted bearer token above is
+# always accepted; set to true to also accept an AWS STS Web Identity JWT (any Bearer token when ENVIRONMENT=local)
+SERVICE_AUTH_ENABLED=false
 
 # AWS / Floci (used by config module SQS + S3)
 AWS_REGION=eu-west-2

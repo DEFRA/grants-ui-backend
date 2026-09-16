@@ -138,9 +138,16 @@ cp env.example.sh .env
 **Grants config broker** (source of form definitions, see [Config ingestion from grants-config-broker](#config-ingestion-from-grants-config-broker)):
 
 - `CONFIG_BROKER_BASE_URL` – base URL of the grants-config-broker API
-- `GRANTS_CONFIG_BROKER_AUTH_TOKEN` – plain bearer token expected by the broker
-- `GRANTS_CONFIG_BROKER_ENCRYPTION_KEY` – AES-256-GCM key used to encrypt the broker bearer token
-- `CONFIG_BROKER_REQUEST_TIMEOUT_MS` – HTTP timeout for broker requests (default: `15000`)
+- `CONFIG_BROKER_WEB_IDENTITY_AUDIENCE` – audience on the AWS STS Web Identity token sent to the broker as the Bearer token (default: `grants-config-broker`). No stored secret: the token is bound to the service IAM role. Locally (`ENVIRONMENT=local`) a mock token is used because Floci cannot issue STS Web Identity tokens.
+- `CONFIG_BROKER_REQUEST_TIMEOUT_MS` – HTTP timeout for broker requests, including acquiring the token (default: `15000`)
+
+**Service-to-service authentication** (inbound, from grants-ui):
+
+The legacy encrypted bearer token (`GRANTS_UI_BACKEND_AUTH_TOKEN` / `GRANTS_UI_BACKEND_ENCRYPTION_KEY`) is always accepted. Optionally, an AWS STS Web Identity JWT can be accepted as well:
+
+- `SERVICE_AUTH_ENABLED` – also accept Web Identity JWTs, verified against the CDP JWKS endpoint (default: `false`). `CDP_JWT_JWKS_URI` and `CDP_JWT_ISSUER` are injected by the platform and must not be set by hand. Locally (`ENVIRONMENT=local`) any Bearer token is accepted when this is on, so grants-ui's mock token works.
+- `SERVICE_AUTH_AUDIENCE` – expected `aud` claim (default: `grants-ui-backend`)
+- `SERVICE_AUTH_ALLOWED_SERVICES` – comma-separated service names allowed to call this API via JWT, e.g. `grants-ui`. Leave empty to allow any valid JWT.
 
 **AWS / Floci** (used by the config ingestion S3 + SQS clients):
 
