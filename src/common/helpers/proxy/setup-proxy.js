@@ -1,5 +1,6 @@
-import { ProxyAgent, setGlobalDispatcher } from 'undici'
-import { bootstrap } from 'global-agent'
+import https from 'node:https'
+import http from 'node:http'
+import Wreck from '@hapi/wreck'
 
 import { createLogger } from '../logging/logger.js'
 import { config } from '../../../config.js'
@@ -7,21 +8,18 @@ import { config } from '../../../config.js'
 const logger = createLogger()
 
 /**
- * If HTTP_PROXY is set setupProxy() will enable it globally
- * for a number of http clients.
- * Node Fetch will still need to pass a ProxyAgent in on each call.
+ * Routes outbound calls through the CDP proxy. Node's native fetch/undici
+ * pick up HTTPS_PROXY automatically once NODE_USE_ENV_PROXY is set on the
+ * process (see cdp-app-config) - that must happen before the process starts,
+ * so there's nothing to bootstrap here for them. @hapi/wreck (used by
+ * @hapi/jwt's JWKS fetch) has its own default agents, so it needs pointing at
+ * Node's global agents explicitly. See
+ * https://github.com/DEFRA/cdp-documentation/blob/main/how-to/proxy.md
  */
 export function setupProxy() {
-  const proxyUrl = config.get('httpProxy')
-
-  if (proxyUrl) {
-    logger.info('setting up global proxies')
-
-    // Undici proxy
-    setGlobalDispatcher(new ProxyAgent(proxyUrl))
-
-    // global-agent (axios/request/and others)
-    bootstrap()
-    globalThis.GLOBAL_AGENT.HTTP_PROXY = proxyUrl
+  if (config.get('httpProxy')) {
+    logger.info('Routing @hapi/wreck through the native proxy agents')
+    Wreck.agents.https = https.globalAgent
+    Wreck.agents.http = http.globalAgent
   }
 }

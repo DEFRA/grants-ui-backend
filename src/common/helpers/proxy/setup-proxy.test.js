@@ -1,28 +1,30 @@
+import https from 'node:https'
+import http from 'node:http'
+import Wreck from '@hapi/wreck'
 import { config } from '../../../config.js'
-import { getGlobalDispatcher, ProxyAgent } from 'undici'
 import { setupProxy } from './setup-proxy.js'
 
 describe('setupProxy', () => {
+  const originalWreckAgents = { ...Wreck.agents }
+
   afterEach(() => {
     config.set('httpProxy', null)
+    Wreck.agents = { ...originalWreckAgents }
   })
 
-  test('Should not setup proxy if the environment variable is not set', () => {
+  test('Should not point Wreck at the native agents if the environment variable is not set', () => {
     config.set('httpProxy', null)
     setupProxy()
 
-    expect(global?.GLOBAL_AGENT?.HTTP_PROXY).toBeUndefined()
-
-    const undiciDispatcher = getGlobalDispatcher()
-
-    expect(undiciDispatcher).not.toBeInstanceOf(ProxyAgent)
+    expect(Wreck.agents.https).not.toBe(https.globalAgent)
+    expect(Wreck.agents.http).not.toBe(http.globalAgent)
   })
 
-  test('Should setup proxy if the environment variable is set', () => {
-    config.set('httpProxy', 'http://localhost:8080')
+  test('Should point Wreck at the native agents if the environment variable is set', () => {
+    config.set('httpProxy', 'http://localhost:3128')
     setupProxy()
-    expect(global?.GLOBAL_AGENT?.HTTP_PROXY).toBe('http://localhost:8080')
-    const undiciDispatcher = getGlobalDispatcher()
-    expect(undiciDispatcher).toBeInstanceOf(ProxyAgent)
+
+    expect(Wreck.agents.https).toBe(https.globalAgent)
+    expect(Wreck.agents.http).toBe(http.globalAgent)
   })
 })
