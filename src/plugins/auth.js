@@ -161,6 +161,13 @@ const auth = {
           .map((s) => s.trim())
           .filter(Boolean)
 
+        // TODO: temporary diagnostic for the JWKS handshake failure seen in dev - remove once resolved
+        log(LogCodes.AUTH.SERVICE_JWT_STRATEGY_CONFIG, {
+          jwksUri: config.get('serviceAuth.jwksUri'),
+          issuer: config.get('serviceAuth.issuer'),
+          audience: config.get('serviceAuth.audience')
+        })
+
         server.auth.strategy('service-jwt', 'jwt', {
           keys: { uri: config.get('serviceAuth.jwksUri') },
           verify: {

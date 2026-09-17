@@ -71,6 +71,11 @@ export const LogCodes = {
       level: 'warn',
       messageFunc: (messageOptions) =>
         `Service-to-service Web Identity token rejected | reason=${messageOptions.reason}`
+    },
+    SERVICE_JWT_STRATEGY_CONFIG: {
+      level: 'info',
+      messageFunc: (messageOptions) =>
+        `Registering service-jwt strategy | jwksUri=${messageOptions.jwksUri} | issuer=${messageOptions.issuer} | audience=${messageOptions.audience}`
     }
   },
   SYSTEM: {
