@@ -84,6 +84,15 @@ describe('buildFormDefinition', () => {
     expect(result.title).toBe('farm-payments')
   })
 
+  test('prefers metadata.shortName over definition name for title', () => {
+    const result = buildFormDefinition({
+      ...baseParams,
+      definition: { name: 'Apply for a Farm Payments agreement', metadata: { shortName: 'Farm Payments' } }
+    })
+
+    expect(result.title).toBe('Farm Payments')
+  })
+
   test('coerces unknown statuses to DRAFT', () => {
     const result = buildFormDefinition({ ...baseParams, status: 'something-else' })
 
