@@ -49,7 +49,7 @@ export function buildFormDefinition({ grantCode, version, status, definition, up
   return {
     grantCode,
     id: definition?.metadata?.id ?? `${grantCode}@${version}`,
-    title: definition?.name ?? grantCode,
+    title: definition?.metadata?.shortName ?? definition?.name ?? grantCode,
     description: definition?.metadata?.description ?? null,
     major,
     minor,
