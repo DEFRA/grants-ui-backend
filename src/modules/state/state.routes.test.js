@@ -558,9 +558,9 @@ describe('State', () => {
       mockError.code = 404
       mockError.reason = 'Some reason'
 
-      expect(() =>
-        stateApplications.options.validate.failAction(mockValidationRequest, mockH, mockError)
-      ).toThrow('Validation error')
+      expect(() => stateApplications.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
+        'Validation error'
+      )
     })
   })
 

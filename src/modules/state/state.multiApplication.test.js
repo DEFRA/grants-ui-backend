@@ -38,7 +38,10 @@ describe('multi-application save/retrieve', () => {
     // Drop first so the migrations build indexes from a clean slate:
     // createIndex is a no-op against an existing index of the same name, so a
     // collection left over from a previous run would keep its old key shape.
-    await db.collection(STATE_COLLECTION).drop().catch(() => {})
+    await db
+      .collection(STATE_COLLECTION)
+      .drop()
+      .catch(() => {})
     await upMultiApplicationIndexes(db)
   })
 
@@ -74,13 +77,13 @@ describe('multi-application save/retrieve', () => {
         sbi: '111',
         grantCode: 'standard-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A', answer: 'first' }
+        state: { $$__referenceNumber: 'REF-A', answer: 'first' }
       })
       await saveApplicationState({
         sbi: '111',
         grantCode: 'standard-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B', answer: 'second' }
+        state: { $$__referenceNumber: 'REF-B', answer: 'second' }
       })
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '111', grantCode: 'standard-grant' }).toArray()
@@ -95,13 +98,13 @@ describe('multi-application save/retrieve', () => {
         sbi: '112',
         grantCode: 'unconfigured-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A' }
+        state: { $$__referenceNumber: 'REF-A' }
       })
       await saveApplicationState({
         sbi: '112',
         grantCode: 'unconfigured-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B' }
+        state: { $$__referenceNumber: 'REF-B' }
       })
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '112', grantCode: 'unconfigured-grant' }).toArray()
@@ -115,7 +118,7 @@ describe('multi-application save/retrieve', () => {
         sbi: '111',
         grantCode: 'standard-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A' }
+        state: { $$__referenceNumber: 'REF-A' }
       })
 
       const result = await getApplicationState({ sbi: '111', grantCode: 'standard-grant', grantVersion: '1.0.0' })
@@ -128,7 +131,7 @@ describe('multi-application save/retrieve', () => {
         sbi: '111',
         grantCode: 'standard-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A' }
+        state: { $$__referenceNumber: 'REF-A' }
       })
 
       const result = await getApplicationStatesForGrant({ sbi: '111', grantCode: 'standard-grant' })
@@ -145,13 +148,13 @@ describe('multi-application save/retrieve', () => {
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A', answer: 'application A' }
+        state: { $$__referenceNumber: 'REF-A', answer: 'application A' }
       })
       await saveApplicationState({
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B', answer: 'application B' }
+        state: { $$__referenceNumber: 'REF-B', answer: 'application B' }
       })
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '222', grantCode: 'multi-grant' }).toArray()
@@ -166,19 +169,19 @@ describe('multi-application save/retrieve', () => {
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A', answer: 'first draft' }
+        state: { $$__referenceNumber: 'REF-A', answer: 'first draft' }
       })
       await saveApplicationState({
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B', answer: 'other application' }
+        state: { $$__referenceNumber: 'REF-B', answer: 'other application' }
       })
       await saveApplicationState({
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A', answer: 'updated draft' }
+        state: { $$__referenceNumber: 'REF-A', answer: 'updated draft' }
       })
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '222', grantCode: 'multi-grant' }).toArray()
@@ -194,13 +197,13 @@ describe('multi-application save/retrieve', () => {
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A', applicationStatus: 'SUBMITTED' }
+        state: { $$__referenceNumber: 'REF-A', applicationStatus: 'SUBMITTED' }
       })
       await saveApplicationState({
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B', applicationStatus: 'DRAFT' }
+        state: { $$__referenceNumber: 'REF-B', applicationStatus: 'DRAFT' }
       })
 
       const result = await getApplicationStatesForGrant({ sbi: '222', grantCode: 'multi-grant' })
@@ -215,13 +218,13 @@ describe('multi-application save/retrieve', () => {
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A', answer: 'A' }
+        state: { $$__referenceNumber: 'REF-A', answer: 'A' }
       })
       await saveApplicationState({
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B', answer: 'B' }
+        state: { $$__referenceNumber: 'REF-B', answer: 'B' }
       })
 
       const result = await getApplicationState({
@@ -239,13 +242,13 @@ describe('multi-application save/retrieve', () => {
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A' }
+        state: { $$__referenceNumber: 'REF-A' }
       })
       await saveApplicationState({
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B' }
+        state: { $$__referenceNumber: 'REF-B' }
       })
 
       const result = await getApplicationStatesForGrant({ sbi: '222', grantCode: 'multi-grant' })
@@ -260,13 +263,13 @@ describe('multi-application save/retrieve', () => {
         sbi: '224',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A', answer: 'A' }
+        state: { $$__referenceNumber: 'REF-A', answer: 'A' }
       })
       await saveApplicationState({
         sbi: '224',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B', answer: 'B' }
+        state: { $$__referenceNumber: 'REF-B', answer: 'B' }
       })
 
       // A definition bump lands and getStateWithFormDefinition upgrades one
@@ -279,7 +282,7 @@ describe('multi-application save/retrieve', () => {
         sbi: '224',
         grantCode: 'multi-grant',
         grantVersion: '1.1.0',
-        state: { '$$__referenceNumber': 'REF-B', answer: 'B updated' }
+        state: { $$__referenceNumber: 'REF-B', answer: 'B updated' }
       })
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '224', grantCode: 'multi-grant' }).toArray()
@@ -314,7 +317,7 @@ describe('multi-application save/retrieve', () => {
         sbi: '226',
         grantCode: 'flipping-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-EXISTING', answer: 'in progress' }
+        state: { $$__referenceNumber: 'REF-EXISTING', answer: 'in progress' }
       })
 
       await db
@@ -327,7 +330,7 @@ describe('multi-application save/retrieve', () => {
         sbi: '226',
         grantCode: 'flipping-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-EXISTING', answer: 'resumed' }
+        state: { $$__referenceNumber: 'REF-EXISTING', answer: 'resumed' }
       })
 
       let docs = await db.collection(STATE_COLLECTION).find({ sbi: '226', grantCode: 'flipping-grant' }).toArray()
@@ -340,7 +343,7 @@ describe('multi-application save/retrieve', () => {
         sbi: '226',
         grantCode: 'flipping-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-SECOND', answer: 'second application' }
+        state: { $$__referenceNumber: 'REF-SECOND', answer: 'second application' }
       })
 
       docs = await db.collection(STATE_COLLECTION).find({ sbi: '226', grantCode: 'flipping-grant' }).toArray()
@@ -361,7 +364,7 @@ describe('multi-application save/retrieve', () => {
         minor: 0,
         patch: 0,
         pinnedMajor: 1,
-        state: { '$$__referenceNumber': 'REF-LEGACY', answer: 'in progress' },
+        state: { $$__referenceNumber: 'REF-LEGACY', answer: 'in progress' },
         createdAt: new Date(),
         updatedAt: new Date()
       })
@@ -372,7 +375,7 @@ describe('multi-application save/retrieve', () => {
         sbi: '227',
         grantCode: 'legacy-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-LEGACY', answer: 'resumed' }
+        state: { $$__referenceNumber: 'REF-LEGACY', answer: 'resumed' }
       })
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '227', grantCode: 'legacy-grant' }).toArray()
@@ -387,13 +390,13 @@ describe('multi-application save/retrieve', () => {
         sbi: '230',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A', answer: 'A' }
+        state: { $$__referenceNumber: 'REF-A', answer: 'A' }
       })
       await saveApplicationState({
         sbi: '230',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B', answer: 'B' }
+        state: { $$__referenceNumber: 'REF-B', answer: 'B' }
       })
 
       const result = await getStateWithFormDefinition({
@@ -414,13 +417,13 @@ describe('multi-application save/retrieve', () => {
         sbi: '228',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A', applicationStatus: 'DRAFT' }
+        state: { $$__referenceNumber: 'REF-A', applicationStatus: 'DRAFT' }
       })
       await saveApplicationState({
         sbi: '228',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B', applicationStatus: 'DRAFT' }
+        state: { $$__referenceNumber: 'REF-B', applicationStatus: 'DRAFT' }
       })
 
       await patchApplicationState({
@@ -444,13 +447,13 @@ describe('multi-application save/retrieve', () => {
         sbi: '229',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A' }
+        state: { $$__referenceNumber: 'REF-A' }
       })
       await saveApplicationState({
         sbi: '229',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-B' }
+        state: { $$__referenceNumber: 'REF-B' }
       })
 
       await deleteApplicationState({
@@ -471,7 +474,7 @@ describe('multi-application save/retrieve', () => {
         sbi: '223',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        state: { '$$__referenceNumber': 'REF-A' }
+        state: { $$__referenceNumber: 'REF-A' }
       })
 
       const result = await getApplicationStatesForGrant({ sbi: '223', grantCode: 'multi-grant' })

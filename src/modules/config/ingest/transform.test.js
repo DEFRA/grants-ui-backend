@@ -65,7 +65,10 @@ describe('buildFormDefinition', () => {
   })
 
   test('defaults allowMultipleApplications to false when metadata omits it', () => {
-    const result = buildFormDefinition({ ...baseParams, definition: { name: 'Farm Payments', metadata: { id: 'fd-001' } } })
+    const result = buildFormDefinition({
+      ...baseParams,
+      definition: { name: 'Farm Payments', metadata: { id: 'fd-001' } }
+    })
 
     expect(result.allowMultipleApplications).toBe(false)
   })

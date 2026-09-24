@@ -271,7 +271,7 @@ describe('state CRUD service pass-throughs', () => {
     }
     initStateRepository(fakeDb)
 
-    await saveApplicationState({ ...params, state: { '$$__referenceNumber': 'REF-1' } })
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
 
     expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
   })
@@ -291,7 +291,7 @@ describe('state CRUD service pass-throughs', () => {
     }
     initStateRepository(fakeDb)
 
-    await saveApplicationState({ ...params, state: { '$$__referenceNumber': 'REF-1' } })
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
 
     expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
     expect(capturedUpdate.$set.allowMultipleApplications).toBe(true)
@@ -315,7 +315,7 @@ describe('state CRUD service pass-throughs', () => {
     }
     initStateRepository(fakeDb)
 
-    await saveApplicationState({ ...params, state: { '$$__referenceNumber': 'REF-1' } })
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
 
     expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
   })
@@ -333,7 +333,7 @@ describe('state CRUD service pass-throughs', () => {
     }
     initStateRepository(fakeDb)
 
-    await saveApplicationState({ ...params, state: { '$$__referenceNumber': 'REF-1' } })
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
 
     expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
   })

@@ -85,7 +85,6 @@ export const patchParamsSchema = Joi.object({
   grantVersion: grantVersion().default('1.0.0')
 })
 
-
 export const patchSchema = Joi.object({
   // Selects one application when the grant allows several per SBI.
   applicationRef: Joi.string().optional(),

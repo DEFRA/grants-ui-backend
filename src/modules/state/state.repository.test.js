@@ -227,7 +227,12 @@ describe('state.repository saveApplicationState / getApplicationState filter bra
     const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 1 })
     initStateRepository({ collection: () => ({ updateOne }) })
 
-    await saveApplicationState({ ...params, state: { foo: 'bar' }, allowMultipleApplications: true, applicationRef: 'ref-1' })
+    await saveApplicationState({
+      ...params,
+      state: { foo: 'bar' },
+      allowMultipleApplications: true,
+      applicationRef: 'ref-1'
+    })
 
     const [, updateDoc] = updateOne.mock.calls[0]
     expect(updateDoc.$set.state).toEqual({ foo: 'bar' })
@@ -241,7 +246,11 @@ describe('state.repository saveApplicationState / getApplicationState filter bra
 
     await getApplicationState(params)
 
-    expect(findOne).toHaveBeenCalledWith({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
+    expect(findOne).toHaveBeenCalledWith({
+      sbi: params.sbi,
+      grantCode: params.grantCode,
+      grantVersion: params.grantVersion
+    })
   })
 
   test('getApplicationState includes applicationRef in the filter when supplied', async () => {
