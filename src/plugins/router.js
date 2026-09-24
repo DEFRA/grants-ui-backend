@@ -3,6 +3,7 @@ import { applicationLockRelease, applicationLocksRelease } from '../modules/stat
 import {
   stateSave,
   stateRetrieve,
+  stateApplications,
   stateDelete,
   statePatch,
   stateWithDefinition
@@ -19,6 +20,7 @@ const router = {
         health,
         stateSave,
         stateRetrieve,
+        stateApplications,
         stateDelete,
         stateWithDefinition,
         addSubmission,

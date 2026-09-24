@@ -54,6 +54,7 @@ describe('buildFormDefinition', () => {
       id: 'fd-001',
       title: 'Farm Payments',
       description: null,
+      allowMultipleApplications: false,
       major: 1,
       minor: 2,
       patch: 3,
@@ -61,6 +62,30 @@ describe('buildFormDefinition', () => {
       definition: baseParams.definition,
       updatedAt: new Date('2024-01-01T00:00:00.000Z')
     })
+  })
+
+  test('defaults allowMultipleApplications to false when metadata omits it', () => {
+    const result = buildFormDefinition({ ...baseParams, definition: { name: 'Farm Payments', metadata: { id: 'fd-001' } } })
+
+    expect(result.allowMultipleApplications).toBe(false)
+  })
+
+  test('sets allowMultipleApplications to true when metadata declares it', () => {
+    const result = buildFormDefinition({
+      ...baseParams,
+      definition: { name: 'Farm Payments', metadata: { id: 'fd-001', allowMultipleApplications: true } }
+    })
+
+    expect(result.allowMultipleApplications).toBe(true)
+  })
+
+  test('coerces a non-boolean allowMultipleApplications value to false', () => {
+    const result = buildFormDefinition({
+      ...baseParams,
+      definition: { name: 'Farm Payments', metadata: { id: 'fd-001', allowMultipleApplications: 'true' } }
+    })
+
+    expect(result.allowMultipleApplications).toBe(false)
   })
 
   test('falls back to grantCode@version for id when metadata.id is missing', () => {

@@ -2,6 +2,7 @@ import {
   initStateRepository,
   saveApplicationState,
   getApplicationState,
+  findApplicationStatesForGrant,
   deleteApplicationState,
   patchApplicationState,
   insertSubmission,
@@ -125,6 +126,164 @@ describe('state.repository CRUD error paths', () => {
     await expect(
       updateApplicationStateVersion({ _id: 'abc', grantVersion: '1.2.0', major: 1, minor: 2, patch: 0 })
     ).rejects.toThrow('DB failed')
+  })
+
+  test('findApplicationStatesForGrant re-throws and logs on error', async () => {
+    initStateRepository({
+      collection: () => ({
+        find: () => ({
+          toArray: () => {
+            throw dbError
+          }
+        })
+      })
+    })
+    await expect(findApplicationStatesForGrant({ sbi: '123', grantCode: 'EGWA' })).rejects.toThrow('DB failed')
+  })
+})
+
+describe('state.repository saveApplicationState / getApplicationState filter branching', () => {
+  const params = { sbi: '123456789', grantCode: 'EGWA', grantVersion: '1.0.0' }
+
+  afterEach(() => {
+    initStateRepository(null)
+  })
+
+  test('saveApplicationState filters on (sbi, grantCode, grantVersion) alone when allowMultipleApplications is false', async () => {
+    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 0 })
+    initStateRepository({ collection: () => ({ updateOne }) })
+
+    await saveApplicationState({ ...params, state: {}, allowMultipleApplications: false, applicationRef: 'ref-1' })
+
+    const [filter] = updateOne.mock.calls[0]
+    expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
+  })
+
+  test('saveApplicationState defaults to allowMultipleApplications false when omitted', async () => {
+    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 0 })
+    initStateRepository({ collection: () => ({ updateOne }) })
+
+    await saveApplicationState({ ...params, state: {} })
+
+    const [filter, updateDoc] = updateOne.mock.calls[0]
+    expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
+    expect(updateDoc.$set.allowMultipleApplications).toBe(false)
+  })
+
+  test('saveApplicationState keys on (sbi, grantCode, applicationRef) when allowMultipleApplications is true', async () => {
+    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 1 })
+    initStateRepository({ collection: () => ({ updateOne }) })
+
+    await saveApplicationState({ ...params, state: {}, allowMultipleApplications: true, applicationRef: 'ref-1' })
+
+    const [filter, updateDoc] = updateOne.mock.calls[0]
+    expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'ref-1' })
+    expect(filter.grantVersion).toBeUndefined()
+    expect(updateDoc.$set.allowMultipleApplications).toBe(true)
+    expect(updateDoc.$set.applicationRef).toBe('ref-1')
+  })
+
+  test('saveApplicationState persists grantVersion via $set for multi-application saves', async () => {
+    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 0 })
+    initStateRepository({ collection: () => ({ updateOne }) })
+
+    await saveApplicationState({
+      ...params,
+      grantVersion: '2.3.4',
+      state: {},
+      allowMultipleApplications: true,
+      applicationRef: 'ref-1'
+    })
+
+    const [, updateDoc] = updateOne.mock.calls[0]
+    expect(updateDoc.$set).toMatchObject({ grantVersion: '2.3.4', major: 2, minor: 3, patch: 4 })
+    expect(updateDoc.$setOnInsert.major).toBeUndefined()
+    expect(updateDoc.$setOnInsert.pinnedMajor).toBe(2)
+  })
+
+  test('saveApplicationState falls back to the single-application key when a multi-application save has no applicationRef', async () => {
+    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 0 })
+    initStateRepository({ collection: () => ({ updateOne }) })
+
+    await saveApplicationState({ ...params, state: {}, allowMultipleApplications: true })
+
+    const [filter, updateDoc] = updateOne.mock.calls[0]
+    expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
+    expect(updateDoc.$set.applicationRef).toBeUndefined()
+  })
+
+  test('saveApplicationState does not write a null applicationRef', async () => {
+    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 0 })
+    initStateRepository({ collection: () => ({ updateOne }) })
+
+    await saveApplicationState({ ...params, state: {}, allowMultipleApplications: true, applicationRef: null })
+
+    const [filter, updateDoc] = updateOne.mock.calls[0]
+    expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
+    expect('applicationRef' in updateDoc.$set).toBe(false)
+  })
+
+  test('saveApplicationState sets allowMultipleApplications and applicationRef on $set', async () => {
+    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 1 })
+    initStateRepository({ collection: () => ({ updateOne }) })
+
+    await saveApplicationState({ ...params, state: { foo: 'bar' }, allowMultipleApplications: true, applicationRef: 'ref-1' })
+
+    const [, updateDoc] = updateOne.mock.calls[0]
+    expect(updateDoc.$set.state).toEqual({ foo: 'bar' })
+    expect(updateDoc.$set.allowMultipleApplications).toBe(true)
+    expect(updateDoc.$set.applicationRef).toBe('ref-1')
+  })
+
+  test('getApplicationState omits applicationRef from the filter when not supplied', async () => {
+    const findOne = jest.fn().mockResolvedValue(null)
+    initStateRepository({ collection: () => ({ findOne }) })
+
+    await getApplicationState(params)
+
+    expect(findOne).toHaveBeenCalledWith({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
+  })
+
+  test('getApplicationState includes applicationRef in the filter when supplied', async () => {
+    const findOne = jest.fn().mockResolvedValue(null)
+    initStateRepository({ collection: () => ({ findOne }) })
+
+    await getApplicationState({ ...params, applicationRef: 'ref-1' })
+
+    expect(findOne).toHaveBeenCalledWith({ ...params, applicationRef: 'ref-1' })
+  })
+
+  test('getLatestApplicationStateForGrant narrows to one application when applicationRef is supplied', async () => {
+    const doc = { _id: 'a', applicationRef: 'ref-1' }
+    const sort = jest.fn().mockReturnValue({ limit: () => ({ next: () => Promise.resolve(doc) }) })
+    const find = jest.fn().mockReturnValue({ sort })
+    initStateRepository({ collection: () => ({ find }) })
+
+    await getLatestApplicationStateForGrant({ sbi: '123', grantCode: 'EGWA', applicationRef: 'ref-1' })
+
+    expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA', applicationRef: 'ref-1' })
+  })
+
+  test('getLatestApplicationStateForGrant omits applicationRef from the filter when not supplied', async () => {
+    const sort = jest.fn().mockReturnValue({ limit: () => ({ next: () => Promise.resolve(null) }) })
+    const find = jest.fn().mockReturnValue({ sort })
+    initStateRepository({ collection: () => ({ find }) })
+
+    await getLatestApplicationStateForGrant({ sbi: '123', grantCode: 'EGWA' })
+
+    expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA' })
+  })
+
+  test('findApplicationStatesForGrant queries by (sbi, grantCode) only', async () => {
+    const docs = [{ _id: '1' }, { _id: '2' }]
+    const toArray = jest.fn().mockResolvedValue(docs)
+    const find = jest.fn().mockReturnValue({ toArray })
+    initStateRepository({ collection: () => ({ find }) })
+
+    const result = await findApplicationStatesForGrant({ sbi: params.sbi, grantCode: params.grantCode })
+
+    expect(find).toHaveBeenCalledWith({ sbi: params.sbi, grantCode: params.grantCode })
+    expect(result).toBe(docs)
   })
 })
 

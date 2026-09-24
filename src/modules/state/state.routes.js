@@ -5,6 +5,7 @@ import { StatusCodes } from 'http-status-codes'
 import {
   stateSaveSchema,
   stateRetrieveSchema,
+  stateApplicationsSchema,
   stateWithDefinitionSchema,
   patchParamsSchema,
   patchSchema
@@ -12,6 +13,7 @@ import {
 import {
   saveApplicationState,
   getApplicationState,
+  getApplicationStatesForGrant,
   deleteApplicationState,
   patchApplicationState,
   getStateWithFormDefinition
@@ -101,10 +103,52 @@ export const stateRetrieve = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode, grantVersion } = request.query
+    const { sbi, grantCode, grantVersion, applicationRef } = request.query
 
     try {
-      const document = await getApplicationState({ sbi, grantCode, grantVersion })
+      const document = await getApplicationState({ sbi, grantCode, grantVersion, applicationRef })
+
+      if (!document) {
+        return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
+      }
+
+      return h.response(document).code(StatusCodes.OK)
+    } catch (_err) {
+      return h.response({ error: 'Failed to retrieve application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
+    }
+  }
+}
+
+export const stateApplications = {
+  method: 'GET',
+  path: '/state/applications',
+  options: {
+    auth: 'bearer',
+    // No enforceApplicationLock: read-only, and there is no single
+    // grantVersion here to scope a lock token to.
+    validate: {
+      query: stateApplicationsSchema,
+      failAction: (request, _h, err) => {
+        const { sbi, grantCode } = request.query
+        log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
+          sbi,
+          grantCode,
+          errorName: err.name,
+          errorMessage: `GET /state/applications, validation failed: ${err.message}`,
+          errorReason: err.reason,
+          errorCode: err.code,
+          isMongoError: false,
+          stack: err.stack?.split('\n')[0]
+        })
+        throw err
+      }
+    }
+  },
+  handler: async (request, h) => {
+    const { sbi, grantCode } = request.query
+
+    try {
+      const document = await getApplicationStatesForGrant({ sbi, grantCode })
 
       if (!document) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
@@ -143,10 +187,10 @@ export const stateDelete = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode, grantVersion } = request.query
+    const { sbi, grantCode, grantVersion, applicationRef } = request.query
 
     try {
-      const doc = await deleteApplicationState({ sbi, grantCode, grantVersion })
+      const doc = await deleteApplicationState({ sbi, grantCode, grantVersion, applicationRef })
 
       if (!doc) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
@@ -193,10 +237,17 @@ export const statePatch = {
   },
   handler: async (request, h) => {
     const { sbi, grantCode, grantVersion } = request.params
+    const { applicationRef } = request.payload
     const { applicationStatus } = request.payload.state
 
     try {
-      const document = await patchApplicationState({ sbi, grantCode, grantVersion, applicationStatus })
+      const document = await patchApplicationState({
+        sbi,
+        grantCode,
+        grantVersion,
+        applicationStatus,
+        applicationRef
+      })
 
       if (!document) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
@@ -237,7 +288,7 @@ export const stateWithDefinition = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode, includeDefinition } = request.payload
+    const { sbi, grantCode, includeDefinition, applicationRef } = request.payload
 
     // Identify the lock owner from the token, but tolerate a missing
     // grantVersion: the orchestrator resolves the authoritative version and
@@ -245,7 +296,7 @@ export const stateWithDefinition = {
     const { ownerId } = extractLockKeys(request, { requireGrantVersion: false })
 
     try {
-      const result = await getStateWithFormDefinition({ sbi, grantCode, ownerId, includeDefinition })
+      const result = await getStateWithFormDefinition({ sbi, grantCode, ownerId, includeDefinition, applicationRef })
 
       if (!result) {
         return h.response({ error: FORM_DEFINITION_NOT_FOUND }).code(StatusCodes.NOT_FOUND)

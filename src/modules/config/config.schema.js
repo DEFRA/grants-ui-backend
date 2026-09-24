@@ -18,6 +18,7 @@ export const formDefinitionSchema = Joi.object({
   patch: semverPart().required(),
   definition: Joi.object().unknown(true).required(),
   status: Joi.string().valid(FORM_DEFINITION_STATUS.DRAFT, FORM_DEFINITION_STATUS.ACTIVE).required(),
+  allowMultipleApplications: Joi.boolean().default(false),
   updatedAt: Joi.date().required()
 })
   .required()
