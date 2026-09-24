@@ -1,6 +1,6 @@
 import { config } from '../../../config.js'
 import { getBrokerServiceToken } from './broker-service-token.js'
-import { fetchAllGrants, fetchVersion, fetchLatestActiveVersion } from './broker-client.js'
+import { fetchAllGrants, fetchVersion, fetchLatestActiveVersion, fetchFeatureControls } from './broker-client.js'
 
 jest.mock('../../../config.js', () => ({
   config: {
@@ -163,6 +163,22 @@ describe('broker-client', () => {
         expect.any(Object)
       )
       expect(result).toEqual(version)
+    })
+  })
+
+  describe('fetchFeatureControls', () => {
+    test('requests one page of active feature controls and returns the parsed body', async () => {
+      getBrokerServiceToken.mockResolvedValue('a-web-identity-token')
+      const body = { items: [{ name: 'APPLICATION_WINDOW_OPEN_WOODLAND', value: true }], totalPages: 1 }
+      global.fetch.mockResolvedValue(okResponse(body))
+
+      const result = await fetchFeatureControls(2, 100)
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://broker.example/api/feature-controls?status=active&page=2&pageSize=100',
+        expect.objectContaining({ method: 'GET' })
+      )
+      expect(result).toEqual(body)
     })
   })
 })

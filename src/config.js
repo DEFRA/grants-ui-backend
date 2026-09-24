@@ -189,6 +189,12 @@ const config = convict({
     }
   },
   configIngest: {
+    featureControlSqsQueueUrl: {
+      doc: 'FIFO SQS queue URL subscribed to the config-broker feature-control SNS topic',
+      format: String,
+      default: '',
+      env: 'CONFIG_INGEST_FEATURE_CONTROL_SQS_QUEUE_URL'
+    },
     sqsQueueUrl: {
       doc: 'SQS queue URL subscribed to the config-broker SNS topic',
       format: String,
