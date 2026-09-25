@@ -145,3 +145,15 @@ export function fetchLatestActiveVersion(grant) {
   const params = new URLSearchParams({ grant })
   return brokerGet(`/api/latestVersion?${params.toString()}`)
 }
+
+/**
+ * Returns one page of active feature controls.
+ *
+ * @param {number} page
+ * @param {number} pageSize
+ * @returns {Promise<{ items: Array<{ name: string, type: string, value: unknown, scopes: string[] }>, totalPages: number }>}
+ */
+export function fetchFeatureControls(page, pageSize) {
+  const params = new URLSearchParams({ status: 'active', page: String(page), pageSize: String(pageSize) })
+  return brokerGet(`/api/feature-controls?${params.toString()}`)
+}

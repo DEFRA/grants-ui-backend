@@ -15,6 +15,8 @@ import { requestTracing } from './common/helpers/request-tracing.js'
 import { setupProxy } from './common/helpers/proxy/setup-proxy.js'
 import { applicationLockPlugin } from './modules/state/lock-enforcement.js'
 import { configSqsConsumerPlugin } from './modules/config/ingest/config-sqs-consumer.js'
+import { featureControlSqsConsumerPlugin } from './modules/feature-control/feature-control-sqs-consumer.js'
+import { initFeatureControlRepository } from './modules/feature-control/feature-control.repository.js'
 import { openapi } from './plugins/openapi.js'
 
 async function createServer() {
@@ -84,6 +86,7 @@ async function createServer() {
     auth,
     applicationLockPlugin,
     configSqsConsumerPlugin,
+    featureControlSqsConsumerPlugin,
     openapi,
     router
   ])
@@ -93,6 +96,7 @@ async function createServer() {
   initStateRepository(server.stateDb)
   initConfigRepository(server.configDb)
   initAllowlistRepository(server.configDb)
+  initFeatureControlRepository(server.configDb)
 
   return server
 }

@@ -9,6 +9,7 @@ import {
 } from '../modules/state/state.routes.js'
 import { addSubmission, retrieveSubmissions } from '../modules/state/submissions.routes.js'
 import { allowlistGrants } from '../modules/allowlist/allowlist.routes.js'
+import { featureControlValue } from '../modules/feature-control/feature-control.routes.js'
 import { clearTestDataRoute } from '../modules/state/test-data.routes.js'
 
 const router = {
@@ -27,6 +28,7 @@ const router = {
         applicationLockRelease,
         applicationLocksRelease,
         allowlistGrants,
+        featureControlValue,
         clearTestDataRoute
       ])
     }

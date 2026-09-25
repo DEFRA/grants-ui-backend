@@ -51,4 +51,22 @@ echo "Created/located SQS queue: $QUEUE_URL ($QUEUE_ARN)"
 
 subscribe_queue_to_topic "$TOPIC_ARN" "$QUEUE_URL" "$QUEUE_ARN"
 
+# Feature controls: FIFO topic published to by grants-config-broker on value changes,
+# and the FIFO queue consumed by grants-ui-backend (FIFO topics only deliver to FIFO queues)
+FC_TOPIC_NAME=gfr__sns__feature_control.fifo
+FC_QUEUE_NAME=grants_ui_backend__sqs__feature_control.fifo
+
+FC_TOPIC_ARN=$(aws $ENDPOINT sns create-topic --name "$FC_TOPIC_NAME" \
+  --attributes FifoTopic=true,ContentBasedDeduplication=false \
+  --query TopicArn --output text)
+echo "Created/located SNS topic: $FC_TOPIC_ARN"
+
+FC_QUEUE_URL=$(aws $ENDPOINT sqs create-queue --queue-name "$FC_QUEUE_NAME" \
+  --attributes FifoQueue=true \
+  --query QueueUrl --output text)
+FC_QUEUE_ARN="arn:aws:sqs:${AWS_REGION}:${ACCOUNT_ID}:${FC_QUEUE_NAME}"
+echo "Created/located SQS queue: $FC_QUEUE_URL ($FC_QUEUE_ARN)"
+
+subscribe_queue_to_topic "$FC_TOPIC_ARN" "$FC_QUEUE_URL" "$FC_QUEUE_ARN"
+
 echo READY > /tmp/READY

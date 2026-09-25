@@ -2,6 +2,7 @@ import { config } from '../../config.js'
 import { createServer } from '../../server.js'
 import { createLogger } from './logging/logger.js'
 import { runStartupPull } from '../../modules/config/ingest/startup-pull.js'
+import { runFeatureControlStartupPull } from '../../modules/feature-control/feature-control-startup-pull.js'
 import { runMigrations } from './run-migrations.js'
 import stateMongoConfig from '../../../migrate-mongo-config.state.js'
 import configMongoConfig from '../../../migrate-mongo-config.config.js'
@@ -38,6 +39,8 @@ async function startServer() {
     // the live SQS config-update consumer reconciles the DB once the broker
     // publishes. We deliberately do not block startup on broker warm-up timing.
     await runBestEffort(server, 'Broker startup pull', runStartupPull)
+
+    await runBestEffort(server, 'Feature-control startup pull', runFeatureControlStartupPull)
 
     await server.start()
 

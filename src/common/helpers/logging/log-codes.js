@@ -311,6 +311,27 @@ export const LogCodes = {
         `Failed to ingest allowlist during startup pull | grantCode=${grantCode} | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
     }
   },
+  FEATURE_CONTROL: {
+    INGEST_UPSERTED: {
+      level: 'info',
+      messageFunc: ({ name, value }) => `Upserted feature control | name=${name} | value=${value}`
+    },
+    INGEST_IGNORED: {
+      level: 'debug',
+      messageFunc: ({ name, valueType, scopes }) =>
+        `Ignoring feature control (not a boolean with a grant scope) | name=${name} | valueType=${valueType} | scopes=${scopes}`
+    },
+    STARTUP_PULL_ITEM_FAILED: {
+      level: 'error',
+      messageFunc: ({ name, errorName, errorMessage }) =>
+        `Failed to ingest feature control during startup pull | name=${name} | errorName=${errorName} | errorMessage=${errorMessage}`
+    },
+    STARTUP_PULL_COMPLETE: {
+      level: 'info',
+      messageFunc: ({ total, stored, failed }) =>
+        `Feature-control startup pull complete | total=${total} | stored=${stored} | failed=${failed}`
+    }
+  },
   MIGRATIONS: {
     APPLIED: {
       level: 'info',
