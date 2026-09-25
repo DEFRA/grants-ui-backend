@@ -14,7 +14,7 @@ import { pulse } from './common/helpers/pulse.js'
 import { requestTracing } from './common/helpers/request-tracing.js'
 import { setupProxy } from './common/helpers/proxy/setup-proxy.js'
 import { applicationLockPlugin } from './modules/state/lock-enforcement.js'
-import { sqsConsumerPlugin } from './modules/config/ingest/sqs-consumer.js'
+import { configSqsConsumerPlugin } from './modules/config/ingest/config-sqs-consumer.js'
 import { openapi } from './plugins/openapi.js'
 
 async function createServer() {
@@ -83,7 +83,7 @@ async function createServer() {
     },
     auth,
     applicationLockPlugin,
-    sqsConsumerPlugin,
+    configSqsConsumerPlugin,
     openapi,
     router
   ])

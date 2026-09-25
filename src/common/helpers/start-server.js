@@ -7,33 +7,37 @@ import stateMongoConfig from '../../../migrate-mongo-config.state.js'
 import configMongoConfig from '../../../migrate-mongo-config.config.js'
 import { runStartupPurge } from '../../modules/state/purge-unsubmitted-applications.js'
 
+/**
+ * Runs a startup task that must not stop the server from booting.
+ * @param {import('@hapi/hapi').Server} server
+ * @param {string} label - what failed, e.g. `Startup purge`
+ * @param {() => Promise<unknown>} task
+ */
+async function runBestEffort(server, label, task) {
+  try {
+    await task()
+  } catch (err) {
+    server.logger.error({ err }, `${label} failed; continuing with existing DB state`)
+  }
+}
+
 async function startServer() {
   let server
 
   try {
     server = await createServer()
 
-    // Run migrations. Across multiple ECS instances, migrate-mongo's changelog
-    // lock (lockTtl > 0) lets exactly one instance apply pending migrations;
-    // the others back-off/poll until the lock clears, then start normally.
+    // Run migrations across multiple ECS instances.
     await runMigrations(server.stateDb, stateMongoConfig)
     await runMigrations(server.configDb, configMongoConfig)
 
-    try {
-      await runStartupPurge()
-    } catch (err) {
-      server.logger.error({ err }, 'Startup purge failed; continuing with existing DB state')
-    }
+    await runBestEffort(server, 'Startup purge', runStartupPurge)
 
     // Best-effort startup pull from the config broker. If the broker is not yet
     // ready (e.g. cold start), we log and continue with the existing DB state;
     // the live SQS config-update consumer reconciles the DB once the broker
     // publishes. We deliberately do not block startup on broker warm-up timing.
-    try {
-      await runStartupPull()
-    } catch (err) {
-      server.logger.error({ err }, 'Broker startup pull failed; continuing with existing DB state')
-    }
+    await runBestEffort(server, 'Broker startup pull', runStartupPull)
 
     await server.start()
 
