@@ -14,12 +14,13 @@ import {
   clearTestData
 } from './state.service'
 import { initStateRepository } from './state.repository'
-import { resolveLatestVersion, resolveLatestVersionWithinMajor } from '../config/config.service.js'
+import { resolveLatestVersion, resolveLatestVersionWithinMajor, getDefinition } from '../config/config.service.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
 
 jest.mock('../config/config.service.js', () => ({
   resolveLatestVersion: jest.fn(),
-  resolveLatestVersionWithinMajor: jest.fn()
+  resolveLatestVersionWithinMajor: jest.fn(),
+  getDefinition: jest.fn()
 }))
 
 jest.mock('../../common/helpers/logging/log.js', () => {
@@ -254,6 +255,86 @@ describe('state CRUD service pass-throughs', () => {
 
     expect(capturedFilter.grantVersion).toBe('1.0.0')
     expect(capturedUpdate.$setOnInsert).toMatchObject({ pinnedMajor: 1, major: 1, minor: 0, patch: 0 })
+  })
+
+  test('saveApplicationState treats allowMultipleApplications as false when no form definition is found', async () => {
+    getDefinition.mockResolvedValueOnce(null)
+    let capturedFilter
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter) => {
+          capturedFilter = filter
+          return { upsertedCount: 1 }
+        }
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
+  })
+
+  test('saveApplicationState folds applicationRef into the filter when the grant allows multiple applications', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: true })
+    let capturedFilter
+    let capturedUpdate
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter, update) => {
+          capturedFilter = filter
+          capturedUpdate = update
+          return { upsertedCount: 1 }
+        }
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
+    expect(capturedUpdate.$set.allowMultipleApplications).toBe(true)
+    expect(capturedUpdate.$set.applicationRef).toBe('REF-1')
+    expect(getDefinition).toHaveBeenCalledWith(params.grantCode, 1, 0, 0)
+  })
+
+  test('saveApplicationState falls back to the grant latest version when the exact version has no definition', async () => {
+    // A multi-application grant must not silently degrade to single-application
+    // keying just because the exact version being saved is not stored.
+    getDefinition.mockResolvedValueOnce(null)
+    resolveLatestVersion.mockResolvedValueOnce({ allowMultipleApplications: true })
+    let capturedFilter
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter) => {
+          capturedFilter = filter
+          return { upsertedCount: 1 }
+        }
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
+  })
+
+  test('saveApplicationState does not fold applicationRef into the filter when the grant does not allow multiple applications', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: false })
+    let capturedFilter
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter) => {
+          capturedFilter = filter
+          return { upsertedCount: 0 }
+        }
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
   })
 
   test('getApplicationState delegates to repository', async () => {

@@ -30,8 +30,11 @@ import {
   deleteAllSubmissionsForGrant as repoDeleteAllSubmissionsForGrant,
   deleteAllApplicationLocksForGrant as repoDeleteAllApplicationLocksForGrant
 } from './state.repository.js'
-import { resolveLatestVersion, resolveLatestVersionWithinMajor } from '../config/config.service.js'
+import { normaliseGrantVersion } from './grant-version.js'
+import { resolveLatestVersion, resolveLatestVersionWithinMajor, getDefinition } from '../config/config.service.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
+
+const APPLICATION_REF_FIELD = '$$__referenceNumber'
 
 export { APPLICATION_LOCK_TTL_MS } from './state.repository.js'
 
@@ -68,41 +71,75 @@ export function releaseAllApplicationLocksForOwner({ ownerId }) {
 /**
  * Saves (upserts) the application state for a given grant and SBI.
  *
+ * Resolves `allowMultipleApplications` from the grant's config (see
+ * {@link resolveAllowMultipleApplications}) and extracts `applicationRef`
+ * from the incoming state payload's `$$__referenceNumber`, generated
+ * client-side by grants-ui for every application. For standard schemes
+ * (`allowMultipleApplications` false) neither affects how the save is
+ * targeted: behaviour is unchanged from before these fields existed.
+ *
  * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown> }} params
  * @returns {Promise<import('mongodb').UpdateResult>}
  */
-export function saveApplicationState({ sbi, grantCode, grantVersion, state }) {
-  return repoSaveApplicationState({ sbi, grantCode, grantVersion, state })
+export async function saveApplicationState({ sbi, grantCode, grantVersion, state }) {
+  const allowMultipleApplications = await resolveAllowMultipleApplications({ grantCode, grantVersion })
+  const applicationRef = state?.[APPLICATION_REF_FIELD]
+
+  return repoSaveApplicationState({ sbi, grantCode, grantVersion, state, allowMultipleApplications, applicationRef })
+}
+
+/**
+ * Resolves whether a grant allows multiple applications per SBI.
+ *
+ * Prefers the definition for the exact version being saved, falling back to
+ * the grant's latest active version when that exact version is not stored
+ * (e.g. a version resolved from a definition that has since been superseded,
+ * or one that was never ingested). The fallback matters: treating an
+ * unresolvable version as single-application would change the document key
+ * mid-flight for a multi-application grant and could duplicate an
+ * application rather than update it.
+ *
+ * @param {{ grantCode: string, grantVersion: string }} params
+ * @returns {Promise<boolean>}
+ */
+async function resolveAllowMultipleApplications({ grantCode, grantVersion }) {
+  const { major, minor, patch } = normaliseGrantVersion(grantVersion)
+  const definition = (await getDefinition(grantCode, major, minor, patch)) ?? (await resolveLatestVersion(grantCode))
+
+  return definition?.allowMultipleApplications === true
 }
 
 /**
  * Retrieves the application state for a given grant and SBI.
  *
- * @param {{ sbi: number|string, grantCode: string, grantVersion: string }} params
+ * When `applicationRef` is supplied, the lookup is narrowed to that exact
+ * application.
+ *
+ * @param {{ sbi: number|string, grantCode: string, grantVersion: string, applicationRef?: string }} params
  * @returns {Promise<ApplicationState|null>}
  */
-export function getApplicationState({ sbi, grantCode, grantVersion }) {
-  return repoGetApplicationState({ sbi, grantCode, grantVersion })
+export function getApplicationState({ sbi, grantCode, grantVersion, applicationRef }) {
+  return repoGetApplicationState({ sbi, grantCode, grantVersion, applicationRef })
 }
 
 /**
  * Deletes the application state for a given grant and SBI.
  *
- * @param {{ sbi: number|string, grantCode: string, grantVersion: string }} params
+ * @param {{ sbi: number|string, grantCode: string, grantVersion: string, applicationRef?: string }} params
  * @returns {Promise<ApplicationState|null>} The deleted document, or null if not found
  */
-export function deleteApplicationState({ sbi, grantCode, grantVersion }) {
-  return repoDeleteApplicationState({ sbi, grantCode, grantVersion })
+export function deleteApplicationState({ sbi, grantCode, grantVersion, applicationRef }) {
+  return repoDeleteApplicationState({ sbi, grantCode, grantVersion, applicationRef })
 }
 
 /**
  * Applies a partial update to the application state for a given grant and SBI.
  *
- * @param {{ sbi: number|string, grantCode: string, grantVersion: string, applicationStatus: string }} params
+ * @param {{ sbi: number|string, grantCode: string, grantVersion: string, applicationStatus: string, applicationRef?: string }} params
  * @returns {Promise<ApplicationState|null>} Updated document, or null if not found
  */
-export function patchApplicationState({ sbi, grantCode, grantVersion, applicationStatus }) {
-  return repoPatchApplicationState({ sbi, grantCode, grantVersion, applicationStatus })
+export function patchApplicationState({ sbi, grantCode, grantVersion, applicationStatus, applicationRef }) {
+  return repoPatchApplicationState({ sbi, grantCode, grantVersion, applicationStatus, applicationRef })
 }
 
 /**
@@ -191,16 +228,24 @@ async function resolveDefinitionForNewState({ grantCode, sbi, ownerId }) {
  * `definition` payload, and the lock is acquired against the state's existing
  * version. When no state exists yet, `state` is `null` and no lock is taken.
  *
- * @param {{ sbi: string, grantCode: string, ownerId: number|string, includeDefinition?: boolean }} params
- *   `includeDefinition` defaults to `true`; pass `false` for state-only reads
+ * @param {{ sbi: string, grantCode: string, ownerId: number|string, includeDefinition?: boolean, applicationRef?: string }} params
+ *   `includeDefinition` defaults to `true`; pass `false` for state-only reads.
+ *   `applicationRef` selects which application to open when the grant allows
+ *   several per SBI; omitted, the highest-semver one is returned as before.
  * @returns {Promise<{ definition?: FormDefinition, state: ApplicationState | null, upgraded: boolean, fromVersion?: string, toVersion?: string } | null>}
  *   `null` when no suitable form definition is found (only possible when
  *   `includeDefinition` is `true`); `state` is `null` when no state exists yet;
  *   `definition` is omitted when `includeDefinition` is `false`
  * @throws {Boom} 423 Locked when another owner holds the lock for the resolved version
  */
-export async function getStateWithFormDefinition({ sbi, grantCode, ownerId, includeDefinition = true }) {
-  const existing = await repoGetLatestApplicationStateForGrant({ sbi, grantCode })
+export async function getStateWithFormDefinition({
+  sbi,
+  grantCode,
+  ownerId,
+  includeDefinition = true,
+  applicationRef
+}) {
+  const existing = await repoGetLatestApplicationStateForGrant({ sbi, grantCode, applicationRef })
 
   // State-only mode: the caller already has the form definition locally, so skip
   // resolving/serialising a definition and the associated version-upgrade work

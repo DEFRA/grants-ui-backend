@@ -23,6 +23,8 @@
  * @property {number} [major]
  * @property {number} [minor]
  * @property {number} [patch]
+ * @property {boolean} allowMultipleApplications
+ * @property {string} [applicationRef]
  * @property {Record<string, unknown>} state
  * @property {Date} createdAt
  * @property {Date} updatedAt
@@ -51,6 +53,17 @@ export const APPLICATION_LOCK_TTL_MS = config.get('applicationLock.ttlMs')
 
 /** @type {import('mongodb').Db} */
 let stateDb
+
+/**
+ * Yields `{ applicationRef }` only when a ref is given, so queries stay
+ * unscoped and writes leave the field untouched rather than storing null.
+ *
+ * @param {string} [applicationRef]
+ * @returns {{ applicationRef?: string }}
+ */
+function applicationRefField(applicationRef) {
+  return applicationRef != null ? { applicationRef } : {}
+}
 
 /**
  * Initialises the repository with the state database instance.
@@ -232,27 +245,63 @@ export async function releaseAllApplicationLocksForOwner({ ownerId }) {
 /**
  * Saves (upserts) application state.
  *
- * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown> }} params
+ * Keyed on `(sbi, grantCode, grantVersion)` for single-application grants,
+ * or `(sbi, grantCode, applicationRef)` for multi-application ones.
+ * `grantVersion` is excluded from the latter because an application's
+ * version changes over its lifetime, so keying on it would split the
+ * application across versions.
+ *
+ * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown>, allowMultipleApplications?: boolean, applicationRef?: string }} params
  * @returns {Promise<import('mongodb').UpdateResult>}
  */
-export async function saveApplicationState({ sbi, grantCode, grantVersion, state }) {
+export async function saveApplicationState({
+  sbi,
+  grantCode,
+  grantVersion,
+  state,
+  allowMultipleApplications = false,
+  applicationRef
+}) {
   const { grantVersion: grantVersionStr, pinnedMajor, major, minor, patch } = normaliseGrantVersion(grantVersion)
 
-  const updateDoc = {
-    $set: {
-      state: {
-        ...state,
-        ...(state?.submittedAt ? { submittedAt: new Date(state.submittedAt) } : {})
-      }
+  const hasApplicationRef = applicationRef != null
+  const keyedByApplicationRef = allowMultipleApplications && hasApplicationRef
+
+  if (allowMultipleApplications && !hasApplicationRef) {
+    log(LogCodes.STATE.STATE_SAVE_MISSING_APPLICATION_REF, { sbi, grantCode, grantVersion })
+  }
+
+  const commonSet = {
+    state: {
+      ...state,
+      ...(state?.submittedAt ? { submittedAt: new Date(state.submittedAt) } : {})
     },
+    allowMultipleApplications,
+    ...applicationRefField(applicationRef)
+  }
+
+  // An upsert inherits its filter's fields, so only the ref-keyed branch has
+  // to write the version itself.
+  const keyedByRef = {
+    filter: { sbi, grantCode, applicationRef },
+    setVersion: { grantVersion: grantVersionStr, major, minor, patch },
+    setVersionOnInsert: {}
+  }
+  const keyedByVersion = {
+    filter: { sbi, grantCode, grantVersion: grantVersionStr },
+    setVersion: {},
+    setVersionOnInsert: { major, minor, patch }
+  }
+  const { filter, setVersion, setVersionOnInsert } = keyedByApplicationRef ? keyedByRef : keyedByVersion
+
+  const updateDoc = {
+    $set: { ...commonSet, ...setVersion },
     $currentDate: { updatedAt: true },
-    $setOnInsert: { createdAt: new Date(), pinnedMajor, major, minor, patch }
+    $setOnInsert: { createdAt: new Date(), pinnedMajor, ...setVersionOnInsert }
   }
 
   try {
-    return await stateDb
-      .collection(STATE_COLLECTION)
-      .updateOne({ sbi, grantCode, grantVersion: grantVersionStr }, updateDoc, { upsert: true })
+    return await stateDb.collection(STATE_COLLECTION).updateOne(filter, updateDoc, { upsert: true })
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
     log(LogCodes.STATE.STATE_SAVE_FAILED, {
@@ -273,12 +322,15 @@ export async function saveApplicationState({ sbi, grantCode, grantVersion, state
 /**
  * Retrieves application state.
  *
- * @param {{ sbi: string, grantCode: string, grantVersion: string }} params
+ * @param {{ sbi: string, grantCode: string, grantVersion: string, applicationRef?: string }} params
+ *   `applicationRef` narrows the lookup to one application.
  * @returns {Promise<ApplicationState|null>}
  */
-export async function getApplicationState({ sbi, grantCode, grantVersion }) {
+export async function getApplicationState({ sbi, grantCode, grantVersion, applicationRef }) {
   try {
-    return await stateDb.collection(STATE_COLLECTION).findOne({ sbi, grantCode, grantVersion })
+    return await stateDb
+      .collection(STATE_COLLECTION)
+      .findOne({ sbi, grantCode, grantVersion, ...applicationRefField(applicationRef) })
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
     log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
@@ -299,12 +351,15 @@ export async function getApplicationState({ sbi, grantCode, grantVersion }) {
 /**
  * Deletes application state.
  *
- * @param {{ sbi: string, grantCode: string, grantVersion: string }} params
+ * @param {{ sbi: string, grantCode: string, grantVersion: string, applicationRef?: string }} params
+ *   `applicationRef` selects which application to delete.
  * @returns {Promise<ApplicationState|null>} The deleted document, or null if not found
  */
-export async function deleteApplicationState({ sbi, grantCode, grantVersion }) {
+export async function deleteApplicationState({ sbi, grantCode, grantVersion, applicationRef }) {
   try {
-    return await stateDb.collection(STATE_COLLECTION).findOneAndDelete({ sbi, grantCode, grantVersion })
+    return await stateDb
+      .collection(STATE_COLLECTION)
+      .findOneAndDelete({ sbi, grantCode, grantVersion, ...applicationRefField(applicationRef) })
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
     log(LogCodes.STATE.STATE_DELETE_FAILED, {
@@ -325,13 +380,14 @@ export async function deleteApplicationState({ sbi, grantCode, grantVersion }) {
 /**
  * Patches application state (updates applicationStatus field).
  *
- * @param {{ sbi: string, grantCode: string, grantVersion: string, applicationStatus: string }} params
+ * @param {{ sbi: string, grantCode: string, grantVersion: string, applicationStatus: string, applicationRef?: string }} params
+ *   `applicationRef` selects which application to patch.
  * @returns {Promise<ApplicationState|null>} Updated document, or null if not found
  */
-export async function patchApplicationState({ sbi, grantCode, grantVersion, applicationStatus }) {
+export async function patchApplicationState({ sbi, grantCode, grantVersion, applicationStatus, applicationRef }) {
   try {
     return await stateDb.collection(STATE_COLLECTION).findOneAndUpdate(
-      { sbi, grantCode, grantVersion },
+      { sbi, grantCode, grantVersion, ...applicationRefField(applicationRef) },
       {
         $set: {
           'state.applicationStatus': applicationStatus
@@ -362,14 +418,16 @@ export async function patchApplicationState({ sbi, grantCode, grantVersion, appl
  *
  * Used when the caller does not know the exact grantVersion.
  *
- * @param {{ sbi: string, grantCode: string }} params
+ * @param {{ sbi: string, grantCode: string, applicationRef?: string }} params
+ *   Without `applicationRef`, an SBI holding several applications resolves
+ *   to an arbitrary one.
  * @returns {Promise<ApplicationState|null>}
  */
-export async function getLatestApplicationStateForGrant({ sbi, grantCode }) {
+export async function getLatestApplicationStateForGrant({ sbi, grantCode, applicationRef }) {
   try {
     return await stateDb
       .collection(STATE_COLLECTION)
-      .find({ sbi, grantCode })
+      .find({ sbi, grantCode, ...applicationRefField(applicationRef) })
       .sort({ major: -1, minor: -1, patch: -1 })
       .limit(1)
       .next()

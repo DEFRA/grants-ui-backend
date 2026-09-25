@@ -223,6 +223,21 @@ describe('State', () => {
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
+    test('passes applicationRef from the payload through to the service', async () => {
+      mockRequest.params = defaultParams
+      mockRequest.payload = { applicationRef: 'REF-B', state: { applicationStatus: 'SUBMITTED' } }
+      patchApplicationState.mockResolvedValue({ _id: 'some-id' })
+
+      await statePatch.handler(mockRequest, mockH)
+
+      expect(patchApplicationState).toHaveBeenCalledWith({
+        ...defaultParams,
+        applicationStatus: 'SUBMITTED',
+        applicationRef: 'REF-B'
+      })
+      expect(mockH.code).toHaveBeenCalledWith(200)
+    })
+
     test('should return 404 when no document is found to patch', async () => {
       mockRequest.params = defaultParams
       mockRequest.payload = { state: { applicationStatus: 'IN_PROGRESS' } }
@@ -458,6 +473,18 @@ describe('State', () => {
           stack: expect.stringContaining('ValidationError: Validation error')
         })
       )
+    })
+
+    test('passes applicationRef through to getApplicationState when supplied', async () => {
+      const mockDocument = { grantVersion: '1.0.0', sbi: 'business123', grantCode: 'grant123', applicationRef: 'REF-1' }
+      getApplicationState.mockResolvedValue(mockDocument)
+      mockRequest.query = { ...defaultQuery, applicationRef: 'REF-1' }
+
+      await stateRetrieve.handler(mockRequest, mockH)
+
+      expect(getApplicationState).toHaveBeenCalledWith({ ...defaultQuery, applicationRef: 'REF-1' })
+      expect(mockH.response).toHaveBeenCalledWith(mockDocument)
+      expect(mockH.code).toHaveBeenCalledWith(200)
     })
   })
 
