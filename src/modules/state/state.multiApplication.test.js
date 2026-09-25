@@ -6,8 +6,8 @@
  *
  * Exercises the real repository against the in-memory Mongo instance (no
  * service/repository mocking) so the partial-unique-index behaviour and the
- * saveApplicationState/getApplicationState/getApplicationStatesForGrant
- * wiring are all verified together, end to end.
+ * saveApplicationState/getApplicationState wiring are all verified
+ * together, end to end.
  */
 import { MongoClient } from 'mongodb'
 import { initStateRepository } from './state.repository.js'
@@ -15,7 +15,6 @@ import { initConfigRepository } from '../config/config.repository.js'
 import {
   saveApplicationState,
   getApplicationState,
-  getApplicationStatesForGrant,
   getStateWithFormDefinition,
   patchApplicationState,
   deleteApplicationState
@@ -125,7 +124,7 @@ describe('multi-application save/retrieve', () => {
       expect(result.applicationRef).toBe('REF-A')
     })
 
-    test('getApplicationStatesForGrant returns the single document (not an array)', async () => {
+    test('stores exactly one document for the sbi/grantCode', async () => {
       await insertDefinition({ grantCode: 'standard-grant', allowMultipleApplications: false })
       await saveApplicationState({
         sbi: '111',
@@ -134,9 +133,9 @@ describe('multi-application save/retrieve', () => {
         state: { $$__referenceNumber: 'REF-A' }
       })
 
-      const result = await getApplicationStatesForGrant({ sbi: '111', grantCode: 'standard-grant' })
-      expect(Array.isArray(result)).toBe(false)
-      expect(result.applicationRef).toBe('REF-A')
+      const docs = await db.collection(STATE_COLLECTION).find({ sbi: '111', grantCode: 'standard-grant' }).toArray()
+      expect(docs).toHaveLength(1)
+      expect(docs[0].applicationRef).toBe('REF-A')
     })
   })
 
@@ -206,10 +205,9 @@ describe('multi-application save/retrieve', () => {
         state: { $$__referenceNumber: 'REF-B', applicationStatus: 'DRAFT' }
       })
 
-      const result = await getApplicationStatesForGrant({ sbi: '222', grantCode: 'multi-grant' })
-      expect(Array.isArray(result)).toBe(true)
-      expect(result).toHaveLength(2)
-      expect(result.map((d) => d.state.applicationStatus).sort()).toEqual(['DRAFT', 'SUBMITTED'])
+      const docs = await db.collection(STATE_COLLECTION).find({ sbi: '222', grantCode: 'multi-grant' }).toArray()
+      expect(docs).toHaveLength(2)
+      expect(docs.map((d) => d.state.applicationStatus).sort()).toEqual(['DRAFT', 'SUBMITTED'])
     })
 
     test('getApplicationState with applicationRef retrieves the exact application', async () => {
@@ -236,7 +234,7 @@ describe('multi-application save/retrieve', () => {
       expect(result.state.answer).toBe('B')
     })
 
-    test('getApplicationStatesForGrant returns an array when multiple applications exist for the sbi', async () => {
+    test('stores one document per applicationRef for the sbi', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
       await saveApplicationState({
         sbi: '222',
@@ -251,9 +249,8 @@ describe('multi-application save/retrieve', () => {
         state: { $$__referenceNumber: 'REF-B' }
       })
 
-      const result = await getApplicationStatesForGrant({ sbi: '222', grantCode: 'multi-grant' })
-      expect(Array.isArray(result)).toBe(true)
-      expect(result).toHaveLength(2)
+      const docs = await db.collection(STATE_COLLECTION).find({ sbi: '222', grantCode: 'multi-grant' }).toArray()
+      expect(docs).toHaveLength(2)
     })
 
     test('a version upgrade of one application does not duplicate a sibling application on its next save', async () => {
@@ -468,7 +465,7 @@ describe('multi-application save/retrieve', () => {
       expect(docs[0].applicationRef).toBe('REF-B')
     })
 
-    test('getApplicationStatesForGrant returns a single object when only one application exists', async () => {
+    test('stores a single document when the sbi has only one application', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
       await saveApplicationState({
         sbi: '223',
@@ -477,9 +474,9 @@ describe('multi-application save/retrieve', () => {
         state: { $$__referenceNumber: 'REF-A' }
       })
 
-      const result = await getApplicationStatesForGrant({ sbi: '223', grantCode: 'multi-grant' })
-      expect(Array.isArray(result)).toBe(false)
-      expect(result.applicationRef).toBe('REF-A')
+      const docs = await db.collection(STATE_COLLECTION).find({ sbi: '223', grantCode: 'multi-grant' }).toArray()
+      expect(docs).toHaveLength(1)
+      expect(docs[0].applicationRef).toBe('REF-A')
     })
   })
 })

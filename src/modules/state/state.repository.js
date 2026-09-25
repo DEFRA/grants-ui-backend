@@ -437,32 +437,6 @@ export async function getLatestApplicationStateForGrant({ sbi, grantCode, applic
 }
 
 /**
- * Retrieves every application for an (sbi, grantCode) pair, across every
- * applicationRef and regardless of `state.applicationStatus`.
- *
- * @param {{ sbi: string, grantCode: string }} params
- * @returns {Promise<ApplicationState[]>}
- */
-export async function findApplicationStatesForGrant({ sbi, grantCode }) {
-  try {
-    return await stateDb.collection(STATE_COLLECTION).find({ sbi, grantCode }).toArray()
-  } catch (err) {
-    const isMongoError = err?.name?.startsWith('Mongo')
-    log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
-      sbi,
-      grantCode,
-      errorName: err.name,
-      errorMessage: err.message,
-      errorReason: err.reason,
-      errorCode: err.code,
-      isMongoError,
-      stack: err.stack?.split('\n')[0]
-    })
-    throw err
-  }
-}
-
-/**
  * Updates the version fields of an existing application state document.
  *
  * `pinnedMajor` is intentionally left untouched so the major stays pinned.

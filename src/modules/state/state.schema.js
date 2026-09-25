@@ -58,13 +58,6 @@ export const stateRetrieveSchema = Joi.object({
   document: Joi.boolean().optional() // TODO - remove when grants-ui changes for combined endpoint are merged
 })
 
-export const stateApplicationsSchema = Joi.object({
-  sbi: Joi.string().required(),
-  grantCode: Joi.string().required()
-})
-  .required()
-  .unknown(false) // Disallow unknown top-level fields
-
 export const stateWithDefinitionSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),

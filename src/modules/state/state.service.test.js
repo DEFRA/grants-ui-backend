@@ -5,7 +5,6 @@ import {
   releaseAllApplicationLocksForOwner,
   saveApplicationState,
   getApplicationState,
-  getApplicationStatesForGrant,
   deleteApplicationState,
   patchApplicationState,
   insertSubmission,
@@ -347,44 +346,6 @@ describe('state CRUD service pass-throughs', () => {
     initStateRepository(fakeDb)
     const result = await getApplicationState(params)
     expect(result).toEqual({ sbi: '123456789', state: {} })
-  })
-
-  test('getApplicationStatesForGrant returns null when no applications exist', async () => {
-    const fakeDb = {
-      collection: () => ({
-        find: () => ({ toArray: () => [] })
-      })
-    }
-    initStateRepository(fakeDb)
-    const result = await getApplicationStatesForGrant({ sbi: params.sbi, grantCode: params.grantCode })
-    expect(result).toBeNull()
-  })
-
-  test('getApplicationStatesForGrant returns the single document when exactly one application exists', async () => {
-    const doc = { sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' }
-    const fakeDb = {
-      collection: () => ({
-        find: () => ({ toArray: () => [doc] })
-      })
-    }
-    initStateRepository(fakeDb)
-    const result = await getApplicationStatesForGrant({ sbi: params.sbi, grantCode: params.grantCode })
-    expect(result).toEqual(doc)
-  })
-
-  test('getApplicationStatesForGrant returns an array when multiple applications exist', async () => {
-    const docs = [
-      { sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' },
-      { sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-2' }
-    ]
-    const fakeDb = {
-      collection: () => ({
-        find: () => ({ toArray: () => docs })
-      })
-    }
-    initStateRepository(fakeDb)
-    const result = await getApplicationStatesForGrant({ sbi: params.sbi, grantCode: params.grantCode })
-    expect(result).toEqual(docs)
   })
 
   test('deleteApplicationState delegates to repository', async () => {

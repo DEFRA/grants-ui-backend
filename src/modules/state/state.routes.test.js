@@ -2,7 +2,6 @@ import {
   stateDelete,
   statePatch,
   stateRetrieve,
-  stateApplications,
   stateSave,
   stateWithDefinition
 } from './state.routes.js'
@@ -12,7 +11,6 @@ import { enforceApplicationLock, extractLockKeys } from './lock-enforcement.js'
 import {
   saveApplicationState,
   getApplicationState,
-  getApplicationStatesForGrant,
   deleteApplicationState,
   patchApplicationState,
   getStateWithFormDefinition
@@ -21,7 +19,6 @@ import {
 jest.mock('./state.service.js', () => ({
   saveApplicationState: jest.fn(),
   getApplicationState: jest.fn(),
-  getApplicationStatesForGrant: jest.fn(),
   deleteApplicationState: jest.fn(),
   patchApplicationState: jest.fn(),
   getStateWithFormDefinition: jest.fn()
@@ -494,73 +491,6 @@ describe('State', () => {
       expect(getApplicationState).toHaveBeenCalledWith({ ...defaultQuery, applicationRef: 'REF-1' })
       expect(mockH.response).toHaveBeenCalledWith(mockDocument)
       expect(mockH.code).toHaveBeenCalledWith(200)
-    })
-  })
-
-  describe('stateApplications', () => {
-    const applicationsQuery = { sbi: 'business123', grantCode: 'grant123' }
-
-    test('is not protected by application lock enforcement', () => {
-      expect(stateApplications.options.pre).toBeUndefined()
-    })
-
-    test('returns 200 with a single application when only one exists', async () => {
-      const mockDocument = { sbi: 'business123', grantCode: 'grant123', applicationRef: 'REF-1' }
-      getApplicationStatesForGrant.mockResolvedValue(mockDocument)
-      mockRequest.query = applicationsQuery
-
-      await stateApplications.handler(mockRequest, mockH)
-
-      expect(getApplicationStatesForGrant).toHaveBeenCalledWith(applicationsQuery)
-      expect(mockH.response).toHaveBeenCalledWith(mockDocument)
-      expect(mockH.code).toHaveBeenCalledWith(200)
-    })
-
-    test('returns 200 with an array when multiple applications exist', async () => {
-      const mockDocuments = [
-        { sbi: 'business123', grantCode: 'grant123', applicationRef: 'REF-1' },
-        { sbi: 'business123', grantCode: 'grant123', applicationRef: 'REF-2' }
-      ]
-      getApplicationStatesForGrant.mockResolvedValue(mockDocuments)
-      mockRequest.query = applicationsQuery
-
-      await stateApplications.handler(mockRequest, mockH)
-
-      expect(mockH.response).toHaveBeenCalledWith(mockDocuments)
-      expect(mockH.code).toHaveBeenCalledWith(200)
-    })
-
-    test('returns 404 when no applications exist', async () => {
-      getApplicationStatesForGrant.mockResolvedValue(null)
-      mockRequest.query = applicationsQuery
-
-      await stateApplications.handler(mockRequest, mockH)
-
-      expect(mockH.response).toHaveBeenCalledWith({ error: 'State not found' })
-      expect(mockH.code).toHaveBeenCalledWith(404)
-    })
-
-    test('handles database errors and returns 500', async () => {
-      getApplicationStatesForGrant.mockRejectedValue(new Error('Database error'))
-      mockRequest.query = applicationsQuery
-
-      await stateApplications.handler(mockRequest, mockH)
-
-      expect(mockH.response).toHaveBeenCalledWith({ error: 'Failed to retrieve application state' })
-      expect(mockH.code).toHaveBeenCalledWith(500)
-    })
-
-    test('validates query and throws error for invalid data', () => {
-      const invalidQuery = { grantCode: 'grant123' }
-      const mockValidationRequest = { server: mockServer, query: invalidQuery }
-      const mockError = new Error('Validation error')
-      mockError.name = 'ValidationError'
-      mockError.code = 404
-      mockError.reason = 'Some reason'
-
-      expect(() => stateApplications.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
-        'Validation error'
-      )
     })
   })
 

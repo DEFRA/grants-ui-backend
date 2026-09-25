@@ -5,7 +5,6 @@ import { StatusCodes } from 'http-status-codes'
 import {
   stateSaveSchema,
   stateRetrieveSchema,
-  stateApplicationsSchema,
   stateWithDefinitionSchema,
   patchParamsSchema,
   patchSchema
@@ -13,7 +12,6 @@ import {
 import {
   saveApplicationState,
   getApplicationState,
-  getApplicationStatesForGrant,
   deleteApplicationState,
   patchApplicationState,
   getStateWithFormDefinition
@@ -107,48 +105,6 @@ export const stateRetrieve = {
 
     try {
       const document = await getApplicationState({ sbi, grantCode, grantVersion, applicationRef })
-
-      if (!document) {
-        return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
-      }
-
-      return h.response(document).code(StatusCodes.OK)
-    } catch (_err) {
-      return h.response({ error: 'Failed to retrieve application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
-    }
-  }
-}
-
-export const stateApplications = {
-  method: 'GET',
-  path: '/state/applications',
-  options: {
-    auth: 'bearer',
-    // No enforceApplicationLock: read-only, and there is no single
-    // grantVersion here to scope a lock token to.
-    validate: {
-      query: stateApplicationsSchema,
-      failAction: (request, _h, err) => {
-        const { sbi, grantCode } = request.query
-        log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
-          sbi,
-          grantCode,
-          errorName: err.name,
-          errorMessage: `GET /state/applications, validation failed: ${err.message}`,
-          errorReason: err.reason,
-          errorCode: err.code,
-          isMongoError: false,
-          stack: err.stack?.split('\n')[0]
-        })
-        throw err
-      }
-    }
-  },
-  handler: async (request, h) => {
-    const { sbi, grantCode } = request.query
-
-    try {
-      const document = await getApplicationStatesForGrant({ sbi, grantCode })
 
       if (!document) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)

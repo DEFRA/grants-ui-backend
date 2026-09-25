@@ -18,7 +18,6 @@ import {
   releaseAllApplicationLocksForOwner as repoReleaseAllApplicationLocksForOwner,
   saveApplicationState as repoSaveApplicationState,
   getApplicationState as repoGetApplicationState,
-  findApplicationStatesForGrant as repoFindApplicationStatesForGrant,
   deleteApplicationState as repoDeleteApplicationState,
   patchApplicationState as repoPatchApplicationState,
   insertSubmission as repoInsertSubmission,
@@ -121,30 +120,6 @@ async function resolveAllowMultipleApplications({ grantCode, grantVersion }) {
  */
 export function getApplicationState({ sbi, grantCode, grantVersion, applicationRef }) {
   return repoGetApplicationState({ sbi, grantCode, grantVersion, applicationRef })
-}
-
-/**
- * Retrieves the application(s) for a given grant and SBI, across every
- * applicationRef.
- *
- * Returns `null` when none exist, the single matching document when
- * exactly one exists (the only possible outcome for standard schemes), or
- * an array of documents when a multi-application scheme has more than one
- * in-flight application for the SBI.
- *
- * @param {{ sbi: number|string, grantCode: string }} params
- * @returns {Promise<ApplicationState|ApplicationState[]|null>}
- */
-export async function getApplicationStatesForGrant({ sbi, grantCode }) {
-  const applications = await repoFindApplicationStatesForGrant({ sbi, grantCode })
-
-  if (applications.length === 0) {
-    return null
-  }
-  if (applications.length === 1) {
-    return applications[0]
-  }
-  return applications
 }
 
 /**

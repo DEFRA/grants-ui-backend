@@ -2,7 +2,6 @@ import {
   initStateRepository,
   saveApplicationState,
   getApplicationState,
-  findApplicationStatesForGrant,
   deleteApplicationState,
   patchApplicationState,
   insertSubmission,
@@ -126,27 +125,6 @@ describe('state.repository CRUD error paths', () => {
     await expect(
       updateApplicationStateVersion({ _id: 'abc', grantVersion: '1.2.0', major: 1, minor: 2, patch: 0 })
     ).rejects.toThrow('DB failed')
-  })
-
-  test('findApplicationStatesForGrant re-throws and logs on error', async () => {
-    initStateRepository({
-      collection: () => ({
-        find: () => ({
-          toArray: () => {
-            throw dbError
-          }
-        })
-      })
-    })
-    await expect(findApplicationStatesForGrant({ sbi: '123', grantCode: 'EGWA' })).rejects.toThrow('DB failed')
-  })
-})
-
-describe('state.repository saveApplicationState / getApplicationState filter branching', () => {
-  const params = { sbi: '123456789', grantCode: 'EGWA', grantVersion: '1.0.0' }
-
-  afterEach(() => {
-    initStateRepository(null)
   })
 
   test('saveApplicationState filters on (sbi, grantCode, grantVersion) alone when allowMultipleApplications is false', async () => {
@@ -283,17 +261,6 @@ describe('state.repository saveApplicationState / getApplicationState filter bra
     expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA' })
   })
 
-  test('findApplicationStatesForGrant queries by (sbi, grantCode) only', async () => {
-    const docs = [{ _id: '1' }, { _id: '2' }]
-    const toArray = jest.fn().mockResolvedValue(docs)
-    const find = jest.fn().mockReturnValue({ toArray })
-    initStateRepository({ collection: () => ({ find }) })
-
-    const result = await findApplicationStatesForGrant({ sbi: params.sbi, grantCode: params.grantCode })
-
-    expect(find).toHaveBeenCalledWith({ sbi: params.sbi, grantCode: params.grantCode })
-    expect(result).toBe(docs)
-  })
 })
 
 describe('state.repository cross-version helpers', () => {
