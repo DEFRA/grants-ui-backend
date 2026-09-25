@@ -249,33 +249,35 @@ export const LogCodes = {
       level: 'info',
       messageFunc: ({ total, upserted, failed }) =>
         `Broker startup pull complete | total=${total} | upserted=${upserted} | failed=${failed}`
-    },
-    SQS_MESSAGE_FAILED: {
+    }
+  },
+  SQS: {
+    MESSAGE_FAILED: {
       level: 'error',
-      messageFunc: ({ errorName, errorMessage, stack }) =>
-        `Failed to process SQS message; leaving for redelivery | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
+      messageFunc: ({ consumer, errorName, errorMessage, stack }) =>
+        `Failed to process SQS message; leaving for redelivery | consumer=${consumer} | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
     },
-    SQS_POLL_FAILED: {
+    POLL_FAILED: {
       level: 'error',
-      messageFunc: ({ errorName, errorMessage, stack }) =>
-        `SQS poll cycle failed; backing off 5s | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
+      messageFunc: ({ consumer, errorName, errorMessage, stack }) =>
+        `SQS poll cycle failed; backing off 5s | consumer=${consumer} | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
     },
-    SQS_QUEUE_URL_MISSING: {
+    QUEUE_URL_MISSING: {
       level: 'warn',
-      messageFunc: () => `CONFIG_INGEST_SQS_QUEUE_URL is not set; SQS consumer will not start`
+      messageFunc: ({ consumer, envVar }) => `${envVar} is not set; SQS consumer will not start | consumer=${consumer}`
     },
-    SQS_CONSUMER_START: {
+    CONSUMER_START: {
       level: 'info',
-      messageFunc: ({ queueUrl }) => `Starting SQS consumer for config ingest | queueUrl=${queueUrl}`
+      messageFunc: ({ consumer, queueUrl }) => `Starting SQS consumer | consumer=${consumer} | queueUrl=${queueUrl}`
     },
-    SQS_CONSUMER_STOP: {
+    CONSUMER_STOP: {
       level: 'info',
-      messageFunc: () => `Stopping SQS consumer for config ingest`
+      messageFunc: ({ consumer }) => `Stopping SQS consumer | consumer=${consumer}`
     },
-    SQS_CONSUMER_SHUTDOWN_ERROR: {
+    CONSUMER_SHUTDOWN_ERROR: {
       level: 'error',
-      messageFunc: ({ errorName, errorMessage, stack }) =>
-        `SQS consumer shutdown error | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
+      messageFunc: ({ consumer, errorName, errorMessage, stack }) =>
+        `SQS consumer shutdown error | consumer=${consumer} | errorName=${errorName} | errorMessage=${errorMessage} | stack=${stack}`
     }
   },
   ALLOWLIST: {
