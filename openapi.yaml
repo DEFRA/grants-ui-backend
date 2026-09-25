@@ -37,6 +37,8 @@ tags:
     x-internal: true
   - name: Allowlist
     description: Resolve grants a user is permitted to access
+  - name: Feature controls
+    description: Read boolean feature-control values broadcast by the config broker
 
 components:
   securitySchemes:
@@ -788,6 +790,46 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Failed to resolve allowlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /feature-controls/{name}:
+    get:
+      tags: [Feature controls]
+      summary: Get the value of a boolean feature control
+      description: |
+        Returns the latest value the config broker broadcast for a boolean feature
+        control that has a `grant.*` scope, as a bare JSON boolean (for example
+        `EXAMPLE_FEATURE_WOODLAND`). The name is case-insensitive.
+
+        Returns 404 when no value has been received for that name, including
+        controls that are not boolean or have no `grant.*` scope.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          example: EXAMPLE_FEATURE_WOODLAND
+      responses:
+        '200':
+          description: The current value
+          content:
+            application/json:
+              schema:
+                type: boolean
+              example: true
+        '401':
+          description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No value has been received for this feature control
           content:
             application/json:
               schema:
