@@ -260,7 +260,6 @@ describe('state.repository CRUD error paths', () => {
 
     expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA' })
   })
-
 })
 
 describe('state.repository cross-version helpers', () => {
