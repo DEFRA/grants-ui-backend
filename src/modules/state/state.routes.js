@@ -69,7 +69,12 @@ export const stateSave = {
       }
 
       return h.response({ success: true, updated: true }).code(StatusCodes.OK)
-    } catch (_err) {
+    } catch (err) {
+      // Boom errors (e.g. 400 for a missing applicationRef) carry their own
+      // status code; let Hapi map them rather than masking as 500.
+      if (err?.isBoom) {
+        throw err
+      }
       return h.response({ error: 'Failed to save application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }

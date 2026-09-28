@@ -12,9 +12,9 @@ export const LogCodes = {
         `Upgraded application state grant version | sbi=${sbi} | grantCode=${grantCode} | fromVersion=${fromVersion} | toVersion=${toVersion}`
     },
     STATE_SAVE_MISSING_APPLICATION_REF: {
-      level: 'warn',
+      level: 'error',
       messageFunc: ({ sbi, grantCode, grantVersion }) =>
-        `Save for a multi-application grant carried no applicationRef, keyed on grantVersion instead | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
+        `Rejected save for a multi-application grant: no applicationRef in state | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
     },
     STATE_PAYLOAD_SIZE_FAILED: {
       level: 'error',

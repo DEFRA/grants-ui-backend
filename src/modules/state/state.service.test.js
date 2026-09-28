@@ -229,7 +229,8 @@ describe('state CRUD service pass-throughs', () => {
   test('saveApplicationState delegates to repository', async () => {
     const fakeDb = {
       collection: () => ({
-        updateOne: () => ({ upsertedCount: 1 })
+        updateOne: () => ({ upsertedCount: 1 }),
+        countDocuments: () => 0
       })
     }
     initStateRepository(fakeDb)
@@ -246,7 +247,8 @@ describe('state CRUD service pass-throughs', () => {
           capturedFilter = filter
           capturedUpdate = update
           return { upsertedCount: 1 }
-        }
+        },
+        countDocuments: () => 0
       })
     }
     initStateRepository(fakeDb)
@@ -265,7 +267,8 @@ describe('state CRUD service pass-throughs', () => {
         updateOne: (filter) => {
           capturedFilter = filter
           return { upsertedCount: 1 }
-        }
+        },
+        countDocuments: () => 0
       })
     }
     initStateRepository(fakeDb)
@@ -285,7 +288,8 @@ describe('state CRUD service pass-throughs', () => {
           capturedFilter = filter
           capturedUpdate = update
           return { upsertedCount: 1 }
-        }
+        },
+        countDocuments: () => 0
       })
     }
     initStateRepository(fakeDb)
@@ -309,12 +313,32 @@ describe('state CRUD service pass-throughs', () => {
         updateOne: (filter) => {
           capturedFilter = filter
           return { upsertedCount: 1 }
-        }
+        },
+        countDocuments: () => 0
       })
     }
     initStateRepository(fakeDb)
 
     await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
+  })
+
+  test('saveApplicationState keeps ref-keying when the grant was reverted to single but the SBI holds several applications', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: false })
+    let capturedFilter
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter) => {
+          capturedFilter = filter
+          return { upsertedCount: 0 }
+        },
+        countDocuments: () => 2
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { '$$__referenceNumber': 'REF-1' } })
 
     expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
   })
@@ -327,7 +351,8 @@ describe('state CRUD service pass-throughs', () => {
         updateOne: (filter) => {
           capturedFilter = filter
           return { upsertedCount: 0 }
-        }
+        },
+        countDocuments: () => 0
       })
     }
     initStateRepository(fakeDb)

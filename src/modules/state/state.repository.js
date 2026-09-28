@@ -264,13 +264,6 @@ export async function saveApplicationState({
 }) {
   const { grantVersion: grantVersionStr, pinnedMajor, major, minor, patch } = normaliseGrantVersion(grantVersion)
 
-  const hasApplicationRef = applicationRef != null
-  const keyedByApplicationRef = allowMultipleApplications && hasApplicationRef
-
-  if (allowMultipleApplications && !hasApplicationRef) {
-    log(LogCodes.STATE.STATE_SAVE_MISSING_APPLICATION_REF, { sbi, grantCode, grantVersion })
-  }
-
   const commonSet = {
     state: {
       ...state,
@@ -292,7 +285,7 @@ export async function saveApplicationState({
     setVersion: {},
     setVersionOnInsert: { major, minor, patch }
   }
-  const { filter, setVersion, setVersionOnInsert } = keyedByApplicationRef ? keyedByRef : keyedByVersion
+  const { filter, setVersion, setVersionOnInsert } = allowMultipleApplications ? keyedByRef : keyedByVersion
 
   const updateDoc = {
     $set: { ...commonSet, ...setVersion },
@@ -527,6 +520,18 @@ export async function findSubmissions(filter) {
     })
     throw err
   }
+}
+
+/**
+ * Reports whether an SBI already holds more than one application for a grant.
+ *
+ * @param {{ sbi: string, grantCode: string }} params
+ * @returns {Promise<boolean>}
+ */
+export async function hasMultipleApplications({ sbi, grantCode }) {
+  const count = await stateDb.collection(STATE_COLLECTION).countDocuments({ sbi, grantCode }, { limit: 2 })
+
+  return count > 1
 }
 
 /**

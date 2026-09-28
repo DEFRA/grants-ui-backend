@@ -345,6 +345,14 @@ describe('State', () => {
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
+    test('rethrows Boom errors (e.g. 400 for a missing applicationRef) instead of masking them as 500', async () => {
+      mockRequest.payload = { ...defaultQuery, state: { key: 'value' } }
+      const boomError = Object.assign(new Error('Missing ref'), { isBoom: true })
+      saveApplicationState.mockRejectedValue(boomError)
+
+      await expect(stateSave.handler(mockRequest, mockH)).rejects.toBe(boomError)
+    })
+
     test('should handle database errors and return 500', async () => {
       mockRequest.payload = {
         ...defaultQuery,

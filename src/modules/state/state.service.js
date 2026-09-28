@@ -23,6 +23,7 @@ import {
   insertSubmission as repoInsertSubmission,
   findSubmissions as repoFindSubmissions,
   getLatestApplicationStateForGrant as repoGetLatestApplicationStateForGrant,
+  hasMultipleApplications as repoHasMultipleApplications,
   updateApplicationStateVersion as repoUpdateApplicationStateVersion,
   findUnsubmittedApplicationStates as repoFindUnsubmittedApplicationStates,
   purgeApplicationStates as repoPurgeApplicationStates,
@@ -80,10 +81,17 @@ export function releaseAllApplicationLocksForOwner({ ownerId }) {
  *
  * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown> }} params
  * @returns {Promise<import('mongodb').UpdateResult>}
+ * @throws {Boom} 400 when a multi-application grant is saved without a
+ *   reference, which cannot be attributed to one of the SBI's applications
  */
 export async function saveApplicationState({ sbi, grantCode, grantVersion, state }) {
-  const allowMultipleApplications = await resolveAllowMultipleApplications({ grantCode, grantVersion })
+  const allowMultipleApplications = await resolveAllowMultipleApplications({ sbi, grantCode, grantVersion })
   const applicationRef = state?.[APPLICATION_REF_FIELD]
+
+  if (allowMultipleApplications && applicationRef == null) {
+    log(LogCodes.STATE.STATE_SAVE_MISSING_APPLICATION_REF, { sbi, grantCode, grantVersion })
+    throw Boom.badRequest(`Missing ${APPLICATION_REF_FIELD} in state for a multi-application grant`)
+  }
 
   return repoSaveApplicationState({ sbi, grantCode, grantVersion, state, allowMultipleApplications, applicationRef })
 }
@@ -99,14 +107,22 @@ export async function saveApplicationState({ sbi, grantCode, grantVersion, state
  * mid-flight for a multi-application grant and could duplicate an
  * application rather than update it.
  *
- * @param {{ grantCode: string, grantVersion: string }} params
+ * A grant reverted to single-application does not apply to an SBI that
+ * already holds several: switching those saves back to a version-keyed
+ * document would let one application overwrite another.
+ *
+ * @param {{ sbi: number|string, grantCode: string, grantVersion: string }} params
  * @returns {Promise<boolean>}
  */
-async function resolveAllowMultipleApplications({ grantCode, grantVersion }) {
+async function resolveAllowMultipleApplications({ sbi, grantCode, grantVersion }) {
   const { major, minor, patch } = normaliseGrantVersion(grantVersion)
   const definition = (await getDefinition(grantCode, major, minor, patch)) ?? (await resolveLatestVersion(grantCode))
 
-  return definition?.allowMultipleApplications === true
+  if (definition?.allowMultipleApplications === true) {
+    return true
+  }
+
+  return repoHasMultipleApplications({ sbi, grantCode })
 }
 
 /**

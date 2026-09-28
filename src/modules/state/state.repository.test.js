@@ -179,28 +179,6 @@ describe('state.repository CRUD error paths', () => {
     expect(updateDoc.$setOnInsert.pinnedMajor).toBe(2)
   })
 
-  test('saveApplicationState falls back to the single-application key when a multi-application save has no applicationRef', async () => {
-    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 0 })
-    initStateRepository({ collection: () => ({ updateOne }) })
-
-    await saveApplicationState({ ...params, state: {}, allowMultipleApplications: true })
-
-    const [filter, updateDoc] = updateOne.mock.calls[0]
-    expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
-    expect(updateDoc.$set.applicationRef).toBeUndefined()
-  })
-
-  test('saveApplicationState does not write a null applicationRef', async () => {
-    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 0 })
-    initStateRepository({ collection: () => ({ updateOne }) })
-
-    await saveApplicationState({ ...params, state: {}, allowMultipleApplications: true, applicationRef: null })
-
-    const [filter, updateDoc] = updateOne.mock.calls[0]
-    expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
-    expect('applicationRef' in updateDoc.$set).toBe(false)
-  })
-
   test('saveApplicationState sets allowMultipleApplications and applicationRef on $set', async () => {
     const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 1 })
     initStateRepository({ collection: () => ({ updateOne }) })

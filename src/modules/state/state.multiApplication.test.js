@@ -291,19 +291,20 @@ describe('multi-application save/retrieve', () => {
       expect(refB[0].grantVersion).toBe('1.1.0')
     })
 
-    test('a save with no applicationRef does not create a null-ref document', async () => {
+    test('a save with no applicationRef is rejected and writes nothing', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
 
-      await saveApplicationState({
-        sbi: '225',
-        grantCode: 'multi-grant',
-        grantVersion: '1.0.0',
-        state: { answer: 'no ref' }
-      })
+      await expect(
+        saveApplicationState({
+          sbi: '225',
+          grantCode: 'multi-grant',
+          grantVersion: '1.0.0',
+          state: { answer: 'no ref' }
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '225', grantCode: 'multi-grant' }).toArray()
-      expect(docs).toHaveLength(1)
-      expect(docs[0].applicationRef).toBeUndefined()
+      expect(docs).toHaveLength(0)
     })
 
     test('enabling the flag on a grant with an in-flight application keeps that application, rather than stranding it', async () => {
@@ -406,6 +407,61 @@ describe('multi-application save/retrieve', () => {
 
       expect(result.state.applicationRef).toBe('REF-B')
       expect(result.state.state.answer).toBe('B')
+    })
+
+    test('reverting the grant to single-application does not let one application overwrite another', async () => {
+      await insertDefinition({ grantCode: 'reverting-grant', allowMultipleApplications: true })
+      await saveApplicationState({
+        sbi: '231',
+        grantCode: 'reverting-grant',
+        grantVersion: '1.0.0',
+        state: { '$$__referenceNumber': 'REF-A', answer: 'A' }
+      })
+      await saveApplicationState({
+        sbi: '231',
+        grantCode: 'reverting-grant',
+        grantVersion: '1.0.0',
+        state: { '$$__referenceNumber': 'REF-B', answer: 'B' }
+      })
+
+      await db
+        .collection(CONFIG_COLLECTION)
+        .updateOne({ grantCode: 'reverting-grant' }, { $set: { allowMultipleApplications: false } })
+
+      await saveApplicationState({
+        sbi: '231',
+        grantCode: 'reverting-grant',
+        grantVersion: '1.0.0',
+        state: { '$$__referenceNumber': 'REF-A', answer: 'A edited' }
+      })
+
+      const docs = await db.collection(STATE_COLLECTION).find({ sbi: '231' }).sort({ applicationRef: 1 }).toArray()
+      expect(docs).toHaveLength(2)
+      expect(docs.map((d) => [d.applicationRef, d.state.answer])).toEqual([
+        ['REF-A', 'A edited'],
+        ['REF-B', 'B']
+      ])
+    })
+
+    test('a single-application grant is unaffected when the SBI holds only one application', async () => {
+      await insertDefinition({ grantCode: 'single-after-all', allowMultipleApplications: false })
+
+      await saveApplicationState({
+        sbi: '232',
+        grantCode: 'single-after-all',
+        grantVersion: '1.0.0',
+        state: { '$$__referenceNumber': 'REF-A', answer: 'first' }
+      })
+      await saveApplicationState({
+        sbi: '232',
+        grantCode: 'single-after-all',
+        grantVersion: '1.0.0',
+        state: { '$$__referenceNumber': 'REF-B', answer: 'second' }
+      })
+
+      const docs = await db.collection(STATE_COLLECTION).find({ sbi: '232' }).toArray()
+      expect(docs).toHaveLength(1)
+      expect(docs[0].state.answer).toBe('second')
     })
 
     test('patching applicationStatus targets only the named application', async () => {
