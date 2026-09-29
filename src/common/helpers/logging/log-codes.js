@@ -11,6 +11,11 @@ export const LogCodes = {
       messageFunc: ({ sbi, grantCode, fromVersion, toVersion }) =>
         `Upgraded application state grant version | sbi=${sbi} | grantCode=${grantCode} | fromVersion=${fromVersion} | toVersion=${toVersion}`
     },
+    STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED: {
+      level: 'warn',
+      messageFunc: ({ sbi, grantCode }) =>
+        `Grant config sets allowMultipleApplications=false but this SBI already holds several applications; keeping per-application saves | sbi=${sbi} | grantCode=${grantCode}`
+    },
     STATE_SAVE_MISSING_APPLICATION_REF: {
       level: 'error',
       messageFunc: ({ sbi, grantCode, grantVersion }) =>

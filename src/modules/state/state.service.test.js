@@ -343,6 +343,39 @@ describe('state CRUD service pass-throughs', () => {
     expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
   })
 
+  test('saveApplicationState warns when a reverted flag is ignored for an SBI with several applications', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: false })
+    const fakeDb = {
+      collection: () => ({
+        updateOne: () => ({ upsertedCount: 0 }),
+        countDocuments: () => 2
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { '$$__referenceNumber': 'REF-1' } })
+
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.STATE.STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED,
+      expect.objectContaining({ sbi: params.sbi, grantCode: params.grantCode })
+    )
+  })
+
+  test('saveApplicationState does not warn when the SBI holds a single application', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: false })
+    const fakeDb = {
+      collection: () => ({
+        updateOne: () => ({ upsertedCount: 0 }),
+        countDocuments: () => 1
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { '$$__referenceNumber': 'REF-1' } })
+
+    expect(log).not.toHaveBeenCalledWith(LogCodes.STATE.STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED, expect.anything())
+  })
+
   test('saveApplicationState does not fold applicationRef into the filter when the grant does not allow multiple applications', async () => {
     getDefinition.mockResolvedValueOnce({ allowMultipleApplications: false })
     let capturedFilter

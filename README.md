@@ -436,7 +436,7 @@ Endpoints accept an optional `applicationRef` (`GET /state`, `POST /state/with-d
 Notes:
 
 - Turning the flag **on** is safe at any time: an in-flight application is matched by its reference, adopts the new key and moves between indexes on its next save.
-- Turning it **off** collapses an SBI to a single application. Where an SBI already holds more than one, the flag is ignored for that SBI so one application cannot overwrite another; the surplus applications remain stored at their existing versions.
+- Turning it **off** applies only to SBIs holding at most one application. Where an SBI already holds several, the flag is ignored for that SBI — saves stay keyed by `applicationRef` so one application cannot overwrite another — and a warning is logged (`STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED`) naming the SBI and grant.
 - Locks are not scoped by `applicationRef`, so two applications for the same SBI and grant version currently share a lock.
 
 ### Application locking

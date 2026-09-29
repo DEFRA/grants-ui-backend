@@ -198,6 +198,12 @@ components:
             definition locally (e.g. a legacy YAML-sourced form), so the backend
             skips all definition resolution and version-upgrade work and returns
             only the stored state (and its version) with no `definition` payload.
+        applicationRef:
+          type: string
+          description: >-
+            Selects which application to open when the grant allows several per
+            SBI. Omitted, the highest-semver application for the SBI and grant
+            code is resolved.
       required: [sbi, grantCode]
     StateWithDefinitionResponse:
       type: object
@@ -301,6 +307,12 @@ components:
       type: object
       additionalProperties: false
       properties:
+        applicationRef:
+          type: string
+          description: >-
+            Selects which application to patch when the grant allows several per
+            SBI. Omitted, the single application for the SBI, grant code and
+            version is patched.
         state:
           type: object
           additionalProperties: false
@@ -395,6 +407,15 @@ paths:
               - type: string
               - type: integer
           required: true
+        - in: query
+          name: applicationRef
+          description: >-
+            Selects one application when the grant allows several per SBI.
+            Omitted, the single application for the SBI, grant code and
+            version is used.
+          schema:
+            type: string
+          required: false
       responses:
         '200':
           description: The stored state document
@@ -444,6 +465,15 @@ paths:
               - type: string
               - type: integer
           required: true
+        - in: query
+          name: applicationRef
+          description: >-
+            Selects one application when the grant allows several per SBI.
+            Omitted, the single application for the SBI, grant code and
+            version is used.
+          schema:
+            type: string
+          required: false
       responses:
         '200':
           description: State deleted

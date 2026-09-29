@@ -122,7 +122,12 @@ async function resolveAllowMultipleApplications({ sbi, grantCode, grantVersion }
     return true
   }
 
-  return repoHasMultipleApplications({ sbi, grantCode })
+  const alreadyHasSeveral = await repoHasMultipleApplications({ sbi, grantCode })
+  if (alreadyHasSeveral) {
+    log(LogCodes.STATE.STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED, { sbi, grantCode })
+  }
+
+  return alreadyHasSeveral
 }
 
 /**
