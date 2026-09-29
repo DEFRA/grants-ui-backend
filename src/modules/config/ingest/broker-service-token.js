@@ -16,11 +16,9 @@ const EARLY_REFRESH_SKEW_MS = 5_000
 const DURATION_SECONDS = 60
 
 // earlyRefreshMs must stay below DURATION_SECONDS, or the library treats every
-// freshly-issued token as already due for refresh (see #tokenHasExpired) and
-// never caches one. Caps it a full EARLY_REFRESH_SKEW_MS below the ceiling so a
-// large requestTimeoutMs degrades to "refresh a bit early" rather than "refresh
-// every call".
-const MAX_EARLY_REFRESH_MS = DURATION_SECONDS * 1000 - EARLY_REFRESH_SKEW_MS
+// freshly-issued token as already due for refresh and never caches one. Capped
+// at half the token's life so a misconfigured requestTimeoutMs can't reach it.
+const MAX_EARLY_REFRESH_MS = (DURATION_SECONDS * 1000) / 2
 
 /** @type {WebIdentityTokenProvider | MockProvider | null} */
 let webIdentityTokenProvider = null
