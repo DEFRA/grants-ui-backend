@@ -35,7 +35,6 @@ const mockLogger = createLogger()
 
 const configValues = {
   'configBroker.webIdentity.audience': 'grants-config-broker',
-  'configBroker.requestTimeoutMs': 15_000,
   cdpEnvironment: 'test'
 }
 

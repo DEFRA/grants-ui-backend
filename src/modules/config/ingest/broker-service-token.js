@@ -8,17 +8,12 @@ const logger = createLogger()
 
 // The broker checks the token's exp on receipt, so refresh early enough that a
 // token can't expire mid-request: one request budget plus some clock-skew slack.
-const EARLY_REFRESH_SKEW_MS = 5_000
+const EARLY_REFRESH_MS = 20_000
 
 // Library default (300s) collides with the ~300s ECS container credential
 // refresh window, causing STS to occasionally reject the request (prod
 // grants-ui, 2026-09-28). See #cdp-support, 2026-09-29.
 const DURATION_SECONDS = 60
-
-// earlyRefreshMs must stay below DURATION_SECONDS, or the library treats every
-// freshly-issued token as already due for refresh and never caches one. Capped
-// at half the token's life so a misconfigured requestTimeoutMs can't reach it.
-const MAX_EARLY_REFRESH_MS = (DURATION_SECONDS * 1000) / 2
 
 /** @type {WebIdentityTokenProvider | MockProvider | null} */
 let webIdentityTokenProvider = null
@@ -37,10 +32,7 @@ function getWebIdentityTokenProvider() {
         : new WebIdentityTokenProvider({
             audience: [config.get('configBroker.webIdentity.audience')],
             durationSeconds: DURATION_SECONDS,
-            earlyRefreshMs: Math.min(
-              MAX_EARLY_REFRESH_MS,
-              config.get('configBroker.requestTimeoutMs') + EARLY_REFRESH_SKEW_MS
-            )
+            earlyRefreshMs: EARLY_REFRESH_MS
           })
   }
   return webIdentityTokenProvider
