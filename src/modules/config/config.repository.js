@@ -13,6 +13,7 @@
  * @property {number} minor
  * @property {number} patch
  * @property {string} status
+ * @property {boolean} [allowMultipleApplications]
  * @property {Record<string, unknown>} definition
  * @property {Date} updatedAt
  */

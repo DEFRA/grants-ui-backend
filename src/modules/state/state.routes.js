@@ -69,7 +69,12 @@ export const stateSave = {
       }
 
       return h.response({ success: true, updated: true }).code(StatusCodes.OK)
-    } catch (_err) {
+    } catch (err) {
+      // Boom errors (e.g. 400 for a missing applicationRef) carry their own
+      // status code; let Hapi map them rather than masking as 500.
+      if (err?.isBoom) {
+        throw err
+      }
       return h.response({ error: 'Failed to save application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
@@ -101,10 +106,10 @@ export const stateRetrieve = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode, grantVersion } = request.query
+    const { sbi, grantCode, grantVersion, applicationRef } = request.query
 
     try {
-      const document = await getApplicationState({ sbi, grantCode, grantVersion })
+      const document = await getApplicationState({ sbi, grantCode, grantVersion, applicationRef })
 
       if (!document) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
@@ -143,10 +148,10 @@ export const stateDelete = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode, grantVersion } = request.query
+    const { sbi, grantCode, grantVersion, applicationRef } = request.query
 
     try {
-      const doc = await deleteApplicationState({ sbi, grantCode, grantVersion })
+      const doc = await deleteApplicationState({ sbi, grantCode, grantVersion, applicationRef })
 
       if (!doc) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
@@ -193,10 +198,17 @@ export const statePatch = {
   },
   handler: async (request, h) => {
     const { sbi, grantCode, grantVersion } = request.params
+    const { applicationRef } = request.payload
     const { applicationStatus } = request.payload.state
 
     try {
-      const document = await patchApplicationState({ sbi, grantCode, grantVersion, applicationStatus })
+      const document = await patchApplicationState({
+        sbi,
+        grantCode,
+        grantVersion,
+        applicationStatus,
+        applicationRef
+      })
 
       if (!document) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
@@ -237,7 +249,7 @@ export const stateWithDefinition = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode, includeDefinition } = request.payload
+    const { sbi, grantCode, includeDefinition, applicationRef } = request.payload
 
     // Identify the lock owner from the token, but tolerate a missing
     // grantVersion: the orchestrator resolves the authoritative version and
@@ -245,7 +257,7 @@ export const stateWithDefinition = {
     const { ownerId } = extractLockKeys(request, { requireGrantVersion: false })
 
     try {
-      const result = await getStateWithFormDefinition({ sbi, grantCode, ownerId, includeDefinition })
+      const result = await getStateWithFormDefinition({ sbi, grantCode, ownerId, includeDefinition, applicationRef })
 
       if (!result) {
         return h.response({ error: FORM_DEFINITION_NOT_FOUND }).code(StatusCodes.NOT_FOUND)

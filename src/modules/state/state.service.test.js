@@ -14,12 +14,13 @@ import {
   clearTestData
 } from './state.service'
 import { initStateRepository } from './state.repository'
-import { resolveLatestVersion, resolveLatestVersionWithinMajor } from '../config/config.service.js'
+import { resolveLatestVersion, resolveLatestVersionWithinMajor, getDefinition } from '../config/config.service.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
 
 jest.mock('../config/config.service.js', () => ({
   resolveLatestVersion: jest.fn(),
-  resolveLatestVersionWithinMajor: jest.fn()
+  resolveLatestVersionWithinMajor: jest.fn(),
+  getDefinition: jest.fn()
 }))
 
 jest.mock('../../common/helpers/logging/log.js', () => {
@@ -228,7 +229,8 @@ describe('state CRUD service pass-throughs', () => {
   test('saveApplicationState delegates to repository', async () => {
     const fakeDb = {
       collection: () => ({
-        updateOne: () => ({ upsertedCount: 1 })
+        updateOne: () => ({ upsertedCount: 1 }),
+        countDocuments: () => 0
       })
     }
     initStateRepository(fakeDb)
@@ -245,7 +247,8 @@ describe('state CRUD service pass-throughs', () => {
           capturedFilter = filter
           capturedUpdate = update
           return { upsertedCount: 1 }
-        }
+        },
+        countDocuments: () => 0
       })
     }
     initStateRepository(fakeDb)
@@ -254,6 +257,142 @@ describe('state CRUD service pass-throughs', () => {
 
     expect(capturedFilter.grantVersion).toBe('1.0.0')
     expect(capturedUpdate.$setOnInsert).toMatchObject({ pinnedMajor: 1, major: 1, minor: 0, patch: 0 })
+  })
+
+  test('saveApplicationState treats allowMultipleApplications as false when no form definition is found', async () => {
+    getDefinition.mockResolvedValueOnce(null)
+    let capturedFilter
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter) => {
+          capturedFilter = filter
+          return { upsertedCount: 1 }
+        },
+        countDocuments: () => 0
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
+  })
+
+  test('saveApplicationState folds applicationRef into the filter when the grant allows multiple applications', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: true })
+    let capturedFilter
+    let capturedUpdate
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter, update) => {
+          capturedFilter = filter
+          capturedUpdate = update
+          return { upsertedCount: 1 }
+        },
+        countDocuments: () => 0
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
+    expect(capturedUpdate.$set.allowMultipleApplications).toBe(true)
+    expect(capturedUpdate.$set.applicationRef).toBe('REF-1')
+    expect(getDefinition).toHaveBeenCalledWith(params.grantCode, 1, 0, 0)
+  })
+
+  test('saveApplicationState falls back to the grant latest version when the exact version has no definition', async () => {
+    // A multi-application grant must not silently degrade to single-application
+    // keying just because the exact version being saved is not stored.
+    getDefinition.mockResolvedValueOnce(null)
+    resolveLatestVersion.mockResolvedValueOnce({ allowMultipleApplications: true })
+    let capturedFilter
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter) => {
+          capturedFilter = filter
+          return { upsertedCount: 1 }
+        },
+        countDocuments: () => 0
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
+  })
+
+  test('saveApplicationState keeps ref-keying when the grant was reverted to single but the SBI holds several applications', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: false })
+    let capturedFilter
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter) => {
+          capturedFilter = filter
+          return { upsertedCount: 0 }
+        },
+        countDocuments: () => 2
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
+  })
+
+  test('saveApplicationState warns when a reverted flag is ignored for an SBI with several applications', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: false })
+    const fakeDb = {
+      collection: () => ({
+        updateOne: () => ({ upsertedCount: 0 }),
+        countDocuments: () => 2
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(log).toHaveBeenCalledWith(
+      LogCodes.STATE.STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED,
+      expect.objectContaining({ sbi: params.sbi, grantCode: params.grantCode })
+    )
+  })
+
+  test('saveApplicationState does not warn when the SBI holds a single application', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: false })
+    const fakeDb = {
+      collection: () => ({
+        updateOne: () => ({ upsertedCount: 0 }),
+        countDocuments: () => 1
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(log).not.toHaveBeenCalledWith(LogCodes.STATE.STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED, expect.anything())
+  })
+
+  test('saveApplicationState does not fold applicationRef into the filter when the grant does not allow multiple applications', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: false })
+    let capturedFilter
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (filter) => {
+          capturedFilter = filter
+          return { upsertedCount: 0 }
+        },
+        countDocuments: () => 0
+      })
+    }
+    initStateRepository(fakeDb)
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
+
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
   })
 
   test('getApplicationState delegates to repository', async () => {
