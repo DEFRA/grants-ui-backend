@@ -79,7 +79,7 @@ describe('broker-service-token', () => {
       expect(WebIdentityTokenProvider).toHaveBeenCalledWith({
         audience: ['grants-config-broker'],
         durationSeconds: 60,
-        earlyRefreshMs: 50_000
+        earlyRefreshMs: 55_000
       })
     })
 

@@ -15,9 +15,12 @@ const EARLY_REFRESH_SKEW_MS = 5_000
 // grants-ui, 2026-09-28). See #cdp-support, 2026-09-29.
 const DURATION_SECONDS = 60
 
-// Leaves at least 10s of token life usable even if the request timeout is
-// close to/above DURATION_SECONDS.
-const MAX_EARLY_REFRESH_MS = (DURATION_SECONDS - 10) * 1000
+// earlyRefreshMs must stay below DURATION_SECONDS, or the library treats every
+// freshly-issued token as already due for refresh (see #tokenHasExpired) and
+// never caches one. Caps it a full EARLY_REFRESH_SKEW_MS below the ceiling so a
+// large requestTimeoutMs degrades to "refresh a bit early" rather than "refresh
+// every call".
+const MAX_EARLY_REFRESH_MS = DURATION_SECONDS * 1000 - EARLY_REFRESH_SKEW_MS
 
 /** @type {WebIdentityTokenProvider | MockProvider | null} */
 let webIdentityTokenProvider = null
