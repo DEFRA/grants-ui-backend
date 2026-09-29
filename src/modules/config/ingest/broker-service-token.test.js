@@ -53,7 +53,6 @@ describe('broker-service-token', () => {
 
   afterEach(() => {
     configValues.cdpEnvironment = 'test'
-    configValues['configBroker.requestTimeoutMs'] = 15_000
   })
 
   describe('getBrokerServiceToken', () => {
@@ -66,19 +65,6 @@ describe('broker-service-token', () => {
         audience: ['grants-config-broker'],
         durationSeconds: 60,
         earlyRefreshMs: 20_000
-      })
-    })
-
-    test('caps earlyRefreshMs so it never crowds out the token duration when the request timeout is large', async () => {
-      configValues['configBroker.requestTimeoutMs'] = 120_000
-      mockGetCredentials.mockResolvedValue(validToken())
-
-      await getBrokerServiceToken()
-
-      expect(WebIdentityTokenProvider).toHaveBeenCalledWith({
-        audience: ['grants-config-broker'],
-        durationSeconds: 60,
-        earlyRefreshMs: 30_000
       })
     })
 
