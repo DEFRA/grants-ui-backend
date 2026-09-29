@@ -157,6 +157,7 @@ The legacy encrypted bearer token (`GRANTS_UI_BACKEND_AUTH_TOKEN` / `GRANTS_UI_B
 **SQS config ingestion** (consumer of grants-config-broker SNS notifications):
 
 - `CONFIG_INGEST_SQS_QUEUE_URL` – SQS queue URL subscribed to the config-broker SNS topic. When unset, the SQS consumer does not start.
+- `CONFIG_INGEST_FEATURE_CONTROL_SQS_QUEUE_URL` – FIFO SQS queue URL subscribed to the config-broker feature-control SNS topic. When unset, the feature-control consumer does not start.
 - `CONFIG_INGEST_SQS_WAIT_TIME_SECONDS` – SQS long-poll wait time in seconds (default: `20`)
 - `CONFIG_INGEST_SQS_MAX_MESSAGES` – maximum SQS messages per poll (default: `10`)
 - `CONFIG_INGEST_SQS_VISIBILITY_TIMEOUT_SECONDS` – SQS visibility timeout per poll batch (default: `30`)
@@ -352,6 +353,11 @@ Grant form definitions are sourced from the [grants-config-broker](https://githu
 - **Ongoing updates** – the broker publishes change notifications to an SNS topic, which fans out to an SQS queue. The SQS consumer reads messages, fetches the corresponding YAML manifests from S3, transforms them, and upserts the definitions into Mongo.
 
 The SQS consumer only runs when `CONFIG_INGEST_SQS_QUEUE_URL` is set; if it is unset the consumer does not start (useful when only the startup pull is required). Locally, S3, SQS and SNS are emulated by Floci and the broker is provided by the Docker Compose stack — see [Docker Compose (recommended)](#docker-compose-recommended). The relevant environment variables are listed under [Environment configuration](#environment-configuration).
+
+**Feature controls** – the broker's boolean feature controls with a `grant.*` scope (e.g. `EXAMPLE_FEATURE_WOODLAND`) are stored in the `config__feature_controls` collection and served to Grants UI at `GET /feature-controls/{name}` as a bare JSON boolean (404 when no value has been received). They arrive two ways:
+
+- **Startup pull** – on boot the active controls are fetched from the broker (`GET /api/feature-controls`) and stored (`runFeatureControlStartupPull`).
+- **Ongoing updates** – the broker publishes value changes to a FIFO SNS topic, which fans out to a FIFO SQS queue read by the feature-control consumer (only runs when `CONFIG_INGEST_FEATURE_CONTROL_SQS_QUEUE_URL` is set). The broker does not broadcast withdrawn, expired or removed controls.
 
 ### Mongo configuration
 

@@ -44,6 +44,7 @@ AWS_ENDPOINT_URL=http://floci:4566
 
 # SQS consumer for grants-config-broker SNS notifications
 CONFIG_INGEST_SQS_QUEUE_URL=http://floci:4566/000000000000/grants_ui_backend__sqs__config_updates
+CONFIG_INGEST_FEATURE_CONTROL_SQS_QUEUE_URL=http://floci:4566/000000000000/grants_ui_backend__sqs__feature_control.fifo
 CONFIG_INGEST_SQS_WAIT_TIME_SECONDS=20
 CONFIG_INGEST_SQS_MAX_MESSAGES=10
 CONFIG_INGEST_SQS_VISIBILITY_TIMEOUT_SECONDS=30

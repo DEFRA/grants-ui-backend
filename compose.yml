@@ -29,6 +29,7 @@ services:
       AWS_ENDPOINT_URL: http://floci:4566
       CONFIG_BROKER_BASE_URL: http://grants-config-broker:3012
       CONFIG_INGEST_SQS_QUEUE_URL: http://floci:4566/000000000000/grants_ui_backend__sqs__config_updates
+      CONFIG_INGEST_FEATURE_CONTROL_SQS_QUEUE_URL: http://floci:4566/000000000000/grants_ui_backend__sqs__feature_control.fifo
       GRANTS_UI_BASE_URL: '${GRANTS_UI_BASE_URL:-http://localhost:3000}'
       ENCRYPTED_AUTH_JWT_SECRET: ${ENCRYPTED_AUTH_JWT_SECRET:-allowlist-jwt-secret}
       # Off by default - the legacy shared bearer token above keeps working either

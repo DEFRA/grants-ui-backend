@@ -1,6 +1,7 @@
 import hapi from '@hapi/hapi'
 import { runStartupPurge } from '../../modules/state/purge-unsubmitted-applications.js'
 import { runStartupPull } from '../../modules/config/ingest/startup-pull.js'
+import { runFeatureControlStartupPull } from '../../modules/feature-control/feature-control-startup-pull.js'
 
 const mockLoggerInfo = jest.fn()
 const mockLoggerError = jest.fn()
@@ -26,12 +27,21 @@ jest.mock('./logging/logger.js', () => ({
 jest.mock('../../modules/config/ingest/startup-pull.js', () => ({
   runStartupPull: jest.fn().mockResolvedValue(undefined)
 }))
+jest.mock('../../modules/feature-control/feature-control-startup-pull.js', () => ({
+  runFeatureControlStartupPull: jest.fn().mockResolvedValue(undefined)
+}))
 jest.mock('./run-migrations.js', () => ({
   runMigrations: jest.fn().mockResolvedValue([])
 }))
-jest.mock('../../modules/config/ingest/sqs-consumer.js', () => ({
-  sqsConsumerPlugin: {
+jest.mock('../../modules/config/ingest/config-sqs-consumer.js', () => ({
+  configSqsConsumerPlugin: {
     name: 'config-sqs-consumer',
+    register: jest.fn()
+  }
+}))
+jest.mock('../../modules/feature-control/feature-control-sqs-consumer.js', () => ({
+  featureControlSqsConsumerPlugin: {
+    name: 'feature-control-sqs-consumer',
     register: jest.fn()
   }
 }))
@@ -79,6 +89,7 @@ describe('#startServer', () => {
       expect(hapiServerSpy).toHaveBeenCalled()
       expect(runStartupPurge).toHaveBeenCalled()
       expect(runStartupPull).toHaveBeenCalled()
+      expect(runFeatureControlStartupPull).toHaveBeenCalled()
       expect(mockHapiLoggerInfo).toHaveBeenCalledWith('Custom secure context is disabled')
       expect(mockHapiLoggerInfo).toHaveBeenCalledWith('MongoDb connected to grants-ui-backend - state')
       expect(mockHapiLoggerInfo).toHaveBeenCalledWith('MongoDb connected to grants-ui-backend - config')
@@ -120,6 +131,21 @@ describe('#startServer', () => {
       expect(mockHapiLoggerError).toHaveBeenCalledWith(
         { err: expect.any(Error) },
         'Broker startup pull failed; continuing with existing DB state'
+      )
+
+      expect(server).toBeDefined()
+      expect(mockHapiLoggerInfo).toHaveBeenCalledWith('Server started successfully')
+    })
+
+    test('Should continue startup when the feature-control startup pull fails', async () => {
+      runFeatureControlStartupPull.mockRejectedValueOnce(new Error('Feature control pull failed'))
+
+      const server = await startServerImport.startServer()
+      servers.push(server)
+
+      expect(mockHapiLoggerError).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'Feature-control startup pull failed; continuing with existing DB state'
       )
 
       expect(server).toBeDefined()
