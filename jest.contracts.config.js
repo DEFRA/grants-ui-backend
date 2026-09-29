@@ -13,5 +13,7 @@ export default {
   setupFilesAfterEnv: ['<rootDir>/.jest/setup-files-after-env.js'],
   reporters: ['default', ['github-actions', { silent: false }], 'summary'],
   transform: { '^.+\\.js$': 'babel-jest' },
-  transformIgnorePatterns: [`node_modules/(?!${['@defra/hapi-tracing', 'node-fetch'].join('|')}/)`]
+  transformIgnorePatterns: [
+    `node_modules/(?!${['@defra/hapi-tracing/', 'node-fetch/', String.raw`mongodb/lib/runtime_adapters\.js$`].join('|')})`
+  ]
 }
