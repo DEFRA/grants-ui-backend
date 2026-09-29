@@ -19,8 +19,9 @@ export default {
   },
   transformIgnorePatterns: [
     `node_modules/(?!${[
-      '@defra/hapi-tracing', // Supports ESM only
-      'node-fetch' // Supports ESM only
-    ].join('|')}/)`
+      '@defra/hapi-tracing/', // Supports ESM only
+      'node-fetch/', // Supports ESM only
+      String.raw`mongodb/lib/runtime_adapters\.js$` // Uses dynamic import('os'), unsupported in Jest's VM without ESM mode
+    ].join('|')})`
   ]
 }
