@@ -353,7 +353,7 @@ describe('state CRUD service pass-throughs', () => {
     }
     initStateRepository(fakeDb)
 
-    await saveApplicationState({ ...params, state: { '$$__referenceNumber': 'REF-1' } })
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
 
     expect(log).toHaveBeenCalledWith(
       LogCodes.STATE.STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED,
@@ -371,7 +371,7 @@ describe('state CRUD service pass-throughs', () => {
     }
     initStateRepository(fakeDb)
 
-    await saveApplicationState({ ...params, state: { '$$__referenceNumber': 'REF-1' } })
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
 
     expect(log).not.toHaveBeenCalledWith(LogCodes.STATE.STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED, expect.anything())
   })
