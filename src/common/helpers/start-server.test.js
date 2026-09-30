@@ -29,8 +29,8 @@ jest.mock('../../modules/config/ingest/startup-pull.js', () => ({
 jest.mock('./run-migrations.js', () => ({
   runMigrations: jest.fn().mockResolvedValue([])
 }))
-jest.mock('../../modules/config/ingest/sqs-consumer.js', () => ({
-  sqsConsumerPlugin: {
+jest.mock('../../modules/config/ingest/config-sqs-consumer.js', () => ({
+  configSqsConsumerPlugin: {
     name: 'config-sqs-consumer',
     register: jest.fn()
   }
