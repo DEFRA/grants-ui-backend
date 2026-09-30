@@ -431,6 +431,8 @@ The flag determines how a state document is identified:
 
 Uniqueness is enforced by two partial indexes created in `migrations/state/20260924000000-multi-application-indexes.js`, each filtered on the document's own `allowMultipleApplications` value. The migration also backfills that field and promotes `applicationRef` onto existing documents, so enabling the flag on a grant requires no separate script.
 
+A third, plain index on `(sbi, grantCode, grantVersion, applicationRef)` serves reads, created in `migrations/state/20260930000000-add-application-lookup-index.js`. Queries do not filter on `allowMultipleApplications`, so neither partial index is guaranteed to contain every matching document and MongoDB will not use either — without this index every lookup is a collection scan, including for single-application grants.
+
 Endpoints accept an optional `applicationRef` (`GET /state`, `POST /state/with-definition`, `PATCH /state/{sbi}/{grantCode}/{grantVersion}`, `DELETE /state`). When omitted, behaviour is unchanged.
 
 Notes:
