@@ -9,7 +9,8 @@ import {
   getLatestApplicationStateForGrant,
   updateApplicationStateVersion,
   purgeApplicationStates,
-  findUnsubmittedApplicationStates
+  findUnsubmittedApplicationStates,
+  listApplications
 } from './state.repository.js'
 
 // Note: index creation is owned by migrate-mongo migrations and is verified in
@@ -131,7 +132,7 @@ describe('state.repository CRUD error paths', () => {
     const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 0 })
     initStateRepository({ collection: () => ({ updateOne }) })
 
-    await saveApplicationState({ ...params, state: {}, allowMultipleApplications: false, applicationRef: 'ref-1' })
+    await saveApplicationState({ ...params, state: {}, allowMultipleApplications: false, referenceNumber: 'ref-1' })
 
     const [filter] = updateOne.mock.calls[0]
     expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
@@ -148,17 +149,17 @@ describe('state.repository CRUD error paths', () => {
     expect(updateDoc.$set.allowMultipleApplications).toBe(false)
   })
 
-  test('saveApplicationState keys on (sbi, grantCode, applicationRef) when allowMultipleApplications is true', async () => {
+  test('saveApplicationState keys on (sbi, grantCode, referenceNumber) when allowMultipleApplications is true', async () => {
     const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 1 })
     initStateRepository({ collection: () => ({ updateOne }) })
 
-    await saveApplicationState({ ...params, state: {}, allowMultipleApplications: true, applicationRef: 'ref-1' })
+    await saveApplicationState({ ...params, state: {}, allowMultipleApplications: true, referenceNumber: 'ref-1' })
 
     const [filter, updateDoc] = updateOne.mock.calls[0]
-    expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'ref-1' })
+    expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, referenceNumber: 'ref-1' })
     expect(filter.grantVersion).toBeUndefined()
     expect(updateDoc.$set.allowMultipleApplications).toBe(true)
-    expect(updateDoc.$set.applicationRef).toBe('ref-1')
+    expect(updateDoc.$set.referenceNumber).toBe('ref-1')
   })
 
   test('saveApplicationState persists grantVersion via $set for multi-application saves', async () => {
@@ -170,7 +171,7 @@ describe('state.repository CRUD error paths', () => {
       grantVersion: '2.3.4',
       state: {},
       allowMultipleApplications: true,
-      applicationRef: 'ref-1'
+      referenceNumber: 'ref-1'
     })
 
     const [, updateDoc] = updateOne.mock.calls[0]
@@ -179,7 +180,7 @@ describe('state.repository CRUD error paths', () => {
     expect(updateDoc.$setOnInsert.pinnedMajor).toBe(2)
   })
 
-  test('saveApplicationState sets allowMultipleApplications and applicationRef on $set', async () => {
+  test('saveApplicationState sets allowMultipleApplications and referenceNumber on $set', async () => {
     const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 1 })
     initStateRepository({ collection: () => ({ updateOne }) })
 
@@ -187,16 +188,16 @@ describe('state.repository CRUD error paths', () => {
       ...params,
       state: { foo: 'bar' },
       allowMultipleApplications: true,
-      applicationRef: 'ref-1'
+      referenceNumber: 'ref-1'
     })
 
     const [, updateDoc] = updateOne.mock.calls[0]
     expect(updateDoc.$set.state).toEqual({ foo: 'bar' })
     expect(updateDoc.$set.allowMultipleApplications).toBe(true)
-    expect(updateDoc.$set.applicationRef).toBe('ref-1')
+    expect(updateDoc.$set.referenceNumber).toBe('ref-1')
   })
 
-  test('getApplicationState omits applicationRef from the filter when not supplied', async () => {
+  test('getApplicationState omits referenceNumber from the filter when not supplied', async () => {
     const findOne = jest.fn().mockResolvedValue(null)
     initStateRepository({ collection: () => ({ findOne }) })
 
@@ -209,27 +210,52 @@ describe('state.repository CRUD error paths', () => {
     })
   })
 
-  test('getApplicationState includes applicationRef in the filter when supplied', async () => {
+  test('deleteApplicationState matches on referenceNumber without grantVersion when a ref is supplied', async () => {
+    const findOneAndDelete = jest.fn().mockResolvedValue(null)
+    initStateRepository({ collection: () => ({ findOneAndDelete }) })
+
+    await deleteApplicationState({ ...params, referenceNumber: 'ref-1' })
+
+    expect(findOneAndDelete).toHaveBeenCalledWith({
+      sbi: params.sbi,
+      grantCode: params.grantCode,
+      referenceNumber: 'ref-1'
+    })
+  })
+
+  test('patchApplicationState matches on referenceNumber without grantVersion when a ref is supplied', async () => {
+    const findOneAndUpdate = jest.fn().mockResolvedValue(null)
+    initStateRepository({ collection: () => ({ findOneAndUpdate }) })
+
+    await patchApplicationState({ ...params, applicationStatus: 'SUBMITTED', referenceNumber: 'ref-1' })
+
+    const [filter] = findOneAndUpdate.mock.calls[0]
+    expect(filter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, referenceNumber: 'ref-1' })
+  })
+
+  test('getApplicationState matches on referenceNumber without grantVersion when a ref is supplied', async () => {
     const findOne = jest.fn().mockResolvedValue(null)
     initStateRepository({ collection: () => ({ findOne }) })
 
-    await getApplicationState({ ...params, applicationRef: 'ref-1' })
+    await getApplicationState({ ...params, referenceNumber: 'ref-1' })
 
-    expect(findOne).toHaveBeenCalledWith({ ...params, applicationRef: 'ref-1' })
+    // The ref identifies the application; its version moves as definitions are
+    // published, so pinning a caller-supplied version alongside it would miss.
+    expect(findOne).toHaveBeenCalledWith({ sbi: params.sbi, grantCode: params.grantCode, referenceNumber: 'ref-1' })
   })
 
-  test('getLatestApplicationStateForGrant narrows to one application when applicationRef is supplied', async () => {
-    const doc = { _id: 'a', applicationRef: 'ref-1' }
+  test('getLatestApplicationStateForGrant narrows to one application when referenceNumber is supplied', async () => {
+    const doc = { _id: 'a', referenceNumber: 'ref-1' }
     const sort = jest.fn().mockReturnValue({ limit: () => ({ next: () => Promise.resolve(doc) }) })
     const find = jest.fn().mockReturnValue({ sort })
     initStateRepository({ collection: () => ({ find }) })
 
-    await getLatestApplicationStateForGrant({ sbi: '123', grantCode: 'EGWA', applicationRef: 'ref-1' })
+    await getLatestApplicationStateForGrant({ sbi: '123', grantCode: 'EGWA', referenceNumber: 'ref-1' })
 
-    expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA', applicationRef: 'ref-1' })
+    expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA', referenceNumber: 'ref-1' })
   })
 
-  test('getLatestApplicationStateForGrant omits applicationRef from the filter when not supplied', async () => {
+  test('getLatestApplicationStateForGrant omits referenceNumber from the filter when not supplied', async () => {
     const sort = jest.fn().mockReturnValue({ limit: () => ({ next: () => Promise.resolve(null) }) })
     const find = jest.fn().mockReturnValue({ sort })
     initStateRepository({ collection: () => ({ find }) })
@@ -237,6 +263,36 @@ describe('state.repository CRUD error paths', () => {
     await getLatestApplicationStateForGrant({ sbi: '123', grantCode: 'EGWA' })
 
     expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA' })
+  })
+
+  test('listApplications re-throws and logs on error', async () => {
+    initStateRepository({
+      collection: () => ({
+        find: () => {
+          throw dbError
+        }
+      })
+    })
+    await expect(listApplications({ sbi: '123', grantCode: 'EGWA' })).rejects.toThrow('DB failed')
+  })
+
+  test('listApplications filters by (sbi, grantCode), sorts by updatedAt descending, and returns a trimmed projection', async () => {
+    const docs = [
+      { grantCode: 'EGWA', referenceNumber: 'ref-2', updatedAt: new Date('2026-02-01') },
+      { grantCode: 'EGWA', referenceNumber: 'ref-1', updatedAt: new Date('2026-01-01') }
+    ]
+    const sort = jest.fn().mockReturnValue({ toArray: () => Promise.resolve(docs) })
+    const find = jest.fn().mockReturnValue({ sort })
+    initStateRepository({ collection: () => ({ find }) })
+
+    const result = await listApplications({ sbi: '123', grantCode: 'EGWA' })
+
+    expect(find).toHaveBeenCalledWith(
+      { sbi: '123', grantCode: 'EGWA' },
+      { projection: { _id: 0, grantCode: 1, referenceNumber: 1, updatedAt: 1 } }
+    )
+    expect(sort).toHaveBeenCalledWith({ updatedAt: -1 })
+    expect(result).toEqual(docs)
   })
 })
 

@@ -19,7 +19,7 @@ export const LogCodes = {
     STATE_SAVE_MISSING_APPLICATION_REF: {
       level: 'error',
       messageFunc: ({ sbi, grantCode, grantVersion }) =>
-        `Rejected save for a multi-application grant: no applicationRef in state | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
+        `Rejected save for a multi-application grant: no referenceNumber in state | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
     },
     STATE_PAYLOAD_SIZE_FAILED: {
       level: 'error',

@@ -11,7 +11,8 @@ import {
   findSubmissions,
   getStateWithFormDefinition,
   purgeApplications,
-  clearTestData
+  clearTestData,
+  listApplications
 } from './state.service'
 import { initStateRepository } from './state.repository'
 import { resolveLatestVersion, resolveLatestVersionWithinMajor, getDefinition } from '../config/config.service.js'
@@ -278,7 +279,7 @@ describe('state CRUD service pass-throughs', () => {
     expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, grantVersion: params.grantVersion })
   })
 
-  test('saveApplicationState folds applicationRef into the filter when the grant allows multiple applications', async () => {
+  test('saveApplicationState folds referenceNumber into the filter when the grant allows multiple applications', async () => {
     getDefinition.mockResolvedValueOnce({ allowMultipleApplications: true })
     let capturedFilter
     let capturedUpdate
@@ -296,9 +297,9 @@ describe('state CRUD service pass-throughs', () => {
 
     await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
 
-    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, referenceNumber: 'REF-1' })
     expect(capturedUpdate.$set.allowMultipleApplications).toBe(true)
-    expect(capturedUpdate.$set.applicationRef).toBe('REF-1')
+    expect(capturedUpdate.$set.referenceNumber).toBe('REF-1')
     expect(getDefinition).toHaveBeenCalledWith(params.grantCode, 1, 0, 0)
   })
 
@@ -321,7 +322,7 @@ describe('state CRUD service pass-throughs', () => {
 
     await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
 
-    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, referenceNumber: 'REF-1' })
   })
 
   test('saveApplicationState keeps ref-keying when the grant was reverted to single but the SBI holds several applications', async () => {
@@ -340,7 +341,7 @@ describe('state CRUD service pass-throughs', () => {
 
     await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' } })
 
-    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, applicationRef: 'REF-1' })
+    expect(capturedFilter).toEqual({ sbi: params.sbi, grantCode: params.grantCode, referenceNumber: 'REF-1' })
   })
 
   test('saveApplicationState warns when a reverted flag is ignored for an SBI with several applications', async () => {
@@ -376,7 +377,7 @@ describe('state CRUD service pass-throughs', () => {
     expect(log).not.toHaveBeenCalledWith(LogCodes.STATE.STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED, expect.anything())
   })
 
-  test('saveApplicationState does not fold applicationRef into the filter when the grant does not allow multiple applications', async () => {
+  test('saveApplicationState does not fold referenceNumber into the filter when the grant does not allow multiple applications', async () => {
     getDefinition.mockResolvedValueOnce({ allowMultipleApplications: false })
     let capturedFilter
     const fakeDb = {
@@ -455,6 +456,17 @@ describe('state CRUD service pass-throughs', () => {
     initStateRepository(fakeDb)
     const result = await findSubmissions({ sbi: '123' })
     expect(result).toEqual([{ sbi: '123' }])
+  })
+
+  test('listApplications delegates to repository', async () => {
+    const fakeDb = {
+      collection: () => ({
+        find: () => ({ sort: () => ({ toArray: () => [{ grantCode: 'EGWA', referenceNumber: 'REF-1' }] }) })
+      })
+    }
+    initStateRepository(fakeDb)
+    const result = await listApplications({ sbi: '123', grantCode: 'EGWA' })
+    expect(result).toEqual([{ grantCode: 'EGWA', referenceNumber: 'REF-1' }])
   })
 })
 

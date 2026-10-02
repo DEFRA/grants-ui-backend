@@ -423,23 +423,25 @@ A grant's form definition may declare `allowMultipleApplications` in its `metada
 The flag determines how a state document is identified:
 
 - **`false` (default)** — one application per `(sbi, grantCode, grantVersion)`. Saves target that document and overwrite it, exactly as before this field existed.
-- **`true`** — one application per `(sbi, grantCode, applicationRef)`. Each application is an independent document, so a new reference never overwrites an existing application.
+- **`true`** — one application per `(sbi, grantCode, referenceNumber)`. Each application is an independent document, so a new reference never overwrites an existing application.
 
-`applicationRef` is the reference the forms engine writes into the state payload as `$$__referenceNumber` at the start of a journey. It is promoted to a top-level field on the state document so it can be indexed; grants-ui does not send it as a separate parameter. A save for a multi-application grant that carries no reference cannot be attributed to one of the SBI's applications and is rejected with a `400`.
+`referenceNumber` is the reference the forms engine writes into the state payload as `$$__referenceNumber` at the start of a journey. It is promoted to a top-level field on the state document so it can be indexed; grants-ui does not send it as a separate parameter. A save for a multi-application grant that carries no reference cannot be attributed to one of the SBI's applications and is rejected with a `400`.
 
 `grantVersion` is deliberately not part of the multi-application key. An application's version is upgraded in place as new definitions are published, so including it would let the same application exist once per version and split it across records after a bump.
 
-Uniqueness is enforced by two partial indexes created in `migrations/state/20260924000000-multi-application-indexes.js`, each filtered on the document's own `allowMultipleApplications` value. The migration also backfills that field and promotes `applicationRef` onto existing documents, so enabling the flag on a grant requires no separate script.
+Uniqueness is enforced by two partial indexes originally created in `migrations/state/20260924000000-multi-application-indexes.js` (which backfilled `allowMultipleApplications` and promoted the reference onto existing documents as `applicationRef`), rebuilt on the renamed field by `migrations/state/20261002000000-rename-application-ref-to-reference-number.js`.
 
-A third, plain index on `(sbi, grantCode, grantVersion, applicationRef)` serves reads, created in `migrations/state/20260930000000-add-application-lookup-index.js`. Queries do not filter on `allowMultipleApplications`, so neither partial index is guaranteed to contain every matching document and MongoDB will not use either — without this index every lookup is a collection scan, including for single-application grants.
+A third, plain index on `(sbi, grantCode, grantVersion, referenceNumber)` serves reads, originally created as `applicationRef` in `migrations/state/20260930000000-add-application-lookup-index.js` and likewise rebuilt by the rename migration. Queries do not filter on `allowMultipleApplications`, so neither partial index is guaranteed to contain every matching document and MongoDB will not use either — without this index every lookup is a collection scan, including for single-application grants.
 
-Endpoints accept an optional `applicationRef` (`GET /state`, `POST /state/with-definition`, `PATCH /state/{sbi}/{grantCode}/{grantVersion}`, `DELETE /state`). When omitted, behaviour is unchanged.
+A fourth, plain index on `(sbi, grantCode, referenceNumber)` serves point lookups by reference alone (no `grantVersion`), originally created as `applicationRef` in `migrations/state/20261001000000-add-application-ref-lookup-index.js` and likewise rebuilt by the rename migration.
+
+Endpoints accept an optional `referenceNumber` (`GET /state`, `POST /state/with-definition`, `PATCH /state/{sbi}/{grantCode}/{grantVersion}` as a query param, `DELETE /state`). When omitted, behaviour is unchanged.
 
 Notes:
 
 - Turning the flag **on** is safe at any time: an in-flight application is matched by its reference, adopts the new key and moves between indexes on its next save.
-- Turning it **off** applies only to SBIs holding at most one application. Where an SBI already holds several, the flag is ignored for that SBI — saves stay keyed by `applicationRef` so one application cannot overwrite another — and a warning is logged (`STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED`) naming the SBI and grant.
-- Locks are not scoped by `applicationRef`, so two applications for the same SBI and grant version currently share a lock.
+- Turning it **off** applies only to SBIs holding at most one application. Where an SBI already holds several, the flag is ignored for that SBI — saves stay keyed by `referenceNumber` so one application cannot overwrite another — and a warning is logged (`STATE_MULTIPLE_APPLICATIONS_FLAG_IGNORED`) naming the SBI and grant.
+- Locks are not scoped by `referenceNumber`, so two applications for the same SBI and grant version currently share a lock.
 
 ### Application locking
 

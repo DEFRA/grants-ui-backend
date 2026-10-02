@@ -7,14 +7,17 @@ import {
   stateRetrieveSchema,
   stateWithDefinitionSchema,
   patchParamsSchema,
-  patchSchema
+  patchQuerySchema,
+  patchSchema,
+  stateListApplicationsSchema
 } from './state.schema.js'
 import {
   saveApplicationState,
   getApplicationState,
   deleteApplicationState,
   patchApplicationState,
-  getStateWithFormDefinition
+  getStateWithFormDefinition,
+  listApplications
 } from './state.service.js'
 
 const PAYLOAD_SIZE_WARNING_THRESHOLD = 500_000 // 500 KB
@@ -70,7 +73,7 @@ export const stateSave = {
 
       return h.response({ success: true, updated: true }).code(StatusCodes.OK)
     } catch (err) {
-      // Boom errors (e.g. 400 for a missing applicationRef) carry their own
+      // Boom errors (e.g. 400 for a missing referenceNumber) carry their own
       // status code; let Hapi map them rather than masking as 500.
       if (err?.isBoom) {
         throw err
@@ -106,10 +109,10 @@ export const stateRetrieve = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode, grantVersion, applicationRef } = request.query
+    const { sbi, grantCode, grantVersion, referenceNumber } = request.query
 
     try {
-      const document = await getApplicationState({ sbi, grantCode, grantVersion, applicationRef })
+      const document = await getApplicationState({ sbi, grantCode, grantVersion, referenceNumber })
 
       if (!document) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
@@ -148,10 +151,10 @@ export const stateDelete = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode, grantVersion, applicationRef } = request.query
+    const { sbi, grantCode, grantVersion, referenceNumber } = request.query
 
     try {
-      const doc = await deleteApplicationState({ sbi, grantCode, grantVersion, applicationRef })
+      const doc = await deleteApplicationState({ sbi, grantCode, grantVersion, referenceNumber })
 
       if (!doc) {
         return h.response({ error: STATE_NOT_FOUND }).code(StatusCodes.NOT_FOUND)
@@ -178,6 +181,7 @@ export const statePatch = {
     },
     validate: {
       params: patchParamsSchema,
+      query: patchQuerySchema,
       payload: patchSchema,
       failAction: (request, _h, err) => {
         const { sbi, grantCode, grantVersion } = request.params
@@ -198,7 +202,7 @@ export const statePatch = {
   },
   handler: async (request, h) => {
     const { sbi, grantCode, grantVersion } = request.params
-    const { applicationRef } = request.payload
+    const { referenceNumber } = request.query
     const { applicationStatus } = request.payload.state
 
     try {
@@ -207,7 +211,7 @@ export const statePatch = {
         grantCode,
         grantVersion,
         applicationStatus,
-        applicationRef
+        referenceNumber
       })
 
       if (!document) {
@@ -217,6 +221,45 @@ export const statePatch = {
       return h.response({ success: true, patched: true }).code(StatusCodes.OK)
     } catch (_err) {
       return h.response({ error: 'Failed to patch application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
+    }
+  }
+}
+
+export const stateListApplications = {
+  method: 'GET',
+  path: '/state/applications',
+  options: {
+    auth: 'bearer',
+    // No `enforceApplicationLock` pre-handler: this lists every application for
+    // an (sbi, grantCode) pair rather than resolving a single grantVersion-scoped
+    // application, so there is no single lock token to validate against.
+    validate: {
+      query: stateListApplicationsSchema,
+      failAction: (request, _h, err) => {
+        const { sbi, grantCode } = request.query
+        log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
+          sbi,
+          grantCode,
+          errorName: err.name,
+          errorMessage: `GET /state/applications, validation failed: ${err.message}`,
+          errorReason: err.reason,
+          errorCode: err.code,
+          isMongoError: false,
+          stack: err.stack?.split('\n')[0]
+        })
+        throw err
+      }
+    }
+  },
+  handler: async (request, h) => {
+    const { sbi, grantCode } = request.query
+
+    try {
+      const applications = await listApplications({ sbi, grantCode })
+
+      return h.response({ applications }).code(StatusCodes.OK)
+    } catch (_err) {
+      return h.response({ error: 'Failed to retrieve applications' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
 }
@@ -249,7 +292,7 @@ export const stateWithDefinition = {
     }
   },
   handler: async (request, h) => {
-    const { sbi, grantCode, includeDefinition, applicationRef } = request.payload
+    const { sbi, grantCode, includeDefinition, referenceNumber } = request.payload
 
     // Identify the lock owner from the token, but tolerate a missing
     // grantVersion: the orchestrator resolves the authoritative version and
@@ -257,7 +300,7 @@ export const stateWithDefinition = {
     const { ownerId } = extractLockKeys(request, { requireGrantVersion: false })
 
     try {
-      const result = await getStateWithFormDefinition({ sbi, grantCode, ownerId, includeDefinition, applicationRef })
+      const result = await getStateWithFormDefinition({ sbi, grantCode, ownerId, includeDefinition, referenceNumber })
 
       if (!result) {
         return h.response({ error: FORM_DEFINITION_NOT_FOUND }).code(StatusCodes.NOT_FOUND)

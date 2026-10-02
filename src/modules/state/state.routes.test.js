@@ -1,4 +1,11 @@
-import { stateDelete, statePatch, stateRetrieve, stateSave, stateWithDefinition } from './state.routes.js'
+import {
+  stateDelete,
+  statePatch,
+  stateRetrieve,
+  stateSave,
+  stateWithDefinition,
+  stateListApplications
+} from './state.routes.js'
 import { logIfApproachingPayloadLimit } from '~/src/common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '~/src/common/helpers/logging/log.js'
 import { enforceApplicationLock, extractLockKeys } from './lock-enforcement.js'
@@ -7,7 +14,8 @@ import {
   getApplicationState,
   deleteApplicationState,
   patchApplicationState,
-  getStateWithFormDefinition
+  getStateWithFormDefinition,
+  listApplications
 } from './state.service.js'
 
 jest.mock('./state.service.js', () => ({
@@ -15,7 +23,8 @@ jest.mock('./state.service.js', () => ({
   getApplicationState: jest.fn(),
   deleteApplicationState: jest.fn(),
   patchApplicationState: jest.fn(),
-  getStateWithFormDefinition: jest.fn()
+  getStateWithFormDefinition: jest.fn(),
+  listApplications: jest.fn()
 }))
 
 jest.mock('./lock-enforcement.js', () => ({
@@ -213,6 +222,7 @@ describe('State', () => {
 
     test('should patch applicationStatus and return 200', async () => {
       mockRequest.params = defaultParams
+      mockRequest.query = {}
       mockRequest.payload = { state: { applicationStatus: 'IN_PROGRESS' } }
       patchApplicationState.mockResolvedValue({ _id: 'some-id', state: { applicationStatus: 'IN_PROGRESS' } })
 
@@ -223,9 +233,10 @@ describe('State', () => {
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
-    test('passes applicationRef from the payload through to the service', async () => {
+    test('passes referenceNumber from the query string through to the service', async () => {
       mockRequest.params = defaultParams
-      mockRequest.payload = { applicationRef: 'REF-B', state: { applicationStatus: 'SUBMITTED' } }
+      mockRequest.query = { referenceNumber: 'REF-B' }
+      mockRequest.payload = { state: { applicationStatus: 'SUBMITTED' } }
       patchApplicationState.mockResolvedValue({ _id: 'some-id' })
 
       await statePatch.handler(mockRequest, mockH)
@@ -233,13 +244,14 @@ describe('State', () => {
       expect(patchApplicationState).toHaveBeenCalledWith({
         ...defaultParams,
         applicationStatus: 'SUBMITTED',
-        applicationRef: 'REF-B'
+        referenceNumber: 'REF-B'
       })
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
     test('should return 404 when no document is found to patch', async () => {
       mockRequest.params = defaultParams
+      mockRequest.query = {}
       mockRequest.payload = { state: { applicationStatus: 'IN_PROGRESS' } }
       patchApplicationState.mockResolvedValue(null)
 
@@ -251,6 +263,7 @@ describe('State', () => {
 
     test('should handle database errors and return 500', async () => {
       mockRequest.params = defaultParams
+      mockRequest.query = {}
       mockRequest.payload = { state: { applicationStatus: 'IN_PROGRESS' } }
 
       const dbError = new Error('Database error')
@@ -345,7 +358,7 @@ describe('State', () => {
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
-    test('rethrows Boom errors (e.g. 400 for a missing applicationRef) instead of masking them as 500', async () => {
+    test('rethrows Boom errors (e.g. 400 for a missing referenceNumber) instead of masking them as 500', async () => {
       mockRequest.payload = { ...defaultQuery, state: { key: 'value' } }
       const boomError = Object.assign(new Error('Missing ref'), { isBoom: true })
       saveApplicationState.mockRejectedValue(boomError)
@@ -483,16 +496,83 @@ describe('State', () => {
       )
     })
 
-    test('passes applicationRef through to getApplicationState when supplied', async () => {
-      const mockDocument = { grantVersion: '1.0.0', sbi: 'business123', grantCode: 'grant123', applicationRef: 'REF-1' }
+    test('passes referenceNumber through to getApplicationState when supplied', async () => {
+      const mockDocument = { grantVersion: '1.0.0', sbi: 'business123', grantCode: 'grant123', referenceNumber: 'REF-1' }
       getApplicationState.mockResolvedValue(mockDocument)
-      mockRequest.query = { ...defaultQuery, applicationRef: 'REF-1' }
+      mockRequest.query = { ...defaultQuery, referenceNumber: 'REF-1' }
 
       await stateRetrieve.handler(mockRequest, mockH)
 
-      expect(getApplicationState).toHaveBeenCalledWith({ ...defaultQuery, applicationRef: 'REF-1' })
+      expect(getApplicationState).toHaveBeenCalledWith({ ...defaultQuery, referenceNumber: 'REF-1' })
       expect(mockH.response).toHaveBeenCalledWith(mockDocument)
       expect(mockH.code).toHaveBeenCalledWith(200)
+    })
+  })
+
+  describe('stateListApplications', () => {
+    const listQuery = { sbi: 'business123', grantCode: 'grant123' }
+
+    test('should retrieve applications and return 200', async () => {
+      const applications = [{ grantCode: 'grant123', referenceNumber: 'REF-1', updatedAt: '2026-01-01' }]
+      listApplications.mockResolvedValue(applications)
+      mockRequest.query = listQuery
+
+      await stateListApplications.handler(mockRequest, mockH)
+
+      expect(listApplications).toHaveBeenCalledWith(listQuery)
+      expect(mockH.response).toHaveBeenCalledWith({ applications })
+      expect(mockH.code).toHaveBeenCalledWith(200)
+    })
+
+    test('should return 200 with an empty array when no applications exist', async () => {
+      listApplications.mockResolvedValue([])
+      mockRequest.query = listQuery
+
+      await stateListApplications.handler(mockRequest, mockH)
+
+      expect(mockH.response).toHaveBeenCalledWith({ applications: [] })
+      expect(mockH.code).toHaveBeenCalledWith(200)
+    })
+
+    test('should handle database errors and return 500', async () => {
+      mockRequest.query = listQuery
+      listApplications.mockRejectedValue(new Error('Database error'))
+
+      await stateListApplications.handler(mockRequest, mockH)
+
+      expect(mockH.response).toHaveBeenCalledWith({ error: 'Failed to retrieve applications' })
+      expect(mockH.code).toHaveBeenCalledWith(500)
+    })
+
+    test('should validate query and throw error for invalid data', () => {
+      const invalidQuery = { grantCode: 'grant123' } // missing sbi
+
+      const mockValidationRequest = {
+        server: mockServer,
+        query: invalidQuery
+      }
+
+      const mockError = new Error('Validation error')
+      mockError.name = 'ValidationError'
+      mockError.code = 400
+      mockError.reason = 'Some reason'
+
+      expect(() => stateListApplications.options.validate.failAction(mockValidationRequest, mockH, mockError)).toThrow(
+        'Validation error'
+      )
+      expect(log).toHaveBeenCalledWith(
+        LogCodes.STATE.STATE_RETRIEVE_FAILED,
+        expect.objectContaining({
+          sbi: invalidQuery.sbi,
+          grantCode: invalidQuery.grantCode,
+          errorName: mockError.name,
+          errorMessage: `GET /state/applications, validation failed: ${mockError.message}`,
+          errorReason: mockError.reason,
+          errorCode: mockError.code,
+          isMongoError: false,
+          stack: expect.stringContaining('ValidationError: Validation error')
+        })
+      )
     })
   })
 

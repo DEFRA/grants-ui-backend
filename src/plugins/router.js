@@ -5,7 +5,8 @@ import {
   stateRetrieve,
   stateDelete,
   statePatch,
-  stateWithDefinition
+  stateWithDefinition,
+  stateListApplications
 } from '../modules/state/state.routes.js'
 import { addSubmission, retrieveSubmissions } from '../modules/state/submissions.routes.js'
 import { allowlistGrants } from '../modules/allowlist/allowlist.routes.js'
@@ -21,6 +22,7 @@ const router = {
         stateRetrieve,
         stateDelete,
         stateWithDefinition,
+        stateListApplications,
         addSubmission,
         retrieveSubmissions,
         statePatch,

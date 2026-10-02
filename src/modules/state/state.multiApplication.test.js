@@ -21,6 +21,7 @@ import {
 } from './state.service.js'
 import { updateApplicationStateVersion } from './state.repository.js'
 import { up as upMultiApplicationIndexes } from '~/migrations/state/20260924000000-multi-application-indexes.js'
+import { up as upRenameApplicationRefToReferenceNumber } from '~/migrations/state/20261002000000-rename-application-ref-to-reference-number.js'
 
 const STATE_COLLECTION = 'state__grant_application_state'
 const CONFIG_COLLECTION = 'config__form_definitions'
@@ -42,6 +43,7 @@ describe('multi-application save/retrieve', () => {
       .drop()
       .catch(() => {})
     await upMultiApplicationIndexes(db)
+    await upRenameApplicationRefToReferenceNumber(db)
   })
 
   afterAll(async () => {
@@ -88,7 +90,7 @@ describe('multi-application save/retrieve', () => {
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '111', grantCode: 'standard-grant' }).toArray()
       expect(docs).toHaveLength(1)
       expect(docs[0].state.answer).toBe('second')
-      expect(docs[0].applicationRef).toBe('REF-B')
+      expect(docs[0].referenceNumber).toBe('REF-B')
       expect(docs[0].allowMultipleApplications).toBe(false)
     })
 
@@ -108,7 +110,7 @@ describe('multi-application save/retrieve', () => {
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '112', grantCode: 'unconfigured-grant' }).toArray()
       expect(docs).toHaveLength(1)
-      expect(docs[0].applicationRef).toBe('REF-B')
+      expect(docs[0].referenceNumber).toBe('REF-B')
     })
 
     test('getApplicationState retrieves the single document by sbi/grantCode/grantVersion', async () => {
@@ -121,7 +123,7 @@ describe('multi-application save/retrieve', () => {
       })
 
       const result = await getApplicationState({ sbi: '111', grantCode: 'standard-grant', grantVersion: '1.0.0' })
-      expect(result.applicationRef).toBe('REF-A')
+      expect(result.referenceNumber).toBe('REF-A')
     })
 
     test('stores exactly one document for the sbi/grantCode', async () => {
@@ -135,12 +137,12 @@ describe('multi-application save/retrieve', () => {
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '111', grantCode: 'standard-grant' }).toArray()
       expect(docs).toHaveLength(1)
-      expect(docs[0].applicationRef).toBe('REF-A')
+      expect(docs[0].referenceNumber).toBe('REF-A')
     })
   })
 
   describe('multi-application scheme (allowMultipleApplications: true)', () => {
-    test('saving with two different applicationRefs creates two independent documents', async () => {
+    test('saving with two different referenceNumbers creates two independent documents', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
 
       await saveApplicationState({
@@ -158,10 +160,10 @@ describe('multi-application save/retrieve', () => {
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '222', grantCode: 'multi-grant' }).toArray()
       expect(docs).toHaveLength(2)
-      expect(docs.map((d) => d.applicationRef).sort()).toEqual(['REF-A', 'REF-B'])
+      expect(docs.map((d) => d.referenceNumber).sort()).toEqual(['REF-A', 'REF-B'])
     })
 
-    test('re-saving with the same applicationRef updates that application in place, not a third document', async () => {
+    test('re-saving with the same referenceNumber updates that application in place, not a third document', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
 
       await saveApplicationState({
@@ -185,7 +187,7 @@ describe('multi-application save/retrieve', () => {
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '222', grantCode: 'multi-grant' }).toArray()
       expect(docs).toHaveLength(2)
-      const refA = docs.find((d) => d.applicationRef === 'REF-A')
+      const refA = docs.find((d) => d.referenceNumber === 'REF-A')
       expect(refA.state.answer).toBe('updated draft')
     })
 
@@ -210,7 +212,7 @@ describe('multi-application save/retrieve', () => {
       expect(docs.map((d) => d.state.applicationStatus).sort()).toEqual(['DRAFT', 'SUBMITTED'])
     })
 
-    test('getApplicationState with applicationRef retrieves the exact application', async () => {
+    test('getApplicationState with referenceNumber retrieves the exact application', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
       await saveApplicationState({
         sbi: '222',
@@ -229,12 +231,12 @@ describe('multi-application save/retrieve', () => {
         sbi: '222',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        applicationRef: 'REF-B'
+        referenceNumber: 'REF-B'
       })
       expect(result.state.answer).toBe('B')
     })
 
-    test('stores one document per applicationRef for the sbi', async () => {
+    test('stores one document per referenceNumber for the sbi', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
       await saveApplicationState({
         sbi: '222',
@@ -271,7 +273,7 @@ describe('multi-application save/retrieve', () => {
 
       // A definition bump lands and getStateWithFormDefinition upgrades one
       // application (whichever the latest-version lookup returns) in place.
-      const appA = await db.collection(STATE_COLLECTION).findOne({ sbi: '224', applicationRef: 'REF-A' })
+      const appA = await db.collection(STATE_COLLECTION).findOne({ sbi: '224', referenceNumber: 'REF-A' })
       await updateApplicationStateVersion({ _id: appA._id, grantVersion: '1.1.0', major: 1, minor: 1, patch: 0 })
 
       // grants-ui now saves the sibling application at the newly resolved version.
@@ -285,13 +287,13 @@ describe('multi-application save/retrieve', () => {
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '224', grantCode: 'multi-grant' }).toArray()
       expect(docs).toHaveLength(2)
 
-      const refB = docs.filter((d) => d.applicationRef === 'REF-B')
+      const refB = docs.filter((d) => d.referenceNumber === 'REF-B')
       expect(refB).toHaveLength(1)
       expect(refB[0].state.answer).toBe('B updated')
       expect(refB[0].grantVersion).toBe('1.1.0')
     })
 
-    test('a save with no applicationRef is rejected and writes nothing', async () => {
+    test('a save with no referenceNumber is rejected and writes nothing', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
 
       await expect(
@@ -346,13 +348,13 @@ describe('multi-application save/retrieve', () => {
 
       docs = await db.collection(STATE_COLLECTION).find({ sbi: '226', grantCode: 'flipping-grant' }).toArray()
       expect(docs).toHaveLength(2)
-      expect(docs.map((d) => d.applicationRef).sort()).toEqual(['REF-EXISTING', 'REF-SECOND'])
+      expect(docs.map((d) => d.referenceNumber).sort()).toEqual(['REF-EXISTING', 'REF-SECOND'])
     })
 
     test('a pre-release document (ref only nested in state) survives the flag being enabled, once migrated', async () => {
       await insertDefinition({ grantCode: 'legacy-grant', allowMultipleApplications: true })
 
-      // Written before this release: no top-level applicationRef or flag,
+      // Written before this release: no top-level referenceNumber or flag,
       // the reference exists only inside the opaque state payload.
       await db.collection(STATE_COLLECTION).insertOne({
         sbi: '227',
@@ -368,6 +370,7 @@ describe('multi-application save/retrieve', () => {
       })
 
       await upMultiApplicationIndexes(db)
+      await upRenameApplicationRefToReferenceNumber(db)
 
       await saveApplicationState({
         sbi: '227',
@@ -378,7 +381,7 @@ describe('multi-application save/retrieve', () => {
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '227', grantCode: 'legacy-grant' }).toArray()
       expect(docs).toHaveLength(1)
-      expect(docs[0].applicationRef).toBe('REF-LEGACY')
+      expect(docs[0].referenceNumber).toBe('REF-LEGACY')
       expect(docs[0].state.answer).toBe('resumed')
     })
 
@@ -402,10 +405,10 @@ describe('multi-application save/retrieve', () => {
         grantCode: 'multi-grant',
         ownerId: 'user-1',
         includeDefinition: false,
-        applicationRef: 'REF-B'
+        referenceNumber: 'REF-B'
       })
 
-      expect(result.state.applicationRef).toBe('REF-B')
+      expect(result.state.referenceNumber).toBe('REF-B')
       expect(result.state.state.answer).toBe('B')
     })
 
@@ -435,9 +438,9 @@ describe('multi-application save/retrieve', () => {
         state: { $$__referenceNumber: 'REF-A', answer: 'A edited' }
       })
 
-      const docs = await db.collection(STATE_COLLECTION).find({ sbi: '231' }).sort({ applicationRef: 1 }).toArray()
+      const docs = await db.collection(STATE_COLLECTION).find({ sbi: '231' }).sort({ referenceNumber: 1 }).toArray()
       expect(docs).toHaveLength(2)
-      expect(docs.map((d) => [d.applicationRef, d.state.answer])).toEqual([
+      expect(docs.map((d) => [d.referenceNumber, d.state.answer])).toEqual([
         ['REF-A', 'A edited'],
         ['REF-B', 'B']
       ])
@@ -464,6 +467,31 @@ describe('multi-application save/retrieve', () => {
       expect(docs[0].state.answer).toBe('second')
     })
 
+    test('an application is found by ref after its version has been upgraded', async () => {
+      await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
+      await saveApplicationState({
+        sbi: '233',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'REF-A', answer: 'A' }
+      })
+
+      const app = await db.collection(STATE_COLLECTION).findOne({ sbi: '233', referenceNumber: 'REF-A' })
+      await updateApplicationStateVersion({ _id: app._id, grantVersion: '1.3.0', major: 1, minor: 3, patch: 0 })
+
+      // The caller still holds the version it last saw (or the schema default).
+      const result = await getApplicationState({
+        sbi: '233',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        referenceNumber: 'REF-A'
+      })
+
+      expect(result).not.toBeNull()
+      expect(result.referenceNumber).toBe('REF-A')
+      expect(result.grantVersion).toBe('1.3.0')
+    })
+
     test('patching applicationStatus targets only the named application', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
       await saveApplicationState({
@@ -484,11 +512,11 @@ describe('multi-application save/retrieve', () => {
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
         applicationStatus: 'SUBMITTED',
-        applicationRef: 'REF-B'
+        referenceNumber: 'REF-B'
       })
 
-      const docs = await db.collection(STATE_COLLECTION).find({ sbi: '228' }).sort({ applicationRef: 1 }).toArray()
-      expect(docs.map((d) => [d.applicationRef, d.state.applicationStatus])).toEqual([
+      const docs = await db.collection(STATE_COLLECTION).find({ sbi: '228' }).sort({ referenceNumber: 1 }).toArray()
+      expect(docs.map((d) => [d.referenceNumber, d.state.applicationStatus])).toEqual([
         ['REF-A', 'DRAFT'],
         ['REF-B', 'SUBMITTED']
       ])
@@ -513,12 +541,12 @@ describe('multi-application save/retrieve', () => {
         sbi: '229',
         grantCode: 'multi-grant',
         grantVersion: '1.0.0',
-        applicationRef: 'REF-A'
+        referenceNumber: 'REF-A'
       })
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '229' }).toArray()
       expect(docs).toHaveLength(1)
-      expect(docs[0].applicationRef).toBe('REF-B')
+      expect(docs[0].referenceNumber).toBe('REF-B')
     })
 
     test('stores a single document when the sbi has only one application', async () => {
@@ -532,7 +560,7 @@ describe('multi-application save/retrieve', () => {
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '223', grantCode: 'multi-grant' }).toArray()
       expect(docs).toHaveLength(1)
-      expect(docs[0].applicationRef).toBe('REF-A')
+      expect(docs[0].referenceNumber).toBe('REF-A')
     })
   })
 })

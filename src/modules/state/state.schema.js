@@ -54,7 +54,7 @@ export const stateRetrieveSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required(),
   grantVersion: grantVersion().default('1.0.0'),
-  applicationRef: Joi.string().optional(),
+  referenceNumber: Joi.string().optional(),
   document: Joi.boolean().optional() // TODO - remove when grants-ui changes for combined endpoint are merged
 })
 
@@ -67,7 +67,7 @@ export const stateWithDefinitionSchema = Joi.object({
   includeDefinition: Joi.boolean().default(true),
   // Selects one application when the grant allows several per SBI. Omitted,
   // the highest-semver application is resolved, as before.
-  applicationRef: Joi.string().optional()
+  referenceNumber: Joi.string().optional()
 })
   .required()
   .unknown(false) // Disallow unknown top-level fields
@@ -78,9 +78,14 @@ export const patchParamsSchema = Joi.object({
   grantVersion: grantVersion().default('1.0.0')
 })
 
+export const patchQuerySchema = Joi.object({
+  // Selects one application when the grant allows several per SBI. A query
+  // param rather than a path segment because it is optional, and alongside
+  // sbi/grantCode/grantVersion on GET/DELETE /state for consistency.
+  referenceNumber: Joi.string().optional()
+})
+
 export const patchSchema = Joi.object({
-  // Selects one application when the grant allows several per SBI.
-  applicationRef: Joi.string().optional(),
   state: Joi.object({
     applicationStatus: Joi.string().required()
   })
@@ -124,6 +129,11 @@ export const applicationLockReleaseSchema = Joi.object({
 // --- admin/test-data route ---
 
 export const clearTestDataSchema = Joi.object({
+  sbi: Joi.string().required(),
+  grantCode: Joi.string().required()
+})
+
+export const stateListApplicationsSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required()
 })

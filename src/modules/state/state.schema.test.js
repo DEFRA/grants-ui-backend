@@ -1,4 +1,11 @@
-import { stateSaveSchema, stateRetrieveSchema, stateWithDefinitionSchema, addSubmissionSchema } from './state.schema.js'
+import {
+  stateSaveSchema,
+  stateRetrieveSchema,
+  stateWithDefinitionSchema,
+  addSubmissionSchema,
+  patchSchema,
+  patchQuerySchema
+} from './state.schema.js'
 
 const validSave = {
   sbi: '123456789',
@@ -100,12 +107,40 @@ describe('stateWithDefinitionSchema', () => {
     expect(error).toBeDefined()
   })
 
-  test('rejects unknown fields (e.g. a stray referenceNumber)', () => {
+  test('rejects unknown fields', () => {
     const { error } = stateWithDefinitionSchema.validate({
       sbi: '123456789',
       grantCode: 'farm-payments',
-      referenceNumber: 'REF-1'
+      somethingUnrecognised: 'REF-1'
     })
     expect(error).toBeDefined()
+  })
+})
+
+describe('patchQuerySchema / patchSchema', () => {
+  test('patchQuerySchema accepts an omitted referenceNumber', () => {
+    const { error, value } = patchQuerySchema.validate({})
+    expect(error).toBeUndefined()
+    expect(value.referenceNumber).toBeUndefined()
+  })
+
+  test('patchQuerySchema accepts referenceNumber', () => {
+    const { error, value } = patchQuerySchema.validate({ referenceNumber: 'REF-1' })
+    expect(error).toBeUndefined()
+    expect(value.referenceNumber).toBe('REF-1')
+  })
+
+  test('patchSchema rejects referenceNumber in the body (it belongs on the query string now)', () => {
+    const { error } = patchSchema.validate({
+      referenceNumber: 'REF-1',
+      state: { applicationStatus: 'SUBMITTED' }
+    })
+    expect(error).toBeDefined()
+  })
+
+  test('patchSchema accepts just state.applicationStatus', () => {
+    const { error, value } = patchSchema.validate({ state: { applicationStatus: 'SUBMITTED' } })
+    expect(error).toBeUndefined()
+    expect(value).toEqual({ state: { applicationStatus: 'SUBMITTED' } })
   })
 })
