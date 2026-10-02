@@ -20,6 +20,7 @@
     "format:check": "prettier --check \"**/*.{cjs,js,json,md}\"",
     "generate:env": "node scripts/generatePrivateEnv.js",
     "generate:auth-header": "node scripts/generateAuthHeader.js",
+    "generate:user-context-header": "node scripts/generateUserContextHeader.js",
     "generate:lock-header": "node scripts/generateLockHeader.js",
     "generate:lock-release-header": "node scripts/generateLockReleaseHeader.js",
     "git:pre-commit-hook": "npm run format:check && npm run lint && npm test",

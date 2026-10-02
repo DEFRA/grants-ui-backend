@@ -1,8 +1,10 @@
+import Boom from '@hapi/boom'
 import { logIfApproachingPayloadLimit } from '../../common/helpers/logging/log-if-approaching-payload-limit.js'
 import { log, LogCodes } from '../../common/helpers/logging/log.js'
 import { enforceApplicationLock, extractLockKeys } from './lock-enforcement.js'
 import { StatusCodes } from 'http-status-codes'
 import {
+  listApplicationsSchema,
   stateSaveSchema,
   stateRetrieveSchema,
   stateWithDefinitionSchema,
@@ -10,6 +12,7 @@ import {
   patchSchema
 } from './state.schema.js'
 import {
+  listApplications,
   saveApplicationState,
   getApplicationState,
   deleteApplicationState,
@@ -273,6 +276,37 @@ export const stateWithDefinition = {
       return h
         .response({ error: 'Failed to retrieve state with form definition' })
         .code(StatusCodes.INTERNAL_SERVER_ERROR)
+    }
+  }
+}
+
+// Listing uses the authenticated business identity and does not take an edit lock.
+export const applicationsList = {
+  method: 'GET',
+  path: '/applications',
+  options: {
+    auth: 'bearer',
+    validate: { query: listApplicationsSchema }
+  },
+  handler: async (request, h) => {
+    const { grantCode } = request.query
+    const { crn, sbi } = request.auth.credentials
+    if (!crn || !sbi) {
+      throw Boom.unauthorized('crn and sbi are required in the x-user-context token')
+    }
+
+    try {
+      const applications = await listApplications({ sbi, grantCode })
+      return h.response({ applications }).code(StatusCodes.OK)
+    } catch (err) {
+      log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
+        sbi,
+        grantCode,
+        errorName: err.name,
+        errorMessage: err.message,
+        stack: err.stack?.split('\n')[0]
+      })
+      return h.response({ error: 'Failed to list applications' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
 }

@@ -1,4 +1,5 @@
 import {
+  listApplicationStates,
   initStateRepository,
   saveApplicationState,
   getApplicationState,
@@ -445,5 +446,35 @@ describe('state.repository cross-version helpers', () => {
     )
 
     expect(result.modifiedCount).toBe(0)
+  })
+})
+
+describe('listApplicationStates', () => {
+  afterEach(() => initStateRepository(null))
+
+  test('scopes the query, excludes purged applications and projects only selector metadata', async () => {
+    const toArray = jest.fn().mockResolvedValue([])
+    const sort = jest.fn().mockReturnValue({ toArray })
+    const find = jest.fn().mockReturnValue({ sort })
+    initStateRepository({ collection: () => ({ find }) })
+    await expect(listApplicationStates({ sbi: 'test-business', grantCode: 'test-grant' })).resolves.toEqual([])
+    expect(find).toHaveBeenCalledWith(
+      { sbi: 'test-business', grantCode: 'test-grant', 'state.applicationStatus': { $ne: 'PURGED' } },
+      {
+        projection: {
+          _id: 0,
+          applicationRef: 1,
+          grantVersion: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          legacyReferenceNumber: {
+            $getField: { field: { $literal: '$$__referenceNumber' }, input: '$state' }
+          },
+          'state.applicationStatus': 1,
+          'state.submittedAt': 1
+        }
+      }
+    )
+    expect(sort).toHaveBeenCalledWith({ createdAt: -1, applicationRef: 1 })
   })
 })
