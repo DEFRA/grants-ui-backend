@@ -326,6 +326,52 @@ security:
   - bearerAuth: []
 
 paths:
+  /applications:
+    get:
+      tags: [State]
+      summary: List application metadata for an SBI and grant
+      description: |
+        Returns draft and submitted application metadata across grant versions,
+        excluding purged applications and form answers. Does not acquire an edit
+        lock. The SBI is obtained from the signed x-user-context token, which
+        must contain both crn and sbi claims. Application statuses are returned
+        unchanged; an absent status is null. Existing POST /state creates a new
+        application when an enabled grant is saved with a fresh reference number.
+      security:
+        - bearerAuth: []
+          userContext: []
+      parameters:
+        - name: grantCode
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Applications ordered by creation date, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applications]
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        applicationRef: { type: string }
+                        referenceNumber: { type: string }
+                        grantVersion: { type: string }
+                        createdAt: { type: string, format: date-time }
+                        updatedAt: { type: string, format: date-time }
+                        applicationStatus: { type: [string, 'null'] }
+                        submittedAt: { type: [string, 'null'], format: date-time }
+        '400':
+          description: Invalid query
+        '401':
+          description: Missing or invalid authentication or user context
+        '500':
+          description: Failed to list applications
   /health:
     get:
       tags: [Health]

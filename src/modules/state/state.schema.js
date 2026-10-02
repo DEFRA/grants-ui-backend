@@ -127,3 +127,7 @@ export const clearTestDataSchema = Joi.object({
   sbi: Joi.string().required(),
   grantCode: Joi.string().required()
 })
+
+export const listApplicationsSchema = Joi.object({
+  grantCode: Joi.string().required()
+}).unknown(false)

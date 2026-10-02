@@ -13,6 +13,7 @@ import { MongoClient } from 'mongodb'
 import { initStateRepository } from './state.repository.js'
 import { initConfigRepository } from '../config/config.repository.js'
 import {
+  listApplications,
   saveApplicationState,
   getApplicationState,
   getStateWithFormDefinition,
@@ -67,6 +68,53 @@ describe('multi-application save/retrieve', () => {
       updatedAt: new Date()
     })
   }
+
+  test('lists only the current SBI and grant, across versions, excluding purged state and answers', async () => {
+    await db.collection(STATE_COLLECTION).insertMany([
+      {
+        sbi: 'test-business',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        applicationRef: 'REF-A',
+        createdAt: new Date('2026-01-01'),
+        state: { applicationStatus: 'SUBMITTED', answer: 'private' }
+      },
+      {
+        sbi: 'test-business',
+        grantCode: 'multi-grant',
+        grantVersion: '2.0.0',
+        applicationRef: 'REF-B',
+        createdAt: new Date('2026-02-01'),
+        state: {}
+      },
+      {
+        sbi: 'other-business',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        applicationRef: 'REF-C',
+        state: {}
+      },
+      {
+        sbi: 'test-business',
+        grantCode: 'other-grant',
+        grantVersion: '1.0.0',
+        applicationRef: 'REF-D',
+        state: {}
+      },
+      {
+        sbi: 'test-business',
+        grantCode: 'multi-grant',
+        grantVersion: '3.0.0',
+        applicationRef: 'REF-E',
+        state: { applicationStatus: 'PURGED' }
+      }
+    ])
+    const applications = await listApplications({ sbi: 'test-business', grantCode: 'multi-grant' })
+    expect(applications.map((application) => application.applicationRef)).toEqual(['REF-B', 'REF-A'])
+    expect(applications[0].applicationStatus).toBeNull()
+    expect(applications[1].applicationStatus).toBe('SUBMITTED')
+    expect(JSON.stringify(applications)).not.toContain('private')
+  })
 
   describe('standard scheme (allowMultipleApplications: false / absent) — unchanged behaviour', () => {
     test('saving twice for the same sbi/grantCode overwrites the single document, never creates a second one', async () => {

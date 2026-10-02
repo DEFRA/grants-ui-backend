@@ -24,6 +24,7 @@ import {
   findSubmissions as repoFindSubmissions,
   getLatestApplicationStateForGrant as repoGetLatestApplicationStateForGrant,
   hasMultipleApplications as repoHasMultipleApplications,
+  listApplicationStates as repoListApplicationStates,
   updateApplicationStateVersion as repoUpdateApplicationStateVersion,
   findUnsubmittedApplicationStates as repoFindUnsubmittedApplicationStates,
   purgeApplicationStates as repoPurgeApplicationStates,
@@ -401,4 +402,37 @@ export async function clearTestData({ sbi, grantCode }) {
     submissionsDeletedCount: submissionsResult.deletedCount,
     locksDeletedCount: locksResult.deletedCount
   }
+}
+
+/**
+ * Returns selector metadata, preserving Grants UI application statuses.
+ * Submission dates come from submission records when absent from form state.
+ *
+ * @param {{ sbi: string, grantCode: string }} params
+ * @returns {Promise<object[]>}
+ */
+export async function listApplications({ sbi, grantCode }) {
+  const [states, submissions] = await Promise.all([
+    repoListApplicationStates({ sbi, grantCode }),
+    repoFindSubmissions({ sbi, grantCode })
+  ])
+  const submissionDates = new Map()
+  for (const submission of submissions) {
+    if (!submissionDates.has(submission.referenceNumber)) {
+      submissionDates.set(submission.referenceNumber, submission.submittedAt)
+    }
+  }
+
+  return states.map(({ applicationRef, legacyReferenceNumber, grantVersion, createdAt, updatedAt, state }) => {
+    const referenceNumber = applicationRef ?? legacyReferenceNumber
+    return {
+      applicationRef: referenceNumber,
+      referenceNumber,
+      grantVersion,
+      createdAt,
+      updatedAt,
+      applicationStatus: state?.applicationStatus ?? null,
+      submittedAt: state?.submittedAt ?? submissionDates.get(referenceNumber) ?? null
+    }
+  })
 }
