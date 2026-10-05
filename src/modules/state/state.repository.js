@@ -648,3 +648,31 @@ export async function purgeApplicationStates(ids) {
     }
   )
 }
+
+/**
+ * Lists application metadata for one SBI and grant across grant versions.
+ * Answers are deliberately excluded from the selector response.
+ *
+ * @param {{ sbi: string, grantCode: string }} params
+ * @returns {Promise<ApplicationState[]>}
+ */
+export async function listApplicationStates({ sbi, grantCode }) {
+  return stateDb
+    .collection(STATE_COLLECTION)
+    .find(
+      { sbi, grantCode, 'state.applicationStatus': { $ne: 'PURGED' } },
+      {
+        projection: {
+          _id: 0,
+          applicationRef: 1,
+          grantVersion: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          'state.applicationStatus': 1,
+          'state.submittedAt': 1
+        }
+      }
+    )
+    .sort({ createdAt: -1, applicationRef: 1 })
+    .toArray()
+}

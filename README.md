@@ -268,6 +268,7 @@ npm run
 - `npm run format` – Auto-format code with Prettier
 - `npm run format:check` – Check code formatting without making changes
 - `npm run generate:auth-header` – Generate Bearer token for API authentication
+- `npm run generate:user-context-header` – Generate signed user context for user-scoped endpoints
 - `npm run generate:lock-header` – Generate lock token for application lock-protected routes
 - `npm run generate:lock-release-header` – Generate lock release token for application lock release route
 - `npm run generate:env` – Generate local HTTP client JWT headers into `http/http-client.private.env.json` (no `.env` required)
@@ -790,6 +791,36 @@ npm run generate:auth-header
 Copy the output `Authorization: Bearer ...` header and use it in Postman under the `grants-ui-backend-bearer_token` in Environments tab for your requests.
 
 ⚠️ Make sure the environment variables match what the backend config expects.
+
+### Generating a User Context Header
+
+`GET /applications?grantCode=<grant-code>` requires the Authorization header
+and a signed `x-user-context` JWT. It obtains the SBI from this JWT and does
+not require an application lock token.
+
+Set these in your local `.env` file:
+
+```text
+ENCRYPTED_AUTH_JWT_SECRET=<same secret configured on the running backend>
+CRN=<local test user CRN>
+SBI=<local test business SBI>
+```
+
+Generate a header valid for 15 minutes:
+
+```bash
+npm run generate:user-context-header
+```
+
+Copy both generated headers into curl:
+
+```bash
+curl 'http://localhost:3001/applications?grantCode=grasslands' \
+  -H 'Authorization: Bearer <generated authorization token>' \
+  -H 'x-user-context: <generated user context JWT>'
+```
+
+The selected SBI must match persisted applications to return a non-empty list.
 
 ### Generating an Application Lock Header
 

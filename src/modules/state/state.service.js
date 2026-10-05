@@ -24,6 +24,7 @@ import {
   findSubmissions as repoFindSubmissions,
   getLatestApplicationStateForGrant as repoGetLatestApplicationStateForGrant,
   hasMultipleApplications as repoHasMultipleApplications,
+  listApplicationStates as repoListApplicationStates,
   updateApplicationStateVersion as repoUpdateApplicationStateVersion,
   findUnsubmittedApplicationStates as repoFindUnsubmittedApplicationStates,
   purgeApplicationStates as repoPurgeApplicationStates,
@@ -401,4 +402,25 @@ export async function clearTestData({ sbi, grantCode }) {
     submissionsDeletedCount: submissionsResult.deletedCount,
     locksDeletedCount: locksResult.deletedCount
   }
+}
+
+/**
+ * Returns selector metadata, preserving Grants UI application statuses.
+ * The submitted date is taken from the persisted application state.
+ *
+ * @param {{ sbi: string, grantCode: string }} params
+ * @returns {Promise<object[]>}
+ */
+export async function listApplications({ sbi, grantCode }) {
+  const states = await repoListApplicationStates({ sbi, grantCode })
+
+  return states.map(({ applicationRef, grantVersion, createdAt, updatedAt, state }) => ({
+    applicationRef,
+    referenceNumber: applicationRef,
+    grantVersion,
+    createdAt,
+    updatedAt,
+    applicationStatus: state?.applicationStatus ?? null,
+    submittedAt: state?.submittedAt ?? null
+  }))
 }
