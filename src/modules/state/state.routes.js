@@ -281,7 +281,7 @@ export const stateWithDefinition = {
 }
 
 // Listing uses the authenticated business identity and does not take an edit lock.
-export const applicationsList = {
+export const stateApplications = {
   method: 'GET',
   path: '/applications',
   options: {

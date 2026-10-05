@@ -335,7 +335,8 @@ paths:
         excluding purged applications and form answers. Does not acquire an edit
         lock. The SBI is obtained from the signed x-user-context token, which
         must contain both crn and sbi claims. Application statuses are returned
-        unchanged; an absent status is null. Existing POST /state creates a new
+        unchanged; an absent status is null. The submitted date comes from
+        application state and is null when absent. Existing POST /state creates a new
         application when an enabled grant is saved with a fresh reference number.
       security:
         - bearerAuth: []

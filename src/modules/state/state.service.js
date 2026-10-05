@@ -406,33 +406,21 @@ export async function clearTestData({ sbi, grantCode }) {
 
 /**
  * Returns selector metadata, preserving Grants UI application statuses.
- * Submission dates come from submission records when absent from form state.
+ * The submitted date is taken from the persisted application state.
  *
  * @param {{ sbi: string, grantCode: string }} params
  * @returns {Promise<object[]>}
  */
 export async function listApplications({ sbi, grantCode }) {
-  const [states, submissions] = await Promise.all([
-    repoListApplicationStates({ sbi, grantCode }),
-    repoFindSubmissions({ sbi, grantCode })
-  ])
-  const submissionDates = new Map()
-  for (const submission of submissions) {
-    if (!submissionDates.has(submission.referenceNumber)) {
-      submissionDates.set(submission.referenceNumber, submission.submittedAt)
-    }
-  }
+  const states = await repoListApplicationStates({ sbi, grantCode })
 
-  return states.map(({ applicationRef, legacyReferenceNumber, grantVersion, createdAt, updatedAt, state }) => {
-    const referenceNumber = applicationRef ?? legacyReferenceNumber
-    return {
-      applicationRef: referenceNumber,
-      referenceNumber,
-      grantVersion,
-      createdAt,
-      updatedAt,
-      applicationStatus: state?.applicationStatus ?? null,
-      submittedAt: state?.submittedAt ?? submissionDates.get(referenceNumber) ?? null
-    }
-  })
+  return states.map(({ applicationRef, grantVersion, createdAt, updatedAt, state }) => ({
+    applicationRef,
+    referenceNumber: applicationRef,
+    grantVersion,
+    createdAt,
+    updatedAt,
+    applicationStatus: state?.applicationStatus ?? null,
+    submittedAt: state?.submittedAt ?? null
+  }))
 }

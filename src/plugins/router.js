@@ -1,7 +1,7 @@
 import { health } from '../routes/health.js'
 import { applicationLockRelease, applicationLocksRelease } from '../modules/state/locks.routes.js'
 import {
-  applicationsList,
+  stateApplications,
   stateSave,
   stateRetrieve,
   stateDelete,
@@ -18,7 +18,7 @@ const router = {
     register: (server, _options) => {
       server.route([
         health,
-        applicationsList,
+        stateApplications,
         stateSave,
         stateRetrieve,
         stateDelete,

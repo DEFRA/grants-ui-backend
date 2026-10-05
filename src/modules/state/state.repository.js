@@ -668,9 +668,6 @@ export async function listApplicationStates({ sbi, grantCode }) {
           grantVersion: 1,
           createdAt: 1,
           updatedAt: 1,
-          legacyReferenceNumber: {
-            $getField: { field: { $literal: '$$__referenceNumber' }, input: '$state' }
-          },
           'state.applicationStatus': 1,
           'state.submittedAt': 1
         }
