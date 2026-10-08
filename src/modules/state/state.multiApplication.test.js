@@ -159,6 +159,18 @@ describe('multi-application save/retrieve', () => {
       expect(docs[0].applicationRef).toBe('REF-B')
     })
 
+    test('an unscoped delete and patch still target the single document (no applicationRef needed)', async () => {
+      await insertDefinition({ grantCode: 'standard-grant', allowMultipleApplications: false })
+      await saveApplicationState({ sbi: '115', grantCode: 'standard-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'REF-A' } })
+
+      const patched = await patchApplicationState({ sbi: '115', grantCode: 'standard-grant', grantVersion: '1.0.0', applicationStatus: 'SUBMITTED' })
+      expect(patched.state.applicationStatus).toBe('SUBMITTED')
+
+      const deleted = await deleteApplicationState({ sbi: '115', grantCode: 'standard-grant', grantVersion: '1.0.0' })
+      expect(deleted.applicationRef).toBe('REF-A')
+      expect(await db.collection(STATE_COLLECTION).countDocuments({ sbi: '115', grantCode: 'standard-grant' })).toBe(0)
+    })
+
     test('getApplicationState retrieves the single document by sbi/grantCode/grantVersion', async () => {
       await insertDefinition({ grantCode: 'standard-grant', allowMultipleApplications: false })
       await saveApplicationState({
@@ -355,7 +367,7 @@ describe('multi-application save/retrieve', () => {
       expect(docs).toHaveLength(0)
     })
 
-    test('a delete with no applicationRef is rejected and removes nothing', async () => {
+    test('a delete with no applicationRef is rejected and removes nothing when several applications share the version', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
       await saveApplicationState({ sbi: '226', grantCode: 'multi-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'A' } })
       await saveApplicationState({ sbi: '226', grantCode: 'multi-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'B' } })
@@ -367,7 +379,7 @@ describe('multi-application save/retrieve', () => {
       expect(await db.collection(STATE_COLLECTION).countDocuments({ sbi: '226', grantCode: 'multi-grant' })).toBe(2)
     })
 
-    test('a patch with no applicationRef is rejected and changes nothing', async () => {
+    test('a patch with no applicationRef is rejected and changes nothing when several applications share the version', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
       await saveApplicationState({ sbi: '227', grantCode: 'multi-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'A' } })
       await saveApplicationState({ sbi: '227', grantCode: 'multi-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'B' } })
