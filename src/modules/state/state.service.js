@@ -30,7 +30,8 @@ import {
   purgeApplicationStates as repoPurgeApplicationStates,
   deleteAllApplicationStatesForGrant as repoDeleteAllApplicationStatesForGrant,
   deleteAllSubmissionsForGrant as repoDeleteAllSubmissionsForGrant,
-  deleteAllApplicationLocksForGrant as repoDeleteAllApplicationLocksForGrant
+  deleteAllApplicationLocksForGrant as repoDeleteAllApplicationLocksForGrant,
+  countApplicationStatesForVersion as repoCountApplicationStatesForVersion
 } from './state.repository.js'
 import { normaliseGrantVersion } from './grant-version.js'
 import { resolveLatestVersion, resolveLatestVersionWithinMajor, getDefinition } from '../config/config.service.js'
@@ -150,7 +151,11 @@ export function getApplicationState({ sbi, grantCode, grantVersion, applicationR
  * @param {{ sbi: number|string, grantCode: string, grantVersion: string, applicationRef?: string }} params
  * @returns {Promise<ApplicationState|null>} The deleted document, or null if not found
  */
-export function deleteApplicationState({ sbi, grantCode, grantVersion, applicationRef }) {
+export async function deleteApplicationState({ sbi, grantCode, grantVersion, applicationRef }) {
+  await requireApplicationRefForMultiApplication(
+    { sbi, grantCode, grantVersion, applicationRef },
+    LogCodes.STATE.STATE_DELETE_MISSING_APPLICATION_REF
+  )
   return repoDeleteApplicationState({ sbi, grantCode, grantVersion, applicationRef })
 }
 
@@ -160,8 +165,31 @@ export function deleteApplicationState({ sbi, grantCode, grantVersion, applicati
  * @param {{ sbi: number|string, grantCode: string, grantVersion: string, applicationStatus: string, applicationRef?: string }} params
  * @returns {Promise<ApplicationState|null>} Updated document, or null if not found
  */
-export function patchApplicationState({ sbi, grantCode, grantVersion, applicationStatus, applicationRef }) {
+export async function patchApplicationState({ sbi, grantCode, grantVersion, applicationStatus, applicationRef }) {
+  await requireApplicationRefForMultiApplication(
+    { sbi, grantCode, grantVersion, applicationRef },
+    LogCodes.STATE.STATE_PATCH_MISSING_APPLICATION_REF
+  )
   return repoPatchApplicationState({ sbi, grantCode, grantVersion, applicationStatus, applicationRef })
+}
+
+/**
+ * Reference-keyed applications can share `(sbi, grantCode, grantVersion)`, so an unscoped
+ * delete or patch would hit an arbitrary one: refuse it. A standard grant's version-keyed
+ * documents never share that key, so they are unaffected.
+ *
+ * @param {{ sbi: number|string, grantCode: string, grantVersion: string, applicationRef?: string }} params
+ * @param {object} logCode
+ * @throws {Boom} 400 when more than one document matches and no applicationRef was given
+ */
+async function requireApplicationRefForMultiApplication({ sbi, grantCode, grantVersion, applicationRef }, logCode) {
+  if (applicationRef != null) {
+    return
+  }
+  if ((await repoCountApplicationStatesForVersion({ sbi, grantCode, grantVersion })) > 1) {
+    log(logCode, { sbi, grantCode, grantVersion })
+    throw Boom.badRequest('Missing applicationRef: several applications match')
+  }
 }
 
 /**
