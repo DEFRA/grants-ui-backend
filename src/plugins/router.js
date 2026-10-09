@@ -1,3 +1,4 @@
+import { latestDefinition } from '../modules/config/config.routes.js'
 import { health } from '../routes/health.js'
 import { applicationLockRelease, applicationLocksRelease } from '../modules/state/locks.routes.js'
 import {
@@ -18,6 +19,7 @@ const router = {
     register: (server, _options) => {
       server.route([
         health,
+        latestDefinition,
         stateApplications,
         stateSave,
         stateRetrieve,
