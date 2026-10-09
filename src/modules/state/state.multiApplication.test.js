@@ -161,9 +161,19 @@ describe('multi-application save/retrieve', () => {
 
     test('an unscoped delete and patch still target the single document (no applicationRef needed)', async () => {
       await insertDefinition({ grantCode: 'standard-grant', allowMultipleApplications: false })
-      await saveApplicationState({ sbi: '115', grantCode: 'standard-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'REF-A' } })
+      await saveApplicationState({
+        sbi: '115',
+        grantCode: 'standard-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'REF-A' }
+      })
 
-      const patched = await patchApplicationState({ sbi: '115', grantCode: 'standard-grant', grantVersion: '1.0.0', applicationStatus: 'SUBMITTED' })
+      const patched = await patchApplicationState({
+        sbi: '115',
+        grantCode: 'standard-grant',
+        grantVersion: '1.0.0',
+        applicationStatus: 'SUBMITTED'
+      })
       expect(patched.state.applicationStatus).toBe('SUBMITTED')
 
       const deleted = await deleteApplicationState({ sbi: '115', grantCode: 'standard-grant', grantVersion: '1.0.0' })
@@ -369,8 +379,18 @@ describe('multi-application save/retrieve', () => {
 
     test('a delete with no applicationRef is rejected and removes nothing when several applications share the version', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
-      await saveApplicationState({ sbi: '226', grantCode: 'multi-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'A' } })
-      await saveApplicationState({ sbi: '226', grantCode: 'multi-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'B' } })
+      await saveApplicationState({
+        sbi: '226',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'A' }
+      })
+      await saveApplicationState({
+        sbi: '226',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'B' }
+      })
 
       await expect(
         deleteApplicationState({ sbi: '226', grantCode: 'multi-grant', grantVersion: '1.0.0' })
@@ -381,21 +401,48 @@ describe('multi-application save/retrieve', () => {
 
     test('a patch with no applicationRef is rejected and changes nothing when several applications share the version', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
-      await saveApplicationState({ sbi: '227', grantCode: 'multi-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'A' } })
-      await saveApplicationState({ sbi: '227', grantCode: 'multi-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'B' } })
+      await saveApplicationState({
+        sbi: '227',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'A' }
+      })
+      await saveApplicationState({
+        sbi: '227',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'B' }
+      })
 
       await expect(
-        patchApplicationState({ sbi: '227', grantCode: 'multi-grant', grantVersion: '1.0.0', applicationStatus: 'SUBMITTED' })
+        patchApplicationState({
+          sbi: '227',
+          grantCode: 'multi-grant',
+          grantVersion: '1.0.0',
+          applicationStatus: 'SUBMITTED'
+        })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
 
-      const patched = await db.collection(STATE_COLLECTION).countDocuments({ sbi: '227', 'state.applicationStatus': 'SUBMITTED' })
+      const patched = await db
+        .collection(STATE_COLLECTION)
+        .countDocuments({ sbi: '227', 'state.applicationStatus': 'SUBMITTED' })
       expect(patched).toBe(0)
     })
 
     test('the unscoped read prefers a live application over a purged sibling', async () => {
       await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
-      await saveApplicationState({ sbi: '228', grantCode: 'multi-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'PURGED-1', applicationStatus: 'PURGED' } })
-      await saveApplicationState({ sbi: '228', grantCode: 'multi-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'LIVE-1' } })
+      await saveApplicationState({
+        sbi: '228',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'PURGED-1', applicationStatus: 'PURGED' }
+      })
+      await saveApplicationState({
+        sbi: '228',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'LIVE-1' }
+      })
 
       const picked = await getLatestApplicationStateForGrant({ sbi: '228', grantCode: 'multi-grant' })
 
@@ -404,7 +451,12 @@ describe('multi-application save/retrieve', () => {
 
     test('the unscoped read still returns a purged document when it is the only one (standard purge flow)', async () => {
       await insertDefinition({ grantCode: 'single-grant', allowMultipleApplications: false })
-      await saveApplicationState({ sbi: '229', grantCode: 'single-grant', grantVersion: '1.0.0', state: { $$__referenceNumber: 'ONLY', applicationStatus: 'PURGED' } })
+      await saveApplicationState({
+        sbi: '229',
+        grantCode: 'single-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'ONLY', applicationStatus: 'PURGED' }
+      })
 
       const picked = await getLatestApplicationStateForGrant({ sbi: '229', grantCode: 'single-grant' })
 
