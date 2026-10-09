@@ -20,7 +20,7 @@ import {
   patchApplicationState,
   deleteApplicationState
 } from './state.service.js'
-import { updateApplicationStateVersion } from './state.repository.js'
+import { getLatestApplicationStateForGrant, updateApplicationStateVersion } from './state.repository.js'
 import { up as upMultiApplicationIndexes } from '~/migrations/state/20260924000000-multi-application-indexes.js'
 
 const STATE_COLLECTION = 'state__grant_application_state'
@@ -157,6 +157,28 @@ describe('multi-application save/retrieve', () => {
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '112', grantCode: 'unconfigured-grant' }).toArray()
       expect(docs).toHaveLength(1)
       expect(docs[0].applicationRef).toBe('REF-B')
+    })
+
+    test('an unscoped delete and patch still target the single document (no applicationRef needed)', async () => {
+      await insertDefinition({ grantCode: 'standard-grant', allowMultipleApplications: false })
+      await saveApplicationState({
+        sbi: '115',
+        grantCode: 'standard-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'REF-A' }
+      })
+
+      const patched = await patchApplicationState({
+        sbi: '115',
+        grantCode: 'standard-grant',
+        grantVersion: '1.0.0',
+        applicationStatus: 'SUBMITTED'
+      })
+      expect(patched.state.applicationStatus).toBe('SUBMITTED')
+
+      const deleted = await deleteApplicationState({ sbi: '115', grantCode: 'standard-grant', grantVersion: '1.0.0' })
+      expect(deleted.applicationRef).toBe('REF-A')
+      expect(await db.collection(STATE_COLLECTION).countDocuments({ sbi: '115', grantCode: 'standard-grant' })).toBe(0)
     })
 
     test('getApplicationState retrieves the single document by sbi/grantCode/grantVersion', async () => {
@@ -353,6 +375,92 @@ describe('multi-application save/retrieve', () => {
 
       const docs = await db.collection(STATE_COLLECTION).find({ sbi: '225', grantCode: 'multi-grant' }).toArray()
       expect(docs).toHaveLength(0)
+    })
+
+    test('a delete with no applicationRef is rejected and removes nothing when several applications share the version', async () => {
+      await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
+      await saveApplicationState({
+        sbi: '226',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'A' }
+      })
+      await saveApplicationState({
+        sbi: '226',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'B' }
+      })
+
+      await expect(
+        deleteApplicationState({ sbi: '226', grantCode: 'multi-grant', grantVersion: '1.0.0' })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+
+      expect(await db.collection(STATE_COLLECTION).countDocuments({ sbi: '226', grantCode: 'multi-grant' })).toBe(2)
+    })
+
+    test('a patch with no applicationRef is rejected and changes nothing when several applications share the version', async () => {
+      await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
+      await saveApplicationState({
+        sbi: '227',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'A' }
+      })
+      await saveApplicationState({
+        sbi: '227',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'B' }
+      })
+
+      await expect(
+        patchApplicationState({
+          sbi: '227',
+          grantCode: 'multi-grant',
+          grantVersion: '1.0.0',
+          applicationStatus: 'SUBMITTED'
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+
+      const patched = await db
+        .collection(STATE_COLLECTION)
+        .countDocuments({ sbi: '227', 'state.applicationStatus': 'SUBMITTED' })
+      expect(patched).toBe(0)
+    })
+
+    test('the unscoped read prefers a live application over a purged sibling', async () => {
+      await insertDefinition({ grantCode: 'multi-grant', allowMultipleApplications: true })
+      await saveApplicationState({
+        sbi: '228',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'PURGED-1', applicationStatus: 'PURGED' }
+      })
+      await saveApplicationState({
+        sbi: '228',
+        grantCode: 'multi-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'LIVE-1' }
+      })
+
+      const picked = await getLatestApplicationStateForGrant({ sbi: '228', grantCode: 'multi-grant' })
+
+      expect(picked.applicationRef).toBe('LIVE-1')
+    })
+
+    test('the unscoped read still returns a purged document when it is the only one (standard purge flow)', async () => {
+      await insertDefinition({ grantCode: 'single-grant', allowMultipleApplications: false })
+      await saveApplicationState({
+        sbi: '229',
+        grantCode: 'single-grant',
+        grantVersion: '1.0.0',
+        state: { $$__referenceNumber: 'ONLY', applicationStatus: 'PURGED' }
+      })
+
+      const picked = await getLatestApplicationStateForGrant({ sbi: '229', grantCode: 'single-grant' })
+
+      expect(picked.applicationRef).toBe('ONLY')
     })
 
     test('enabling the flag on a grant with an in-flight application keeps that application, rather than stranding it', async () => {

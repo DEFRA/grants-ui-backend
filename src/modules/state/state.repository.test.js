@@ -256,7 +256,7 @@ describe('state.repository cross-version helpers', () => {
 
     const result = await getLatestApplicationStateForGrant({ sbi: '123', grantCode: 'EGWA' })
 
-    expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA' })
+    expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA', 'state.applicationStatus': { $ne: 'PURGED' } })
     expect(sort).toHaveBeenCalledWith({ major: -1, minor: -1, patch: -1 })
     expect(result).toBe(topDoc)
   })
