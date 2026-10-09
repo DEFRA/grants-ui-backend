@@ -1,13 +1,19 @@
-/**
- * Config module — route registration.
- *
- * SCAFFOLD ONLY. The Config domain (form definitions) currently lives in the
- * separate `grants-ui-config-api` service. When that service is rewritten and
- * merged into `grants-ui-backend`, its HTTP routes will be defined/registered
- * here, mirroring `src/modules/state/state.routes.js`.
- *
- * Until then this file is intentionally empty and is not wired into
- * `src/plugins/router.js`.
- */
+import Boom from '@hapi/boom'
+import Joi from 'joi'
+import { resolveLatestVersion } from './config.service.js'
 
-export const configRoutes = []
+export const latestDefinition = {
+  method: 'GET',
+  path: '/definitions/{grantCode}',
+  options: {
+    auth: 'bearer',
+    validate: { params: Joi.object({ grantCode: Joi.string().required() }) }
+  },
+  handler: async (request) => {
+    const definition = await resolveLatestVersion(request.params.grantCode)
+    if (!definition) {
+      throw Boom.notFound('Form definition not found')
+    }
+    return definition
+  }
+}

@@ -260,7 +260,13 @@ export const stateWithDefinition = {
     const { ownerId } = extractLockKeys(request, { requireGrantVersion: false })
 
     try {
-      const result = await getStateWithFormDefinition({ sbi, grantCode, ownerId, includeDefinition, applicationRef })
+      const result = await getStateWithFormDefinition({
+        sbi,
+        grantCode,
+        ownerId,
+        includeDefinition,
+        applicationRef
+      })
 
       if (!result) {
         return h.response({ error: FORM_DEFINITION_NOT_FOUND }).code(StatusCodes.NOT_FOUND)

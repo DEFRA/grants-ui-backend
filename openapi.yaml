@@ -326,6 +326,31 @@ security:
   - bearerAuth: []
 
 paths:
+  /definitions/{grantCode}:
+    get:
+      summary: Get the latest active grant form definition
+      operationId: getLatestDefinition
+      tags: [Config]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: grantCode
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Latest active definition; no application state or editing lock involved
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: Invalid or missing service credentials
+        '404':
+          description: No active definition found
   /applications:
     get:
       tags: [State]
