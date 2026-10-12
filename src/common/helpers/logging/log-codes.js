@@ -296,15 +296,15 @@ export const LogCodes = {
       messageFunc: ({ grantCode, version, status, entryCount }) =>
         `Upserted allowlist entries | grantCode=${grantCode} | version=${version} | status=${status} | entryCount=${entryCount}`
     },
-    INGEST_CLEARED: {
+    INGEST_FILE_MISSING: {
       level: 'debug',
       messageFunc: ({ grantCode, version }) =>
-        `No allowlist.yaml in manifest, clearing entries to open grant to all | grantCode=${grantCode} | version=${version}`
+        `No allowlist.yaml in manifest, preserving existing entries | grantCode=${grantCode} | version=${version}`
     },
-    INGEST_ENV_MISSING: {
+    INGEST_EMPTY: {
       level: 'warn',
       messageFunc: ({ grantCode, version }) =>
-        `No allowlist entries found for environment, grant will be closed to all users | grantCode=${grantCode} | version=${version}`
+        `No allowlist entries found for environment, preserving existing entries | grantCode=${grantCode} | version=${version}`
     },
     GRANTS_CHECKED: {
       level: 'debug',

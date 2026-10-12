@@ -517,16 +517,16 @@ describe('LogCodes', () => {
         'Upserted allowlist entries | grantCode=woodland | version=1.0.0 | status=active | entryCount=42'
       ],
       [
-        'INGEST_CLEARED',
+        'INGEST_FILE_MISSING',
         'debug',
         { grantCode: 'woodland', version: '1.0.0' },
-        'No allowlist.yaml in manifest, clearing entries to open grant to all | grantCode=woodland | version=1.0.0'
+        'No allowlist.yaml in manifest, preserving existing entries | grantCode=woodland | version=1.0.0'
       ],
       [
-        'INGEST_ENV_MISSING',
+        'INGEST_EMPTY',
         'warn',
         { grantCode: 'woodland', version: '1.0.0' },
-        'No allowlist entries found for environment, grant will be closed to all users | grantCode=woodland | version=1.0.0'
+        'No allowlist entries found for environment, preserving existing entries | grantCode=woodland | version=1.0.0'
       ],
       [
         'GRANTS_CHECKED',
