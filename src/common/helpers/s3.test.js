@@ -1,15 +1,10 @@
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
-import { load as loadYaml } from 'js-yaml'
 import { config } from '../../config.js'
 import { getS3Client, getYamlObject, _resetS3ClientForTests } from './s3.js'
 
 jest.mock('@aws-sdk/client-s3', () => ({
   S3Client: jest.fn(),
   GetObjectCommand: jest.fn((input) => ({ input }))
-}))
-
-jest.mock('js-yaml', () => ({
-  load: jest.fn()
 }))
 
 jest.mock('../../config.js', () => ({
@@ -75,14 +70,21 @@ describe('s3', () => {
         Body: { transformToString: jest.fn().mockResolvedValue('name: Farm Payments') }
       })
       S3Client.mockImplementation(() => ({ send }))
-      loadYaml.mockReturnValue({ name: 'Farm Payments' })
 
       const result = await getYamlObject('my-bucket', 'farm-payments.yaml')
 
       expect(GetObjectCommand).toHaveBeenCalledWith({ Bucket: 'my-bucket', Key: 'farm-payments.yaml' })
       expect(send).toHaveBeenCalledWith({ input: { Bucket: 'my-bucket', Key: 'farm-payments.yaml' } })
-      expect(loadYaml).toHaveBeenCalledWith('name: Farm Payments')
       expect(result).toEqual({ name: 'Farm Payments' })
+    })
+
+    test('rejects empty YAML by default', async () => {
+      const send = jest.fn().mockResolvedValue({
+        Body: { transformToString: jest.fn().mockResolvedValue('') }
+      })
+      S3Client.mockImplementation(() => ({ send }))
+
+      await expect(getYamlObject('my-bucket', 'farm-payments.yaml')).rejects.toThrow()
     })
 
     test('propagates errors from the S3 client', async () => {

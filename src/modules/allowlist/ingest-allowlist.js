@@ -7,6 +7,8 @@ import { config } from '../../config.js'
 /**
  * Fetches allowlist.yaml from S3 for the given grant version and replaces all
  * allowlist entries for that grant in Mongo.
+ * Missing files or empty entries for the current environment preserve the
+ * existing entries; they cannot be used to revoke access.
  *
  * Should only be called for active versions — callers are responsible for
  * checking status before calling.
@@ -22,20 +24,20 @@ export async function ingestAllowlist({ grantCode, version, bucket, manifest }) 
   const allowlistPath = manifest.find((path) => path === `${grantCode}/${version}/grants-ui/allowlist.yaml`)
 
   if (!allowlistPath) {
-    log(LogCodes.ALLOWLIST.INGEST_CLEARED, { grantCode, version })
-    await replaceAllowlistEntries(grantCode, [])
+    log(LogCodes.ALLOWLIST.INGEST_FILE_MISSING, { grantCode, version })
     return
   }
 
   const env = config.get('cdpEnvironment')
-  const allowlist = await getYamlObject(bucket, allowlistPath)
+  const allowlist = await getYamlObject(bucket, allowlistPath, { allowEmpty: true })
   const envBlock = allowlist?.[env]
 
-  if (!envBlock) {
-    log(LogCodes.ALLOWLIST.INGEST_ENV_MISSING, { grantCode, version })
+  const entries = buildAllowlistEntries(grantCode, envBlock)
+  if (entries.length === 0) {
+    log(LogCodes.ALLOWLIST.INGEST_EMPTY, { grantCode, version })
+    return
   }
 
-  const entries = buildAllowlistEntries(grantCode, envBlock)
   await replaceAllowlistEntries(grantCode, entries)
 
   log(LogCodes.ALLOWLIST.INGEST_UPSERTED, { grantCode, version, status: 'active', entryCount: entries.length })
