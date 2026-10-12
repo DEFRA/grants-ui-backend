@@ -176,7 +176,8 @@ export async function patchApplicationState({ sbi, grantCode, grantVersion, appl
 /**
  * Reference-keyed applications can share `(sbi, grantCode, grantVersion)`, so an unscoped
  * delete or patch would hit an arbitrary one: refuse it. A standard grant's version-keyed
- * documents never share that key, so they are unaffected.
+ * documents never share that key, so they are unaffected. The count and the write are
+ * separate queries, so a save landing between them is not caught; that window is accepted.
  *
  * @param {{ sbi: number|string, grantCode: string, grantVersion: string, applicationRef?: string }} params
  * @param {object} logCode

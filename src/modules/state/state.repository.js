@@ -342,14 +342,14 @@ export async function getApplicationState({ sbi, grantCode, grantVersion, applic
 }
 
 /**
- * How many documents an unscoped delete or patch on `(sbi, grantCode, grantVersion)` would
- * match. More than one is only possible for reference-keyed applications.
+ * How many documents (capped at 2) an unscoped delete or patch on `(sbi, grantCode, grantVersion)`
+ * would match. More than one is only possible for reference-keyed applications.
  *
  * @param {{ sbi: string, grantCode: string, grantVersion: string }} params
  * @returns {Promise<number>}
  */
 export async function countApplicationStatesForVersion({ sbi, grantCode, grantVersion }) {
-  return stateDb.collection(STATE_COLLECTION).countDocuments({ sbi, grantCode, grantVersion })
+  return stateDb.collection(STATE_COLLECTION).countDocuments({ sbi, grantCode, grantVersion }, { limit: 2 })
 }
 
 /**
@@ -424,7 +424,7 @@ export async function patchApplicationState({ sbi, grantCode, grantVersion, appl
  *
  * @param {{ sbi: string, grantCode: string, applicationRef?: string }} params
  *   Without `applicationRef`, an SBI holding several applications resolves
- *   to an arbitrary one.
+ *   to an arbitrary live one; a purged document is returned only when nothing else exists.
  * @returns {Promise<ApplicationState|null>}
  */
 export async function getLatestApplicationStateForGrant({ sbi, grantCode, applicationRef }) {

@@ -24,12 +24,12 @@ export const LogCodes = {
     STATE_DELETE_MISSING_APPLICATION_REF: {
       level: 'error',
       messageFunc: ({ sbi, grantCode, grantVersion }) =>
-        `Rejected delete for a multi-application grant: no applicationRef given | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
+        `Rejected delete: several applications share this version and no applicationRef given | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
     },
     STATE_PATCH_MISSING_APPLICATION_REF: {
       level: 'error',
       messageFunc: ({ sbi, grantCode, grantVersion }) =>
-        `Rejected patch for a multi-application grant: no applicationRef given | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
+        `Rejected patch: several applications share this version and no applicationRef given | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
     },
     STATE_PAYLOAD_SIZE_FAILED: {
       level: 'error',

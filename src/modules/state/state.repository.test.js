@@ -237,7 +237,12 @@ describe('state.repository CRUD error paths', () => {
 
     await getLatestApplicationStateForGrant({ sbi: '123', grantCode: 'EGWA' })
 
-    expect(find).toHaveBeenCalledWith({ sbi: '123', grantCode: 'EGWA' })
+    expect(find).toHaveBeenNthCalledWith(1, {
+      sbi: '123',
+      grantCode: 'EGWA',
+      'state.applicationStatus': { $ne: 'PURGED' }
+    })
+    expect(find).toHaveBeenNthCalledWith(2, { sbi: '123', grantCode: 'EGWA' })
   })
 })
 
