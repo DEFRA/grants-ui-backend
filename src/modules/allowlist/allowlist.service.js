@@ -17,27 +17,24 @@ export const allowlistCache = new LRUCache({ max: 500, ttl: 2 * 60 * 1000 })
  * Rules:
  * - Grants with no allowlist entries are closed to all users.
  * - Grants with allowAll: true are open to all users.
- * - Otherwise a user must appear in BOTH the crn list AND the sbi list.
+ * - Otherwise a user must appear in the sbi list.
  *
- * @param {string} crn
  * @param {string} sbi
  * @returns {Promise<Array<{ code: string, title: string, description: string|null, url: string|null }>>}
  */
-export async function resolveAllowedGrants(crn, sbi) {
-  const cacheKey = `${crn}:${sbi}`
+export async function resolveAllowedGrants(sbi) {
+  const cacheKey = String(sbi)
   const cached = allowlistCache.get(cacheKey)
   if (cached) {
     return cached
   }
 
-  const [allActiveGrants, crnMatches, sbiMatches, grantsWithAllowlist] = await Promise.all([
+  const [allActiveGrants, sbiMatches, grantsWithAllowlist] = await Promise.all([
     getAllActiveGrants(),
-    findGrantCodesByEntry('crn', String(crn)),
     findGrantCodesByEntry('sbi', String(sbi)),
     findGrantCodesWithAllowlist()
   ])
 
-  const crnSet = new Set(crnMatches)
   const sbiSet = new Set(sbiMatches)
 
   const allowed = allActiveGrants.filter(({ grantCode }) => {
@@ -48,10 +45,10 @@ export async function resolveAllowedGrants(crn, sbi) {
     if (allowlist.allowAll) {
       return true
     }
-    return crnSet.has(grantCode) && sbiSet.has(grantCode)
+    return sbiSet.has(grantCode)
   })
 
-  log(LogCodes.ALLOWLIST.GRANTS_CHECKED, { crn, sbi, matchedCount: allowed.length })
+  log(LogCodes.ALLOWLIST.GRANTS_CHECKED, { sbi, matchedCount: allowed.length })
 
   const grantsUiBaseUrl = config.get('grantsUiBaseUrl')
 

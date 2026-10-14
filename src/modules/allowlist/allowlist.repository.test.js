@@ -6,7 +6,7 @@ const COLLECTION = 'config__allowlist_entries'
 
 const makeEntry = (overrides = {}) => ({
   grantCode: 'woodland',
-  type: 'crn',
+  type: 'sbi',
   value: '1234567890',
   updatedAt: new Date('2024-01-01T00:00:00.000Z'),
   ...overrides
@@ -42,27 +42,27 @@ describe('allowlist.repository', () => {
       await db
         .collection(COLLECTION)
         .insertMany([
-          makeEntry({ grantCode: 'woodland', type: 'crn', value: '111' }),
-          makeEntry({ grantCode: 'farm-payments', type: 'crn', value: '111' }),
-          makeEntry({ grantCode: 'other-grant', type: 'crn', value: '999' })
+          makeEntry({ grantCode: 'woodland', type: 'sbi', value: '111' }),
+          makeEntry({ grantCode: 'farm-payments', type: 'sbi', value: '111' }),
+          makeEntry({ grantCode: 'other-grant', type: 'sbi', value: '999' })
         ])
 
-      const result = await findGrantCodesByEntry('crn', '111')
+      const result = await findGrantCodesByEntry('sbi', '111')
 
       expect(result).toHaveLength(2)
       expect(result).toEqual(expect.arrayContaining(['woodland', 'farm-payments']))
     })
 
     test('does not match entries of a different type', async () => {
-      await db.collection(COLLECTION).insertOne(makeEntry({ type: 'sbi', value: '111' }))
+      await db.collection(COLLECTION).insertOne(makeEntry({ type: 'allowAll', value: '111' }))
 
-      const result = await findGrantCodesByEntry('crn', '111')
+      const result = await findGrantCodesByEntry('sbi', '111')
 
       expect(result).toEqual([])
     })
 
     test('returns empty array when no entries match', async () => {
-      const result = await findGrantCodesByEntry('crn', 'unknown')
+      const result = await findGrantCodesByEntry('sbi', 'unknown')
 
       expect(result).toEqual([])
     })
@@ -73,9 +73,9 @@ describe('allowlist.repository', () => {
       await db
         .collection(COLLECTION)
         .insertMany([
-          makeEntry({ grantCode: 'woodland', type: 'crn', value: '111' }),
+          makeEntry({ grantCode: 'woodland', type: 'sbi', value: '111' }),
           makeEntry({ grantCode: 'woodland', type: 'sbi', value: '999' }),
-          makeEntry({ grantCode: 'farm-payments', type: 'crn', value: '222' })
+          makeEntry({ grantCode: 'farm-payments', type: 'sbi', value: '222' })
         ])
 
       const result = await findGrantCodesWithAllowlist()
@@ -91,7 +91,7 @@ describe('allowlist.repository', () => {
         .collection(COLLECTION)
         .insertMany([
           makeEntry({ grantCode: 'woodland', type: 'allowAll', value: 'true' }),
-          makeEntry({ grantCode: 'farm-payments', type: 'crn', value: '111' })
+          makeEntry({ grantCode: 'farm-payments', type: 'sbi', value: '111' })
         ])
 
       const result = await findGrantCodesWithAllowlist()

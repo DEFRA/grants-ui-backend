@@ -11,7 +11,7 @@ info:
     - The token is encrypted using AES-256-GCM and then base64 encoded.
     - The `/allowlist/grants` endpoint additionally requires the
       `x-user-context` header. This contains a JWT containing the user's
-      `crn` and `sbi` claims, signed using the shared `ENCRYPTED_AUTH_JWT_SECRET`.
+      `sbi` claim, signed using the shared `ENCRYPTED_AUTH_JWT_SECRET`.
 
   contact:
     name: DEFRA DDTS
@@ -843,26 +843,24 @@ paths:
       tags: [Allowlist]
       summary: Resolve grants accessible to a user
       description: |
-        Returns the list of active grants the user identified by `crn` and `sbi`
+        Returns the list of active grants the user identified by `sbi`
         is permitted to access.
 
         The user's identity is supplied in the `x-user-context` header as a JWT
-        containing `crn` and `sbi` claims. The JWT is signed by the calling service
+        containing an `sbi` claim. The JWT is signed by the calling service
         using the shared `ENCRYPTED_AUTH_JWT_SECRET`.
 
         Access rules (evaluated per environment):
         - Grants with **no allowlist entries** are **closed to all users**.
         - Grants with `allowAll: true` in their `allowlist.yaml` are **open to all users**.
-        - Otherwise the user must appear in **both** the CRN and SBI lists.
+        - Otherwise the user must appear in the SBI list.
 
-         The `allowlist.yaml` format (per environment, per grant config):
+        The `allowlist.yaml` format (per environment, per grant config):
 
         ```yaml
         dev:
           allowAll: true
         test:
-          crns:
-            - '1234567890'
           sbis:
             - '123456789'
         ```
@@ -883,7 +881,7 @@ paths:
                     description: Support for creating new woodland areas
                     url: http://localhost:3000/woodland
         '401':
-          description: Missing or invalid bearer token, or missing crn/sbi in JWT
+          description: Missing or invalid bearer token, or missing sbi in JWT
           content:
             application/json:
               schema:

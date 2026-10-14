@@ -49,7 +49,7 @@ describe('ingestAllowlist', () => {
   }
 
   test('fetches the current env block from allowlist.yaml and ingests it', async () => {
-    mockYamlBody('dev:\n  crns: ["111"]\n  sbis: ["222"]\nprod:\n  crns: ["999"]')
+    mockYamlBody('dev:\n  sbis: ["222"]\nprod:\n  sbis: ["999"]')
 
     await ingestAllowlist(baseParams)
 
@@ -58,9 +58,20 @@ describe('ingestAllowlist', () => {
       Key: 'woodland/1.0.0/grants-ui/allowlist.yaml'
     })
     expect(replaceAllowlistEntries).toHaveBeenCalledWith('woodland', [
-      { grantCode: 'woodland', type: 'crn', value: '111', updatedAt: expect.any(Date) },
       { grantCode: 'woodland', type: 'sbi', value: '222', updatedAt: expect.any(Date) }
     ])
+  })
+
+  test('ingests sbis successfully when allowlist.yaml has allowAll: false', async () => {
+    mockYamlBody('dev:\n  allowAll: false\n  sbis: ["222", "333"]')
+
+    await ingestAllowlist(baseParams)
+
+    expect(replaceAllowlistEntries).toHaveBeenCalledWith('woodland', [
+      { grantCode: 'woodland', type: 'sbi', value: '222', updatedAt: expect.any(Date) },
+      { grantCode: 'woodland', type: 'sbi', value: '333', updatedAt: expect.any(Date) }
+    ])
+    expect(log).not.toHaveBeenCalledWith('INGEST_EMPTY', expect.anything())
   })
 
   test('preserves entries when allowlist.yaml is not in manifest', async () => {
@@ -87,9 +98,9 @@ describe('ingestAllowlist', () => {
     ['comments-only', '# Allowlist managed outside config\n'],
     ['null', 'null'],
     ['an empty object', '{}'],
-    ['missing the current environment', 'prod:\n  crns: ["111"]'],
+    ['missing the current environment', 'prod:\n  sbis: ["111"]'],
     ['an empty environment block', 'dev: {}'],
-    ['empty CRN/SBI arrays', 'dev:\n  crns: []\n  sbis: []'],
+    ['an empty SBI array', 'dev:\n  sbis: []'],
     ['allowAll false without entries', 'dev:\n  allowAll: false']
   ])('warns and preserves entries when allowlist.yaml is %s', async (_description, yaml) => {
     mockYamlBody(yaml)

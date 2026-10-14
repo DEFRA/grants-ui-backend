@@ -10,14 +10,14 @@ export const allowlistGrants = {
     auth: 'bearer'
   },
   handler: async (request, h) => {
-    const { crn, sbi } = request.auth.credentials
+    const { sbi } = request.auth.credentials
 
-    if (!crn || !sbi) {
-      log(LogCodes.ALLOWLIST.GRANTS_UNAUTHORIZED, { errorMessage: 'crn and sbi missing from token' })
-      throw Boom.unauthorized('crn and sbi are required in the x-user-context token')
+    if (!sbi) {
+      log(LogCodes.ALLOWLIST.GRANTS_UNAUTHORIZED, { errorMessage: 'sbi missing from token' })
+      throw Boom.unauthorized('sbi is required in the x-user-context token')
     }
 
-    const grants = await resolveAllowedGrants(crn, sbi)
+    const grants = await resolveAllowedGrants(sbi)
     return h.response({ grants }).code(StatusCodes.OK)
   }
 }

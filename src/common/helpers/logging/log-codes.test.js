@@ -531,14 +531,14 @@ describe('LogCodes', () => {
       [
         'GRANTS_CHECKED',
         'debug',
-        { crn: '1234567890', sbi: '123456789', matchedCount: 2 },
-        'Allowlist grants checked | crn=1234567890 | sbi=123456789 | matchedCount=2'
+        { sbi: '123456789', matchedCount: 2 },
+        'Allowlist grants checked | sbi=123456789 | matchedCount=2'
       ],
       [
         'GRANTS_UNAUTHORIZED',
         'warn',
-        { errorMessage: 'crn and sbi are required' },
-        'GET /allowlist/grants, validation failed: crn and sbi are required'
+        { errorMessage: 'sbi is required' },
+        'GET /allowlist/grants, validation failed: sbi is required'
       ],
       [
         'STARTUP_PULL_FAILED',
