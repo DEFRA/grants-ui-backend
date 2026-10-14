@@ -10,8 +10,6 @@ export const allowlistGrants = {
     auth: 'bearer'
   },
   handler: async (request, h) => {
-    // Only sbi is used for allowlist resolution. A crn claim may still be
-    // present in the x-user-context token for backwards compatibility and is ignored.
     const { sbi } = request.auth.credentials
 
     if (!sbi) {

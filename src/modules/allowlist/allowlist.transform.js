@@ -5,10 +5,9 @@
  * allowlist.yaml env block structure:
  *   allowAll: true          # everyone is allowed; sbis are ignored
  *   sbis: ['333', '444']
- *   crns: ['111', '222']    # legacy, ignored — access is resolved by sbi only
  *
  * @param {string} grantCode
- * @param {{ allowAll?: boolean, crns?: string[], sbis?: string[] } | null | undefined} envBlock - the env-specific block from the parsed YAML
+ * @param {{ allowAll?: boolean, sbis?: string[] } | null | undefined} envBlock - the env-specific block from the parsed YAML
  * @returns {import('./allowlist.repository.js').AllowlistEntry[]}
  */
 export function buildAllowlistEntries(grantCode, envBlock) {

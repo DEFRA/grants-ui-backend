@@ -12,7 +12,7 @@ jest.mock('../../common/helpers/logging/log.js', () => {
   return { log: jest.fn(), LogCodes }
 })
 
-const mockRequest = (crn, sbi) => ({ auth: { credentials: { crn, sbi } } })
+const mockRequest = (sbi, extraClaims = {}) => ({ auth: { credentials: { sbi, ...extraClaims } } })
 
 describe('allowlistGrants route', () => {
   let mockH
@@ -37,7 +37,7 @@ describe('allowlistGrants route', () => {
       ]
       resolveAllowedGrants.mockResolvedValue(grants)
 
-      await allowlistGrants.handler(mockRequest('1234567890', '123456789'), mockH)
+      await allowlistGrants.handler(mockRequest('123456789'), mockH)
 
       expect(resolveAllowedGrants).toHaveBeenCalledWith('123456789')
       expect(mockH.response).toHaveBeenCalledWith({ grants })
@@ -47,40 +47,32 @@ describe('allowlistGrants route', () => {
     test('returns 200 with empty grants array when user has no allowed grants', async () => {
       resolveAllowedGrants.mockResolvedValue([])
 
-      await allowlistGrants.handler(mockRequest('1234567890', '123456789'), mockH)
+      await allowlistGrants.handler(mockRequest('123456789'), mockH)
 
       expect(mockH.response).toHaveBeenCalledWith({ grants: [] })
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
-    test('resolves grants by sbi when crn is missing from token (crn is no longer required)', async () => {
+    test('ignores additional claims in the token and resolves grants by sbi only', async () => {
       resolveAllowedGrants.mockResolvedValue([])
 
-      await allowlistGrants.handler(mockRequest(undefined, '123456789'), mockH)
+      await allowlistGrants.handler(mockRequest('123456789', { other: 'ignored' }), mockH)
 
+      expect(resolveAllowedGrants).toHaveBeenCalledTimes(1)
       expect(resolveAllowedGrants).toHaveBeenCalledWith('123456789')
       expect(mockH.code).toHaveBeenCalledWith(200)
       expect(log).not.toHaveBeenCalledWith(LogCodes.ALLOWLIST.GRANTS_UNAUTHORIZED, expect.anything())
     })
 
-    test('ignores crn from token and resolves grants by sbi only', async () => {
-      resolveAllowedGrants.mockResolvedValue([])
-
-      await allowlistGrants.handler(mockRequest('1234567890', '123456789'), mockH)
-
-      expect(resolveAllowedGrants).toHaveBeenCalledTimes(1)
-      expect(resolveAllowedGrants).toHaveBeenCalledWith('123456789')
-    })
-
     test('throws 401 when sbi is missing from token', async () => {
-      await expect(allowlistGrants.handler(mockRequest('1234567890', undefined), mockH)).rejects.toThrow(
+      await expect(allowlistGrants.handler(mockRequest(undefined), mockH)).rejects.toThrow(
         Boom.unauthorized().constructor
       )
       expect(resolveAllowedGrants).not.toHaveBeenCalled()
     })
 
     test('logs a warning when sbi is missing', async () => {
-      await expect(allowlistGrants.handler(mockRequest(undefined, undefined), mockH)).rejects.toThrow()
+      await expect(allowlistGrants.handler(mockRequest(undefined), mockH)).rejects.toThrow()
       expect(log).toHaveBeenCalledWith(LogCodes.ALLOWLIST.GRANTS_UNAUTHORIZED, expect.any(Object))
     })
   })

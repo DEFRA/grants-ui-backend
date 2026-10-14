@@ -33,9 +33,9 @@ describe('buildAllowlistEntries', () => {
     )
   })
 
-  test('ignores crns present in the config and only emits sbi entries', () => {
+  test('ignores unrecognised keys in the env block and only emits sbi entries', () => {
     const envBlock = {
-      crns: ['1111111111', '2222222222'],
+      other: ['1111111111', '2222222222'],
       sbis: ['123456789']
     }
 
@@ -43,10 +43,9 @@ describe('buildAllowlistEntries', () => {
 
     expect(entries).toHaveLength(1)
     expect(entries[0]).toMatchObject({ grantCode: 'woodland', type: 'sbi', value: '123456789' })
-    expect(entries.some((entry) => entry.type === 'crn')).toBe(false)
   })
 
-  test('reads sbis successfully when allowAll is false and no crns list is defined', () => {
+  test('reads sbis successfully when allowAll is false', () => {
     const entries = buildAllowlistEntries('woodland', { allowAll: false, sbis: ['123456789', '987654321'] })
 
     expect(entries).toHaveLength(2)
@@ -56,10 +55,6 @@ describe('buildAllowlistEntries', () => {
         expect.objectContaining({ grantCode: 'woodland', type: 'sbi', value: '987654321' })
       ])
     )
-  })
-
-  test('returns empty array when only crns are present', () => {
-    expect(buildAllowlistEntries('woodland', { crns: ['111'] })).toEqual([])
   })
 
   test('coerces numeric values to strings', () => {
@@ -74,15 +69,15 @@ describe('buildAllowlistEntries', () => {
     expect(entries).toEqual([])
   })
 
-  test('emits a single allowAll entry when allowAll is true, ignoring crns/sbis', () => {
-    const entries = buildAllowlistEntries('woodland', { allowAll: true, crns: ['111'], sbis: ['222'] })
+  test('emits a single allowAll entry when allowAll is true, ignoring sbis', () => {
+    const entries = buildAllowlistEntries('woodland', { allowAll: true, sbis: ['222'] })
 
     expect(entries).toHaveLength(1)
     expect(entries[0]).toMatchObject({ grantCode: 'woodland', type: 'allowAll', value: 'true' })
   })
 
   test('processes sbis normally when allowAll is false', () => {
-    const entries = buildAllowlistEntries('woodland', { allowAll: false, crns: ['111'], sbis: ['222'] })
+    const entries = buildAllowlistEntries('woodland', { allowAll: false, sbis: ['222'] })
 
     expect(entries).toHaveLength(1)
     expect(entries[0]).toMatchObject({ type: 'sbi', value: '222' })

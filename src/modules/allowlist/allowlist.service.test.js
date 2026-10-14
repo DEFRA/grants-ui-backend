@@ -147,7 +147,7 @@ describe('resolveAllowedGrants', () => {
     expect(getAllActiveGrants).toHaveBeenCalledTimes(1)
   })
 
-  test('queries the repository by sbi only — crn entries are never consulted', async () => {
+  test('queries the repository by sbi only', async () => {
     getAllActiveGrants.mockResolvedValue([woodland])
     findGrantCodesByEntry.mockResolvedValue([])
 
