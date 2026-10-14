@@ -308,8 +308,7 @@ export const LogCodes = {
     },
     GRANTS_CHECKED: {
       level: 'debug',
-      messageFunc: ({ crn, sbi, matchedCount }) =>
-        `Allowlist grants checked | crn=${crn} | sbi=${sbi} | matchedCount=${matchedCount}`
+      messageFunc: ({ sbi, matchedCount }) => `Allowlist grants checked | sbi=${sbi} | matchedCount=${matchedCount}`
     },
     GRANTS_UNAUTHORIZED: {
       level: 'warn',

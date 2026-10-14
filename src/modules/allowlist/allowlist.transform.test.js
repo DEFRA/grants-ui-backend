@@ -17,7 +17,23 @@ describe('buildAllowlistEntries', () => {
     expect(buildAllowlistEntries('woodland', {})).toEqual([])
   })
 
-  test('flattens crns and sbis into individual entry documents', () => {
+  test('flattens sbis into individual entry documents', () => {
+    const envBlock = {
+      sbis: ['123456789', '987654321']
+    }
+
+    const entries = buildAllowlistEntries('woodland', envBlock)
+
+    expect(entries).toHaveLength(2)
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ grantCode: 'woodland', type: 'sbi', value: '123456789' }),
+        expect.objectContaining({ grantCode: 'woodland', type: 'sbi', value: '987654321' })
+      ])
+    )
+  })
+
+  test('ignores crns present in the config and only emits sbi entries', () => {
     const envBlock = {
       crns: ['1111111111', '2222222222'],
       sbis: ['123456789']
@@ -25,32 +41,35 @@ describe('buildAllowlistEntries', () => {
 
     const entries = buildAllowlistEntries('woodland', envBlock)
 
-    expect(entries).toHaveLength(3)
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({ grantCode: 'woodland', type: 'sbi', value: '123456789' })
+    expect(entries.some((entry) => entry.type === 'crn')).toBe(false)
+  })
+
+  test('reads sbis successfully when allowAll is false and no crns list is defined', () => {
+    const entries = buildAllowlistEntries('woodland', { allowAll: false, sbis: ['123456789', '987654321'] })
+
+    expect(entries).toHaveLength(2)
     expect(entries).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ grantCode: 'woodland', type: 'crn', value: '1111111111' }),
-        expect.objectContaining({ grantCode: 'woodland', type: 'crn', value: '2222222222' }),
-        expect.objectContaining({ grantCode: 'woodland', type: 'sbi', value: '123456789' })
+        expect.objectContaining({ grantCode: 'woodland', type: 'sbi', value: '123456789' }),
+        expect.objectContaining({ grantCode: 'woodland', type: 'sbi', value: '987654321' })
       ])
     )
   })
 
+  test('returns empty array when only crns are present', () => {
+    expect(buildAllowlistEntries('woodland', { crns: ['111'] })).toEqual([])
+  })
+
   test('coerces numeric values to strings', () => {
-    const entries = buildAllowlistEntries('woodland', { crns: [1234567890], sbis: [123456789] })
+    const entries = buildAllowlistEntries('woodland', { sbis: [123456789] })
 
-    expect(entries[0].value).toBe('1234567890')
-    expect(entries[1].value).toBe('123456789')
+    expect(entries[0].value).toBe('123456789')
   })
 
-  test('handles missing crns or sbis gracefully', () => {
-    const entries = buildAllowlistEntries('woodland', { crns: ['111'] })
-
-    expect(entries).toHaveLength(1)
-    expect(entries[0]).toMatchObject({ type: 'crn', value: '111' })
-  })
-
-  test('ignores crns or sbis that are not arrays', () => {
-    const entries = buildAllowlistEntries('woodland', { crns: '1234567890', sbis: 123456789 })
+  test('ignores sbis that are not arrays', () => {
+    const entries = buildAllowlistEntries('woodland', { sbis: 123456789 })
 
     expect(entries).toEqual([])
   })
@@ -62,20 +81,15 @@ describe('buildAllowlistEntries', () => {
     expect(entries[0]).toMatchObject({ grantCode: 'woodland', type: 'allowAll', value: 'true' })
   })
 
-  test('processes crns/sbis normally when allowAll is false', () => {
+  test('processes sbis normally when allowAll is false', () => {
     const entries = buildAllowlistEntries('woodland', { allowAll: false, crns: ['111'], sbis: ['222'] })
 
-    expect(entries).toHaveLength(2)
-    expect(entries).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ type: 'crn', value: '111' }),
-        expect.objectContaining({ type: 'sbi', value: '222' })
-      ])
-    )
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({ type: 'sbi', value: '222' })
   })
 
   test('each entry has an updatedAt date', () => {
-    const entries = buildAllowlistEntries('woodland', { crns: ['111'] })
+    const entries = buildAllowlistEntries('woodland', { sbis: ['111'] })
 
     expect(entries[0].updatedAt).toBeInstanceOf(Date)
   })

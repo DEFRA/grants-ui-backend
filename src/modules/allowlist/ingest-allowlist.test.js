@@ -58,7 +58,28 @@ describe('ingestAllowlist', () => {
       Key: 'woodland/1.0.0/grants-ui/allowlist.yaml'
     })
     expect(replaceAllowlistEntries).toHaveBeenCalledWith('woodland', [
-      { grantCode: 'woodland', type: 'crn', value: '111', updatedAt: expect.any(Date) },
+      { grantCode: 'woodland', type: 'sbi', value: '222', updatedAt: expect.any(Date) }
+    ])
+  })
+
+  test('ingests sbis successfully when allowlist.yaml has allowAll: false and no crns list', async () => {
+    mockYamlBody('dev:\n  allowAll: false\n  sbis: ["222", "333"]')
+
+    await ingestAllowlist(baseParams)
+
+    expect(replaceAllowlistEntries).toHaveBeenCalledWith('woodland', [
+      { grantCode: 'woodland', type: 'sbi', value: '222', updatedAt: expect.any(Date) },
+      { grantCode: 'woodland', type: 'sbi', value: '333', updatedAt: expect.any(Date) }
+    ])
+    expect(log).not.toHaveBeenCalledWith('INGEST_EMPTY', expect.anything())
+  })
+
+  test('ignores crns in allowlist.yaml and ingests sbis only', async () => {
+    mockYamlBody('dev:\n  crns: ["111", "333"]\n  sbis: ["222"]')
+
+    await ingestAllowlist(baseParams)
+
+    expect(replaceAllowlistEntries).toHaveBeenCalledWith('woodland', [
       { grantCode: 'woodland', type: 'sbi', value: '222', updatedAt: expect.any(Date) }
     ])
   })
@@ -90,6 +111,7 @@ describe('ingestAllowlist', () => {
     ['missing the current environment', 'prod:\n  crns: ["111"]'],
     ['an empty environment block', 'dev: {}'],
     ['empty CRN/SBI arrays', 'dev:\n  crns: []\n  sbis: []'],
+    ['crns only (crns are ignored)', 'dev:\n  crns: ["111"]'],
     ['allowAll false without entries', 'dev:\n  allowAll: false']
   ])('warns and preserves entries when allowlist.yaml is %s', async (_description, yaml) => {
     mockYamlBody(yaml)

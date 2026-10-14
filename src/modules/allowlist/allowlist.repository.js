@@ -6,8 +6,8 @@
  * documents themselves, only the index — regardless of list size.
  *
  * Index: { type, value, grantCode }
- *   - type      : low cardinality prefix ('crn' | 'sbi') — narrows the scan quickly
- *   - value     : the actual CRN/SBI string — highly selective
+ *   - type      : low cardinality prefix ('sbi' | 'allowAll') — narrows the scan quickly
+ *   - value     : the actual SBI string — highly selective
  *   - grantCode : included last so distinct('grantCode', …) is fully covered
  *
  * Environment isolation is handled by infrastructure — each CDP environment
@@ -15,7 +15,7 @@
  */
 
 /**
- * @typedef {'crn' | 'sbi'} AllowlistEntryType
+ * @typedef {'sbi' | 'allowAll'} AllowlistEntryType
  *
  * @typedef {Object} AllowlistEntry
  * @property {string} grantCode

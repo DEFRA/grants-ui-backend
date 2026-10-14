@@ -39,7 +39,7 @@ describe('allowlistGrants route', () => {
 
       await allowlistGrants.handler(mockRequest('1234567890', '123456789'), mockH)
 
-      expect(resolveAllowedGrants).toHaveBeenCalledWith('1234567890', '123456789')
+      expect(resolveAllowedGrants).toHaveBeenCalledWith('123456789')
       expect(mockH.response).toHaveBeenCalledWith({ grants })
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
@@ -53,11 +53,23 @@ describe('allowlistGrants route', () => {
       expect(mockH.code).toHaveBeenCalledWith(200)
     })
 
-    test('throws 401 when crn is missing from token', async () => {
-      await expect(allowlistGrants.handler(mockRequest(undefined, '123456789'), mockH)).rejects.toThrow(
-        Boom.unauthorized().constructor
-      )
-      expect(resolveAllowedGrants).not.toHaveBeenCalled()
+    test('resolves grants by sbi when crn is missing from token (crn is no longer required)', async () => {
+      resolveAllowedGrants.mockResolvedValue([])
+
+      await allowlistGrants.handler(mockRequest(undefined, '123456789'), mockH)
+
+      expect(resolveAllowedGrants).toHaveBeenCalledWith('123456789')
+      expect(mockH.code).toHaveBeenCalledWith(200)
+      expect(log).not.toHaveBeenCalledWith(LogCodes.ALLOWLIST.GRANTS_UNAUTHORIZED, expect.anything())
+    })
+
+    test('ignores crn from token and resolves grants by sbi only', async () => {
+      resolveAllowedGrants.mockResolvedValue([])
+
+      await allowlistGrants.handler(mockRequest('1234567890', '123456789'), mockH)
+
+      expect(resolveAllowedGrants).toHaveBeenCalledTimes(1)
+      expect(resolveAllowedGrants).toHaveBeenCalledWith('123456789')
     })
 
     test('throws 401 when sbi is missing from token', async () => {
@@ -67,7 +79,7 @@ describe('allowlistGrants route', () => {
       expect(resolveAllowedGrants).not.toHaveBeenCalled()
     })
 
-    test('logs a warning when crn or sbi is missing', async () => {
+    test('logs a warning when sbi is missing', async () => {
       await expect(allowlistGrants.handler(mockRequest(undefined, undefined), mockH)).rejects.toThrow()
       expect(log).toHaveBeenCalledWith(LogCodes.ALLOWLIST.GRANTS_UNAUTHORIZED, expect.any(Object))
     })
