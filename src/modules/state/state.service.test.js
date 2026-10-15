@@ -409,6 +409,7 @@ describe('state CRUD service pass-throughs', () => {
   test('deleteApplicationState delegates to repository', async () => {
     const fakeDb = {
       collection: () => ({
+        countDocuments: async () => 1,
         findOneAndDelete: () => ({ _id: 'abc', ...params })
       })
     }
@@ -420,6 +421,7 @@ describe('state CRUD service pass-throughs', () => {
   test('patchApplicationState delegates to repository', async () => {
     const fakeDb = {
       collection: () => ({
+        countDocuments: async () => 1,
         findOneAndUpdate: () => ({ ...params, state: { applicationStatus: 'submitted' } })
       })
     }

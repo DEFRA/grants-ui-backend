@@ -21,6 +21,16 @@ export const LogCodes = {
       messageFunc: ({ sbi, grantCode, grantVersion }) =>
         `Rejected save for a multi-application grant: no applicationRef in state | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
     },
+    STATE_DELETE_MISSING_APPLICATION_REF: {
+      level: 'error',
+      messageFunc: ({ sbi, grantCode, grantVersion }) =>
+        `Rejected delete: several applications share this version and no applicationRef given | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
+    },
+    STATE_PATCH_MISSING_APPLICATION_REF: {
+      level: 'error',
+      messageFunc: ({ sbi, grantCode, grantVersion }) =>
+        `Rejected patch: several applications share this version and no applicationRef given | sbi=${sbi} | grantCode=${grantCode} | grantVersion=${grantVersion}`
+    },
     STATE_PAYLOAD_SIZE_FAILED: {
       level: 'error',
       messageFunc: (messageOptions) =>

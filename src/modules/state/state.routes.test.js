@@ -249,6 +249,16 @@ describe('State', () => {
       expect(mockH.code).toHaveBeenCalledWith(404)
     })
 
+    test('rethrows Boom errors (e.g. 400 for a missing applicationRef) instead of masking them as 500', async () => {
+      mockRequest.params = defaultParams
+      mockRequest.payload = { state: { applicationStatus: 'SUBMITTED' } }
+      const boomError = Object.assign(new Error('Missing ref'), { isBoom: true })
+      patchApplicationState.mockRejectedValue(boomError)
+
+      await expect(statePatch.handler(mockRequest, mockH)).rejects.toBe(boomError)
+      expect(mockH.code).not.toHaveBeenCalledWith(500)
+    })
+
     test('should handle database errors and return 500', async () => {
       mockRequest.params = defaultParams
       mockRequest.payload = { state: { applicationStatus: 'IN_PROGRESS' } }
@@ -519,6 +529,15 @@ describe('State', () => {
 
       expect(mockH.response).toHaveBeenCalledWith({ error: 'State not found' })
       expect(mockH.code).toHaveBeenCalledWith(404)
+    })
+
+    test('rethrows Boom errors (e.g. 400 for a missing applicationRef) instead of masking them as 500', async () => {
+      mockRequest.query = defaultQuery
+      const boomError = Object.assign(new Error('Missing ref'), { isBoom: true })
+      deleteApplicationState.mockRejectedValue(boomError)
+
+      await expect(stateDelete.handler(mockRequest, mockH)).rejects.toBe(boomError)
+      expect(mockH.code).not.toHaveBeenCalledWith(500)
     })
 
     test('should handle database errors and return 500', async () => {
