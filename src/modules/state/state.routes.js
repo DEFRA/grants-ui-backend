@@ -161,7 +161,11 @@ export const stateDelete = {
       }
 
       return h.response({ success: true, deleted: true }).code(StatusCodes.OK)
-    } catch (_err) {
+    } catch (err) {
+      // Boom errors (e.g. 400 for a missing applicationRef) carry their own status code.
+      if (err?.isBoom) {
+        throw err
+      }
       return h.response({ error: 'Failed to delete application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }
@@ -218,7 +222,11 @@ export const statePatch = {
       }
 
       return h.response({ success: true, patched: true }).code(StatusCodes.OK)
-    } catch (_err) {
+    } catch (err) {
+      // Boom errors (e.g. 400 for a missing applicationRef) carry their own status code.
+      if (err?.isBoom) {
+        throw err
+      }
       return h.response({ error: 'Failed to patch application state' }).code(StatusCodes.INTERNAL_SERVER_ERROR)
     }
   }

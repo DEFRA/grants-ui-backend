@@ -342,6 +342,17 @@ export async function getApplicationState({ sbi, grantCode, grantVersion, applic
 }
 
 /**
+ * How many documents (capped at 2) an unscoped delete or patch on `(sbi, grantCode, grantVersion)`
+ * would match. More than one is only possible for reference-keyed applications.
+ *
+ * @param {{ sbi: string, grantCode: string, grantVersion: string }} params
+ * @returns {Promise<number>}
+ */
+export async function countApplicationStatesForVersion({ sbi, grantCode, grantVersion }) {
+  return stateDb.collection(STATE_COLLECTION).countDocuments({ sbi, grantCode, grantVersion }, { limit: 2 })
+}
+
+/**
  * Deletes application state.
  *
  * @param {{ sbi: string, grantCode: string, grantVersion: string, applicationRef?: string }} params
@@ -413,17 +424,26 @@ export async function patchApplicationState({ sbi, grantCode, grantVersion, appl
  *
  * @param {{ sbi: string, grantCode: string, applicationRef?: string }} params
  *   Without `applicationRef`, an SBI holding several applications resolves
- *   to an arbitrary one.
+ *   to an arbitrary live one; a purged document is returned only when nothing else exists.
  * @returns {Promise<ApplicationState|null>}
  */
 export async function getLatestApplicationStateForGrant({ sbi, grantCode, applicationRef }) {
-  try {
-    return await stateDb
+  const latest = (extra = {}) =>
+    stateDb
       .collection(STATE_COLLECTION)
-      .find({ sbi, grantCode, ...applicationRefField(applicationRef) })
+      .find({ sbi, grantCode, ...applicationRefField(applicationRef), ...extra })
       .sort({ major: -1, minor: -1, patch: -1 })
       .limit(1)
       .next()
+
+  try {
+    // do not shadow a live application with a purged sibling (the applications list
+    // hides purged ones). A purged document is only returned when nothing else exists, so a
+    // standard grant's purge flow still finds it.
+    if (applicationRef == null) {
+      return (await latest({ 'state.applicationStatus': { $ne: 'PURGED' } })) ?? (await latest())
+    }
+    return await latest()
   } catch (err) {
     const isMongoError = err?.name?.startsWith('Mongo')
     log(LogCodes.STATE.STATE_RETRIEVE_FAILED, {
