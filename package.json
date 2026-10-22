@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "type": "module",
   "engines": {
-    "node": ">=24.15.0 <25.0.0",
+    "node": ">=24.22.1 <25.0.0",
     "npm": ">=11.12.1"
   },
   "scripts": {
@@ -74,11 +74,12 @@
     "semver": "7.8.5",
     "swagger-ui-dist": "5.33.1",
     "testcontainers": "12.2.0",
-    "undici": "8.11.2"
+    "undici": "8.12.2"
   },
   "overrides": {
     "joi": "18.2.9",
-    "underscore": "1.13.8"
+    "underscore": "1.13.8",
+    "qs": "6.16.1"
   },
   "devDependencies": {
     "@babel/core": "7.29.7",
