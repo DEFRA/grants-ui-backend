@@ -48,7 +48,7 @@ describe('application locks', () => {
     const params = {
       grantCode: 'EGWA',
       grantVersion: '1.0.0',
-      sbi: '106514040',
+      sbi: '800000902',
       ownerId: 'user-1'
     }
 
@@ -66,7 +66,7 @@ describe('application locks', () => {
     const lock = await acquireOrRefreshApplicationLock({
       grantCode: 'EGWA',
       grantVersion: 1,
-      sbi: '106514040',
+      sbi: '800000902',
       ownerId: 'user-1'
     })
 
@@ -75,14 +75,14 @@ describe('application locks', () => {
 
     const stored = await server.stateDb
       .collection('state__grant_application_locks')
-      .findOne({ grantCode: 'EGWA', sbi: '106514040', ownerId: 'user-1' })
+      .findOne({ grantCode: 'EGWA', sbi: '800000902', ownerId: 'user-1' })
     expect(stored.grantVersion).toBe('1.0.0')
 
     // Releasing with the same legacy value resolves to the same semver lock
     const released = await releaseApplicationLock({
       grantCode: 'EGWA',
       grantVersion: 1,
-      sbi: '106514040',
+      sbi: '800000902',
       ownerId: 'user-1'
     })
     expect(released).toBe(true)

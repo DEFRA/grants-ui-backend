@@ -20,7 +20,7 @@ describe('verifyLockToken', () => {
     const token = jwt.sign(
       {
         sub: 'user-1',
-        sbi: '106514040',
+        sbi: '800000902',
         grantCode: 'EGWA',
         typ: 'lock'
       },
@@ -34,12 +34,12 @@ describe('verifyLockToken', () => {
     const payload = verifyLockToken(token)
 
     expect(payload.sub).toBe('user-1')
-    expect(payload.sbi).toBe('106514040')
+    expect(payload.sbi).toBe('800000902')
     expect(payload.grantCode).toBe('EGWA')
   })
 
   it('throws if token is signed with wrong secret', () => {
-    const token = jwt.sign({ sub: 'user-1', sbi: '106514040', grantCode: 'EGWA' }, 'wrong-secret', {
+    const token = jwt.sign({ sub: 'user-1', sbi: '800000902', grantCode: 'EGWA' }, 'wrong-secret', {
       issuer: 'grants-ui',
       audience: 'grants-backend'
     })
@@ -48,7 +48,7 @@ describe('verifyLockToken', () => {
   })
 
   it('throws if issuer is invalid', () => {
-    const token = jwt.sign({ sub: 'user-1', sbi: '106514040', grantCode: 'EGWA' }, SECRET, {
+    const token = jwt.sign({ sub: 'user-1', sbi: '800000902', grantCode: 'EGWA' }, SECRET, {
       issuer: 'someone-else',
       audience: 'grants-backend'
     })
@@ -57,7 +57,7 @@ describe('verifyLockToken', () => {
   })
 
   it('throws if audience is invalid', () => {
-    const token = jwt.sign({ sub: 'user-1', sbi: '106514040', grantCode: 'EGWA' }, SECRET, {
+    const token = jwt.sign({ sub: 'user-1', sbi: '800000902', grantCode: 'EGWA' }, SECRET, {
       issuer: 'grants-ui',
       audience: 'some-other-service'
     })
