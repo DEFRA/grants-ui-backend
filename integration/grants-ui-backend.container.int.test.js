@@ -1097,15 +1097,15 @@ describe('GET /allowlist/grants', () => {
       updatedAt: new Date()
     })
     await db.collection('config__allowlist_entries').insertMany([
-      { grantCode: 'woodland', env: 'local', type: 'crn', value: '1100946179', updatedAt: new Date() },
-      { grantCode: 'woodland', env: 'local', type: 'sbi', value: '115371673', updatedAt: new Date() }
+      { grantCode: 'woodland', env: 'local', type: 'crn', value: '9000000901', updatedAt: new Date() },
+      { grantCode: 'woodland', env: 'local', type: 'sbi', value: '800000901', updatedAt: new Date() }
     ])
 
     const response = await Wreck.get(`${apiUrl}/allowlist/grants`, {
       json: true,
       headers: {
         authorization: createAuthHeader(),
-        'x-user-context': createUserContextHeader({ crn: '1100946179', sbi: '115371673' })
+        'x-user-context': createUserContextHeader({ crn: '9000000901', sbi: '800000901' })
       }
     })
 
@@ -1127,8 +1127,8 @@ describe('GET /allowlist/grants', () => {
       updatedAt: new Date()
     })
     await db.collection('config__allowlist_entries').insertMany([
-      { grantCode: 'woodland', env: 'local', type: 'crn', value: '1100946179', updatedAt: new Date() },
-      { grantCode: 'woodland', env: 'local', type: 'sbi', value: '115371673', updatedAt: new Date() }
+      { grantCode: 'woodland', env: 'local', type: 'crn', value: '9000000901', updatedAt: new Date() },
+      { grantCode: 'woodland', env: 'local', type: 'sbi', value: '800000901', updatedAt: new Date() }
     ])
 
     const response = await Wreck.get(`${apiUrl}/allowlist/grants`, {
