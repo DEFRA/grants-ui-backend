@@ -698,14 +698,14 @@ Instructions for setting up SonarCloud can be found in [sonar-project.properties
 
 ## HTTP clients (recommended)
 
-HTTP clients are the **primary, recommended way to exercise and test every endpoint** in this project. The `http/` directory contains `.http` request files that work with the JetBrains HTTP client (built into IntelliJ/WebStorm) and the VS Code [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension. They are version-controlled alongside the code, cover both the backend and the grants-config-broker, and have their tokens populated automatically by a single npm script.
+HTTP clients are the **primary, recommended way to exercise and test every endpoint** in this project. The `http/` directory contains `.http` request files that work with the JetBrains HTTP client (built into IntelliJ/WebStorm) and the VS Code [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension. They are version-controlled alongside the code, cover both the backend and the grants-config-broker, with local backend tokens populated by an npm script.
 
 ### Files
 
 - `http/grants-ui-backend.http` – requests for this backend: health check, application `state` save/get/delete/patch, `submissions`, the admin application-lock release, and `DELETE /application-locks` (release all locks for an owner).
-- `http/grants-config-broker.http` – requests against the grants-config-broker: `GET /api/allGrants`, `GET /api/version`, and `GET /api/latestVersion`.
+- `http/grants-config-broker.http` – requests against the grants-config-broker: `GET /api/allGrants`, `GET /api/version`, and `GET /api/latestVersion`. Deployed requests require a Web Identity token; local requests require no authentication.
 - `http/http-client.env.json` – public, checked-in environment variables (`backendBaseUrl`, `configBrokerBaseUrl`) for the `local` and `dev` environments.
-- `http/http-client.private.env.json` – generated secrets/tokens (`backendAuthToken`, `userContextToken`, `applicationLockOwnerToken`, `applicationLockReleaseToken`, `configBrokerAuthToken`, etc.). This file is produced by `npm run generate:env` and must **not** be committed.
+- `http/http-client.private.env.json` – generated secrets/tokens (`backendAuthToken`, `userContextToken`, `applicationLockOwnerToken`, `applicationLockReleaseToken`, etc.). This file is produced by `npm run generate:env` and must **not** be committed.
 
 ### Environments
 
