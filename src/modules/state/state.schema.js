@@ -45,7 +45,12 @@ export const stateSaveSchema = Joi.object({
   grantVersion: grantVersion().default('1.0.0'),
   state: Joi.object().unknown(true).required().messages({
     'object.base': '"state" must be an object'
-  })
+  }),
+  // Reopening an application on a multi-application grant saves it as a new document under
+  // a new reference and then deletes the superseded one. Only the caller knows which document
+  // the new one continues, so it passes that document's start date here. Recorded only when
+  // this save inserts; ISO 8601 and never in the future, as this service stamped it originally.
+  createdAt: Joi.date().iso().max('now').optional()
 })
   .required()
   .unknown(false) // Disallow unknown top-level fields

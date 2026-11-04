@@ -81,12 +81,14 @@ export function releaseAllApplicationLocksForOwner({ ownerId }) {
  * (`allowMultipleApplications` false) neither affects how the save is
  * targeted: behaviour is unchanged from before these fields existed.
  *
- * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown> }} params
+ * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown>, createdAt?: Date }} params
+ *   `createdAt` is recorded only when the save creates the document: the start date
+ *   a reopened application inherits from the document it supersedes.
  * @returns {Promise<import('mongodb').UpdateResult>}
  * @throws {Boom} 400 when a multi-application grant is saved without a
  *   reference, which cannot be attributed to one of the SBI's applications
  */
-export async function saveApplicationState({ sbi, grantCode, grantVersion, state }) {
+export async function saveApplicationState({ sbi, grantCode, grantVersion, state, createdAt }) {
   const allowMultipleApplications = await resolveAllowMultipleApplications({ sbi, grantCode, grantVersion })
   const applicationRef = state?.[APPLICATION_REF_FIELD]
 
@@ -95,7 +97,15 @@ export async function saveApplicationState({ sbi, grantCode, grantVersion, state
     throw Boom.badRequest(`Missing ${APPLICATION_REF_FIELD} in state for a multi-application grant`)
   }
 
-  return repoSaveApplicationState({ sbi, grantCode, grantVersion, state, allowMultipleApplications, applicationRef })
+  return repoSaveApplicationState({
+    sbi,
+    grantCode,
+    grantVersion,
+    state,
+    allowMultipleApplications,
+    applicationRef,
+    createdAt
+  })
 }
 
 /**
@@ -450,6 +460,7 @@ export async function listApplications({ sbi, grantCode }) {
     createdAt,
     updatedAt,
     applicationStatus: state?.applicationStatus ?? null,
-    submittedAt: state?.submittedAt ?? null
+    submittedAt: state?.submittedAt ?? null,
+    previousReferenceNumber: state?.previousReferenceNumber ?? null
   }))
 }
