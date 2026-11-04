@@ -82,7 +82,8 @@ export function releaseAllApplicationLocksForOwner({ ownerId }) {
  * targeted: behaviour is unchanged from before these fields existed.
  *
  * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown>, createdAt?: Date }} params
- *   `createdAt` is recorded only when the save creates the document.
+ *   `createdAt` is recorded only when the save creates the document: the start date
+ *   a reopened application inherits from the document it supersedes.
  * @returns {Promise<import('mongodb').UpdateResult>}
  * @throws {Boom} 400 when a multi-application grant is saved without a
  *   reference, which cannot be attributed to one of the SBI's applications

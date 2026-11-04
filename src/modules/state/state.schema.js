@@ -46,9 +46,10 @@ export const stateSaveSchema = Joi.object({
   state: Joi.object().unknown(true).required().messages({
     'object.base': '"state" must be an object'
   }),
-  // Recorded only when this save creates the document, so a reopened application
-  // can keep the start date of the application it replaces. ISO 8601 and never
-  // in the future: it is only ever a date this service stamped earlier.
+  // Reopening an application on a multi-application grant saves it as a new document under
+  // a new reference and then deletes the superseded one. Only the caller knows which document
+  // the new one continues, so it passes that document's start date here. Recorded only when
+  // this save inserts; ISO 8601 and never in the future, as this service stamped it originally.
   createdAt: Joi.date().iso().max('now').optional()
 })
   .required()
