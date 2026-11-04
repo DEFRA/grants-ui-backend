@@ -45,7 +45,11 @@ export const stateSaveSchema = Joi.object({
   grantVersion: grantVersion().default('1.0.0'),
   state: Joi.object().unknown(true).required().messages({
     'object.base': '"state" must be an object'
-  })
+  }),
+  // Recorded only when this save creates the document, so a reopened application
+  // can keep the start date of the application it replaces. ISO 8601 and never
+  // in the future: it is only ever a date this service stamped earlier.
+  createdAt: Joi.date().iso().max('now').optional()
 })
   .required()
   .unknown(false) // Disallow unknown top-level fields

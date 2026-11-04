@@ -251,7 +251,10 @@ export async function releaseAllApplicationLocksForOwner({ ownerId }) {
  * version changes over its lifetime, so keying on it would split the
  * application across versions.
  *
- * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown>, allowMultipleApplications?: boolean, applicationRef?: string }} params
+ * `createdAt` is recorded only when the save creates the document, so a
+ * reopened application keeps the start date of the one it replaces.
+ *
+ * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown>, allowMultipleApplications?: boolean, applicationRef?: string, createdAt?: Date }} params
  * @returns {Promise<import('mongodb').UpdateResult>}
  */
 export async function saveApplicationState({
@@ -260,7 +263,8 @@ export async function saveApplicationState({
   grantVersion,
   state,
   allowMultipleApplications = false,
-  applicationRef
+  applicationRef,
+  createdAt
 }) {
   const { grantVersion: grantVersionStr, pinnedMajor, major, minor, patch } = normaliseGrantVersion(grantVersion)
 
@@ -290,7 +294,7 @@ export async function saveApplicationState({
   const updateDoc = {
     $set: { ...commonSet, ...setVersion },
     $currentDate: { updatedAt: true },
-    $setOnInsert: { createdAt: new Date(), pinnedMajor, ...setVersionOnInsert }
+    $setOnInsert: { createdAt: createdAt ?? new Date(), pinnedMajor, ...setVersionOnInsert }
   }
 
   try {
@@ -689,7 +693,8 @@ export async function listApplicationStates({ sbi, grantCode }) {
           createdAt: 1,
           updatedAt: 1,
           'state.applicationStatus': 1,
-          'state.submittedAt': 1
+          'state.submittedAt': 1,
+          'state.previousReferenceNumber': 1
         }
       }
     )

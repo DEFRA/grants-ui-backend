@@ -27,14 +27,27 @@ test('returns metadata for drafts, submitted and reopened applications without e
       applicationRef: 'REF-S',
       state: { applicationStatus: 'SUBMITTED', submittedAt: '2026-03-01', secretAnswer: 'private' }
     },
-    { applicationRef: 'REF-R', state: { applicationStatus: 'REOPENED', submittedAt: '2026-02-01' } }
+    {
+      applicationRef: 'REF-R',
+      state: { applicationStatus: 'REOPENED', submittedAt: '2026-02-01', previousReferenceNumber: 'REF-P' }
+    }
   ])
   const applications = await listApplications(scope)
   expect(listApplicationStates).toHaveBeenCalledWith(scope)
   expect(applications).toEqual([
-    expect.objectContaining({ applicationRef: 'REF-D', applicationStatus: null, submittedAt: null }),
+    expect.objectContaining({
+      applicationRef: 'REF-D',
+      applicationStatus: null,
+      submittedAt: null,
+      previousReferenceNumber: null
+    }),
     expect.objectContaining({ referenceNumber: 'REF-S', applicationStatus: 'SUBMITTED', submittedAt: '2026-03-01' }),
-    expect.objectContaining({ applicationRef: 'REF-R', applicationStatus: 'REOPENED', submittedAt: '2026-02-01' })
+    expect.objectContaining({
+      applicationRef: 'REF-R',
+      applicationStatus: 'REOPENED',
+      submittedAt: '2026-02-01',
+      previousReferenceNumber: 'REF-P'
+    })
   ])
   expect(JSON.stringify(applications)).not.toContain('private')
 })

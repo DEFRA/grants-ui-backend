@@ -436,6 +436,8 @@ A third, plain index on `(sbi, grantCode, grantVersion, applicationRef)` serves 
 
 Endpoints accept an optional `applicationRef` (`GET /state`, `POST /state/with-definition`, `PATCH /state/{sbi}/{grantCode}/{grantVersion}`, `DELETE /state`). When omitted, behaviour is unchanged.
 
+`POST /state` also accepts an optional `createdAt` (ISO 8601, not in the future). It is recorded only when the save creates the document and ignored on an update, so when an application is returned for amendments and continues under a new reference, grants-ui can carry over the start date of the application it replaces. `GET /applications` exposes that link as `previousReferenceNumber` on the replacement row (`null` otherwise), which is how a request for the previous reference is redirected to it.
+
 Notes:
 
 - Turning the flag **on** is safe at any time: an in-flight application is matched by its reference, adopts the new key and moves between indexes on its next save.

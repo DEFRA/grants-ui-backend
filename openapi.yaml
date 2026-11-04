@@ -125,6 +125,14 @@ components:
           default: 1
         state:
           $ref: '#/components/schemas/StateObject'
+        createdAt:
+          type: string
+          format: date-time
+          description: >-
+            Optional. Recorded as the document's creation date only when this
+            save creates the document; ignored on an update. Lets a reopened
+            application keep the start date of the one it replaces. Must not be
+            in the future.
       required: [sbi, grantCode, grantVersion, state]
     StateSaveResponse:
       type: object
@@ -363,6 +371,8 @@ paths:
         unchanged; an absent status is null. The submitted date comes from
         application state and is null when absent. Existing POST /state creates a new
         application when an enabled grant is saved with a fresh reference number.
+        A reopened application carries the reference it replaces as
+        previousReferenceNumber; it is null for every other application.
       security:
         - bearerAuth: []
           userContext: []
@@ -392,6 +402,11 @@ paths:
                         updatedAt: { type: string, format: date-time }
                         applicationStatus: { type: [string, 'null'] }
                         submittedAt: { type: [string, 'null'], format: date-time }
+                        previousReferenceNumber:
+                          type: [string, 'null']
+                          description: >-
+                            Reference of the submitted application this one replaces
+                            after being returned for amendments; null otherwise.
         '400':
           description: Invalid query
         '401':
