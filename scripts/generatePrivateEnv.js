@@ -59,8 +59,6 @@ const lockSecret = parseComposeEnv('APPLICATION_LOCK_TOKEN_SECRET')
 const authToken = parseComposeEnv('GRANTS_UI_BACKEND_AUTH_TOKEN')
 const encryptionKey = parseComposeEnv('GRANTS_UI_BACKEND_ENCRYPTION_KEY')
 const encryptedAuthJwtSecret = parseComposeEnv('ENCRYPTED_AUTH_JWT_SECRET')
-const configBrokerAuthToken = parseComposeEnv('GRANTS_CONFIG_BROKER_AUTH_TOKEN')
-const configBrokerEncryptionKey = parseComposeEnv('GRANTS_CONFIG_BROKER_ENCRYPTION_KEY')
 
 // ---------------------------------------------------------------------------
 // 3. Generate tokens via the shared script functions
@@ -92,13 +90,6 @@ privateEnv.local.applicationLockOwnerToken = applicationLockOwnerToken
 privateEnv.local.applicationLockReleaseToken = applicationLockReleaseToken
 privateEnv.local.userContextToken = userContextToken
 
-if (!privateEnv.local.configBrokerAuthToken) {
-  privateEnv.local.configBrokerAuthToken = configBrokerAuthToken
-}
-if (!privateEnv.local.configBrokerEncryptionKey) {
-  privateEnv.local.configBrokerEncryptionKey = configBrokerEncryptionKey
-}
-
 if (!('xApiKey' in privateEnv.local)) {
   privateEnv.local.xApiKey = ''
 }
@@ -110,6 +101,4 @@ console.log('  backendAuthToken')
 console.log('  applicationLockOwnerToken')
 console.log('  applicationLockReleaseToken')
 console.log('  userContextToken')
-console.log('  configBrokerAuthToken (if absent)')
-console.log('  configBrokerEncryptionKey (if absent)')
 console.log('  xApiKey (if absent)')
