@@ -1,4 +1,52 @@
 # Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities
 version: v1.25.0
-ignore: {}
+ignore:
+  'SNYK-JS-BRACES-19963945':
+    - 'nodemon > chokidar > braces':
+        reason: 'Checked 2026-11-05 on nodemon@3.1.14 > chokidar@3.6.0 > braces@3.0.3: braces@3.0.3. Stack exhaustion requires deeply nested attacker-controlled brace patterns. The development watcher/build/stylelint paths take patterns from repository files and CLI configuration, not applicant form values; they do not run in the server request path. No fixed braces release exists. Remove when upstream drops braces or a fixed release is published; reassess if pattern sources change.'
+        expires: '2026-12-05'
+  'SNYK-JS-DEEPMERGE-19964053':
+    - 'jest > @jest/core > jest-config > deepmerge':
+        reason: 'Checked 2026-11-05 on jest@30.5.2 > jest-config@30.5.2 > deepmerge@4.3.1. Prototype replacement needs an attacker-controlled source object containing __proto__ passed to mergeObject(). Jest uses deepmerge for repository-controlled test configuration, presets and globals; applicant input does not reach these configuration merges. Development dependency, outside server requests. No fixed deepmerge release exists. Remove when Jest drops or fixes deepmerge; reassess if test configuration becomes untrusted.'
+        expires: '2026-12-05'
+  'SNYK-JS-INFLIGHT-6095116':
+    - '@pact-foundation/pact > @pact-foundation/pact-core > pino-pretty > help-me > glob > inflight':
+        reason: 'Checked 2026-11-05 on @pact-foundation/pact@15.0.1 > @pact-foundation/pact-core@16.1.1 > pino-pretty@9.4.1 > help-me@4.2.0 > glob@8.1.0 > inflight@1.0.6: inflight@1.0.6. The leak requires repeated asynchronous operations through inflight. This development path scans repository source files or the Pact logger''s installed help directory during build/test/CLI execution, not applicant input or server requests. No fixed inflight release exists. Remove when upstream drops legacy glob/inflight or a compatible fix is published.'
+        expires: '2026-12-05'
+  'SNYK-JS-MINIMATCH-22111072':
+    - 'eslint > @eslint/config-array > minimatch':
+        reason: 'Checked 2026-11-05 on eslint@9.39.5 > @eslint/config-array@0.21.2 > minimatch@3.1.5: minimatch@3.1.5. Amplification requires attacker-controlled patterns with optimizationLevel >= 2; installed minimatch v3/v5 has neither firstPhasePreProcess nor optimizationLevel. These callers use repository-controlled lint, build, package-script or help-file patterns. Fixed v11.0.3 cleared seven-day cooldown on 2026-11-04T20:00:34.713Z, but its object exports replace the callable API used by legacy callers. Modern v7+ paths are overridden to v11.0.3. Remove when upstream adopts a compatible fixed release; reassess if callers or pattern sources change.'
+        expires: '2026-12-05'
+    - 'npm-run-all > minimatch':
+        reason: 'Checked 2026-11-05 on npm-run-all@4.1.5 > minimatch@3.1.5: minimatch@3.1.5. Amplification requires attacker-controlled patterns with optimizationLevel >= 2; installed minimatch v3/v5 has neither firstPhasePreProcess nor optimizationLevel. These callers use repository-controlled lint, build, package-script or help-file patterns. Fixed v11.0.3 cleared seven-day cooldown on 2026-11-04T20:00:34.713Z, but its object exports replace the callable API used by legacy callers. Modern v7+ paths are overridden to v11.0.3. Remove when upstream adopts a compatible fixed release; reassess if callers or pattern sources change.'
+        expires: '2026-12-05'
+    - 'eslint > @eslint/eslintrc > minimatch':
+        reason: 'Checked 2026-11-05 on eslint@9.39.5 > @eslint/eslintrc@3.3.7 > minimatch@3.1.5: minimatch@3.1.5. Amplification requires attacker-controlled patterns with optimizationLevel >= 2; installed minimatch v3/v5 has neither firstPhasePreProcess nor optimizationLevel. These callers use repository-controlled lint, build, package-script or help-file patterns. Fixed v11.0.3 cleared seven-day cooldown on 2026-11-04T20:00:34.713Z, but its object exports replace the callable API used by legacy callers. Modern v7+ paths are overridden to v11.0.3. Remove when upstream adopts a compatible fixed release; reassess if callers or pattern sources change.'
+        expires: '2026-12-05'
+    - 'eslint > minimatch':
+        reason: 'Checked 2026-11-05 on eslint@9.39.5 > minimatch@3.1.5: minimatch@3.1.5. Amplification requires attacker-controlled patterns with optimizationLevel >= 2; installed minimatch v3/v5 has neither firstPhasePreProcess nor optimizationLevel. These callers use repository-controlled lint, build, package-script or help-file patterns. Fixed v11.0.3 cleared seven-day cooldown on 2026-11-04T20:00:34.713Z, but its object exports replace the callable API used by legacy callers. Modern v7+ paths are overridden to v11.0.3. Remove when upstream adopts a compatible fixed release; reassess if callers or pattern sources change.'
+        expires: '2026-12-05'
+    - '@pact-foundation/pact > @pact-foundation/pact-core > pino-pretty > help-me > glob > minimatch':
+        reason: 'Checked 2026-11-05 on @pact-foundation/pact@15.0.1 > @pact-foundation/pact-core@16.1.1 > pino-pretty@9.4.1 > help-me@4.2.0 > glob@8.1.0 > minimatch@5.1.9: minimatch@5.1.9. Amplification requires attacker-controlled patterns with optimizationLevel >= 2; installed minimatch v3/v5 has neither firstPhasePreProcess nor optimizationLevel. These callers use repository-controlled lint, build, package-script or help-file patterns. Fixed v11.0.3 cleared seven-day cooldown on 2026-11-04T20:00:34.713Z, but its object exports replace the callable API used by legacy callers. Modern v7+ paths are overridden to v11.0.3. Remove when upstream adopts a compatible fixed release; reassess if callers or pattern sources change.'
+        expires: '2026-12-05'
+    - 'testcontainers > archiver > readdir-glob > minimatch':
+        reason: 'Checked 2026-11-05 on testcontainers@12.2.1 > archiver@7.0.1 > readdir-glob@1.1.3 > minimatch@5.1.9: minimatch@5.1.9. Amplification requires attacker-controlled patterns with optimizationLevel >= 2; installed minimatch v3/v5 has neither firstPhasePreProcess nor optimizationLevel. These callers use repository-controlled lint, build, package-script or help-file patterns. Fixed v11.0.3 cleared seven-day cooldown on 2026-11-04T20:00:34.713Z, but its v11 preprocessing semantics are outside readdir-globs supported v5 range. This path is installed in production; readdir-glob only passes dot, noglobstar, matchBase and nocase, never optimizationLevel >= 2. Modern v7+ paths are overridden to v11.0.3. Remove when upstream adopts a compatible fixed release; reassess if callers or pattern sources change.'
+        expires: '2026-12-05'
+  'SNYK-JS-URIJS-19963961':
+    - 'eslint > @eslint/eslintrc > ajv > uri-js':
+        reason: 'Checked 2026-11-05 on eslint@9.39.5 > @eslint/eslintrc@3.3.7 > ajv@6.15.0 > uri-js@4.4.1. Exploitation requires attacker-controlled malformed percent-encoded URIs reaching pctDecChars and downstream use of decoded metacharacters. Ajv resolves repository-controlled ESLint configuration schema identifiers; applicant input does not reach those URIs. Development tooling, outside server requests. No fixed uri-js release exists. Remove when ESLint drops uri-js or a compatible fix is published; reassess if configuration sources change.'
+        expires: '2026-12-05'
+  'SNYK-JS-URIJS-19963963':
+    - 'eslint > @eslint/eslintrc > ajv > uri-js':
+        reason: 'Checked 2026-11-05 on eslint@9.39.5 > @eslint/eslintrc@3.3.7 > ajv@6.15.0 > uri-js@4.4.1. Exploitation requires attacker-controlled paths containing Unicode line or paragraph separators reaching removeDotSegments. Ajv resolves repository-controlled ESLint configuration schema identifiers; applicant input does not reach those URIs. Development tooling, outside server requests. No fixed uri-js release exists. Remove when ESLint drops uri-js or a compatible fix is published; reassess if configuration sources change.'
+        expires: '2026-12-05'
+  'SNYK-JS-URIJS-20341609':
+    - 'eslint > @eslint/eslintrc > ajv > uri-js':
+        reason: 'Checked 2026-11-05 on eslint@9.39.5 > @eslint/eslintrc@3.3.7 > ajv@6.15.0 > uri-js@4.4.1. Exploitation requires attacker-controlled a mailto URI with a bare to query parameter reaching the URI parser. Ajv resolves repository-controlled ESLint configuration schema identifiers; applicant input does not reach those URIs. Development tooling, outside server requests. No fixed uri-js release exists. Remove when ESLint drops uri-js or a compatible fix is published; reassess if configuration sources change.'
+        expires: '2026-12-05'
+# npm-only GHSA-3g3m-2fjr-6pw4: glob@9.3.5 remains under babel-plugin-module-resolver@5.0.3.
+# Glob AbortSignal cancellation affects asynchronous traversal of attacker-controlled patterns.
+# normalizeRoot() uses hasMagic()/sync() on repository-controlled Babel root paths, without AbortSignal.
+# glob@14.0.3 is cooldown-eligible but its ESM default export is incompatible with this caller
+# (production build and Jest fail with undefined hasMagic). Recheck upstream by 2026-12-05.
 patch: {}

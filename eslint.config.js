@@ -1,8 +1,10 @@
 import neostandard from 'neostandard'
 
-export default neostandard({
-  env: ['node', 'jest'],
-  ignores: [...neostandard.resolveIgnoresFromGitignore()],
-  noJsx: true,
-  noStyle: true
-})
+export default [
+  { ignores: neostandard.resolveIgnoresFromGitignore() },
+  ...neostandard({
+    env: ['node', 'jest'],
+    noJsx: true,
+    noStyle: true
+  })
+]
