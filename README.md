@@ -438,6 +438,8 @@ Endpoints accept an optional `applicationRef` (`GET /state`, `POST /state/with-d
 
 `POST /state` also accepts an optional `createdAt` (ISO 8601, not in the future). It is recorded only when the save creates the document and ignored on an update. It exists because reopening an application on a multi-application grant is not an update: grants-ui saves the answers as a new document under a new reference and then deletes the superseded one, so the backend would otherwise stamp the reopen date as the start date. Only grants-ui knows which document the new one continues, so it passes that document's `createdAt` on the save. `GET /applications` exposes that link as `previousReferenceNumber` on the replacement row (`null` otherwise), which is how a request for the previous reference is redirected to it.
 
+`GET /applications` also lists each application's `pinnedMajor`, the grant major it is served under, and `GET /definitions/{grantCode}` accepts an optional `major` query and then returns the latest active definition within that major rather than the grant's latest overall. Together they let grants-ui read, on the applications selector, the redirect rules each listed application is subject to without opening it.
+
 Notes:
 
 - Turning the flag **on** is safe at any time: an in-flight application is matched by its reference, adopts the new key and moves between indexes on its next save.

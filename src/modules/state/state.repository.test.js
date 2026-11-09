@@ -500,6 +500,8 @@ describe('listApplicationStates', () => {
           _id: 0,
           applicationRef: 1,
           grantVersion: 1,
+          pinnedMajor: 1,
+          major: 1,
           createdAt: 1,
           updatedAt: 1,
           'state.applicationStatus': 1,

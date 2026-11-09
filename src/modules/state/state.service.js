@@ -453,10 +453,13 @@ export async function clearTestData({ sbi, grantCode }) {
 export async function listApplications({ sbi, grantCode }) {
   const states = await repoListApplicationStates({ sbi, grantCode })
 
-  return states.map(({ applicationRef, grantVersion, createdAt, updatedAt, state }) => ({
+  return states.map(({ applicationRef, grantVersion, pinnedMajor, major, createdAt, updatedAt, state }) => ({
     applicationRef,
     referenceNumber: applicationRef,
     grantVersion,
+    // The major the application is served under (see getStateWithFormDefinition), so a caller can tell
+    // which definition applies to it without opening it.
+    pinnedMajor: pinnedMajor ?? major ?? null,
     createdAt,
     updatedAt,
     applicationStatus: state?.applicationStatus ?? null,

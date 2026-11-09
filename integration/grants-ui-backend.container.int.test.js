@@ -64,6 +64,8 @@ const createLockReleaseToken = ({ sub }) =>
     }
   )
 
+const createUserContextHeader = ({ crn, sbi }) => jwt.sign({ crn, sbi }, ENCRYPTED_AUTH_JWT_SECRET)
+
 beforeAll(async () => {
   process.env.GRANTS_UI_BACKEND_AUTH_TOKEN = TEST_AUTH_TOKEN
   process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
@@ -158,6 +160,71 @@ describe('POST /state', () => {
       grantVersion: '1.0.0'
     })
     expect(doc.state).toEqual({ step: 'middle' })
+  })
+
+  it('records the start date a replacement application is given and keeps it on later saves', async () => {
+    // A grant allowing multiple applications stores one document per reference, so a reopened application
+    // is a new document carrying the start date of the one it replaces; later saves must not move it.
+    const grantCode = 'grant-multi'
+    const sbi = 'biz-multi'
+    await db.collection('config__form_definitions').deleteMany({ grantCode })
+    await db.collection('config__form_definitions').insertOne({
+      grantCode,
+      id: `${grantCode}-1.0.0`,
+      title: `${grantCode} form`,
+      major: 1,
+      minor: 0,
+      patch: 0,
+      status: 'active',
+      allowMultipleApplications: true,
+      definition: { pages: [] },
+      updatedAt: new Date()
+    })
+    const originalStart = '2026-01-15T09:30:00.000Z'
+    const replacementState = { $$__referenceNumber: 'REF-NEW', previousReferenceNumber: 'REF-OLD' }
+    const save = (state, createdAt) =>
+      Wreck.post(`${apiUrl}/state`, {
+        json: true,
+        payload: { sbi, grantCode, grantVersion: '1.0.0', state, ...(createdAt && { createdAt }) },
+        headers: {
+          authorization: createAuthHeader(),
+          'x-application-lock-owner': createLockToken({ sub: TEST_CONTACT_ID, sbi, grantCode, grantVersion: '1.0.0' })
+        }
+      })
+    const listApplications = async () => {
+      const response = await Wreck.get(`${apiUrl}/applications?grantCode=${grantCode}`, {
+        json: true,
+        headers: {
+          authorization: createAuthHeader(),
+          'x-user-context': createUserContextHeader({ crn: 'crn-multi', sbi })
+        }
+      })
+      return response.payload.applications
+    }
+
+    const replacement = await save({ ...replacementState, step: 'summary' }, originalStart)
+    expect(replacement.res.statusCode).toBe(201)
+    expect(await listApplications()).toEqual([
+      expect.objectContaining({
+        applicationRef: 'REF-NEW',
+        previousReferenceNumber: 'REF-OLD',
+        pinnedMajor: 1,
+        createdAt: originalStart
+      })
+    ])
+
+    const later = await save({ ...replacementState, step: 'declaration' })
+    expect(later.res.statusCode).toBe(200)
+    const resent = await save({ ...replacementState, step: 'declaration' }, '2026-03-01T00:00:00.000Z')
+    expect(resent.res.statusCode).toBe(200)
+
+    const [application] = await listApplications()
+    expect(application.createdAt).toBe(originalStart)
+    const doc = await db
+      .collection('state__grant_application_state')
+      .findOne({ sbi, grantCode, applicationRef: 'REF-NEW' })
+    expect(doc.createdAt).toEqual(new Date(originalStart))
+    expect(doc.state.step).toBe('declaration')
   })
 
   it('persists a multi-part semver grantVersion', async () => {
@@ -778,6 +845,60 @@ describe('POST /state/with-definition', () => {
   })
 })
 
+describe('GET /definitions/{grantCode}', () => {
+  const grantCode = 'def-grant'
+  const seedDefinition = ({ major, minor, patch, status = 'active' }) =>
+    db.collection('config__form_definitions').insertOne({
+      grantCode,
+      id: `${grantCode}-${major}.${minor}.${patch}`,
+      title: `${grantCode} form`,
+      major,
+      minor,
+      patch,
+      status,
+      definition: { pages: [] },
+      updatedAt: new Date()
+    })
+  const getDefinition = (query = '') =>
+    Wreck.get(`${apiUrl}/definitions/${grantCode}${query}`, {
+      json: true,
+      headers: { authorization: createAuthHeader() }
+    })
+  const getDefinitionStatus = async (query) =>
+    (
+      await Wreck.request('GET', `${apiUrl}/definitions/${grantCode}${query}`, {
+        json: true,
+        headers: { authorization: createAuthHeader() },
+        throwOnError: false
+      })
+    ).statusCode
+
+  beforeEach(async () => {
+    await db.collection('config__form_definitions').deleteMany({})
+    await seedDefinition({ major: 1, minor: 2, patch: 0 })
+    await seedDefinition({ major: 1, minor: 4, patch: 1 })
+    await seedDefinition({ major: 1, minor: 5, patch: 0, status: 'draft' })
+    await seedDefinition({ major: 2, minor: 0, patch: 0 })
+  })
+
+  it('returns the latest active definition overall', async () => {
+    const response = await getDefinition()
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload).toMatchObject({ grantCode, major: 2, minor: 0, patch: 0 })
+  })
+
+  it('returns the latest active definition within a major when asked, as an application pinned to it is served', async () => {
+    const response = await getDefinition('?major=1')
+    expect(response.res.statusCode).toBe(200)
+    expect(response.payload).toMatchObject({ grantCode, major: 1, minor: 4, patch: 1 })
+  })
+
+  it('returns 404 for a major with no active definition and 400 for a major that is not a whole number', async () => {
+    expect(await getDefinitionStatus('?major=3')).toBe(404)
+    expect(await getDefinitionStatus('?major=one')).toBe(400)
+  })
+})
+
 describe('DELETE /admin/application-lock', () => {
   it('removes a specific application lock', async () => {
     await db.collection('state__grant_application_locks').insertOne({
@@ -1077,8 +1198,6 @@ describe('POST /submissions', () => {
 })
 
 describe('GET /allowlist/grants', () => {
-  const createUserContextHeader = ({ crn, sbi }) => jwt.sign({ crn, sbi }, ENCRYPTED_AUTH_JWT_SECRET)
-
   beforeEach(async () => {
     await db.collection('config__allowlist_entries').deleteMany({})
     await db.collection('config__form_definitions').deleteMany({})

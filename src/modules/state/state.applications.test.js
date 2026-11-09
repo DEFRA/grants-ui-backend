@@ -22,9 +22,10 @@ beforeEach(() => {
 
 test('returns metadata for drafts, submitted and reopened applications without exposing answers', async () => {
   listApplicationStates.mockResolvedValue([
-    { applicationRef: 'REF-D', grantVersion: '1.0.0', createdAt: '2026-01-01', state: {} },
+    { applicationRef: 'REF-D', grantVersion: '1.0.0', pinnedMajor: 1, major: 2, createdAt: '2026-01-01', state: {} },
     {
       applicationRef: 'REF-S',
+      major: 2,
       state: { applicationStatus: 'SUBMITTED', submittedAt: '2026-03-01', secretAnswer: 'private' }
     },
     {
@@ -37,13 +38,20 @@ test('returns metadata for drafts, submitted and reopened applications without e
   expect(applications).toEqual([
     expect.objectContaining({
       applicationRef: 'REF-D',
+      pinnedMajor: 1,
       applicationStatus: null,
       submittedAt: null,
       previousReferenceNumber: null
     }),
-    expect.objectContaining({ referenceNumber: 'REF-S', applicationStatus: 'SUBMITTED', submittedAt: '2026-03-01' }),
+    expect.objectContaining({
+      referenceNumber: 'REF-S',
+      pinnedMajor: 2,
+      applicationStatus: 'SUBMITTED',
+      submittedAt: '2026-03-01'
+    }),
     expect.objectContaining({
       applicationRef: 'REF-R',
+      pinnedMajor: null,
       applicationStatus: 'REOPENED',
       submittedAt: '2026-02-01',
       previousReferenceNumber: 'REF-P'
