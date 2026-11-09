@@ -32,6 +32,17 @@ describe('config.service', () => {
 
       return expect(resolveLatestVersion('unknown-grant')).resolves.toBeNull()
     })
+
+    test('resolves within a major when one is given', () => {
+      const expected = { major: 1, minor: 4, patch: 1 }
+      repoResolveLatestVersionWithinMajor.mockResolvedValue(expected)
+
+      const result = resolveLatestVersion('farm-payments', { major: 1 })
+
+      expect(repoResolveLatestVersionWithinMajor).toHaveBeenCalledWith('farm-payments', 1)
+      expect(repoResolveLatestVersion).not.toHaveBeenCalled()
+      return expect(result).resolves.toBe(expected)
+    })
   })
 
   describe('resolveLatestVersionWithinMajor', () => {

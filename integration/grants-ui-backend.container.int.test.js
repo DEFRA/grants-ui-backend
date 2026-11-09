@@ -66,6 +66,20 @@ const createLockReleaseToken = ({ sub }) =>
 
 const createUserContextHeader = ({ crn, sbi }) => jwt.sign({ crn, sbi }, ENCRYPTED_AUTH_JWT_SECRET)
 
+const seedDefinition = ({ grantCode, major, minor, patch, status = 'active', ...fields }) =>
+  db.collection('config__form_definitions').insertOne({
+    grantCode,
+    id: `${grantCode}-${major}.${minor}.${patch}`,
+    title: `${grantCode} form`,
+    major,
+    minor,
+    patch,
+    status,
+    definition: { pages: [] },
+    updatedAt: new Date(),
+    ...fields
+  })
+
 beforeAll(async () => {
   process.env.GRANTS_UI_BACKEND_AUTH_TOKEN = TEST_AUTH_TOKEN
   process.env.GRANTS_UI_BACKEND_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY
@@ -167,18 +181,7 @@ describe('POST /state', () => {
     const grantCode = 'grant-multi'
     const sbi = 'biz-multi'
     await db.collection('config__form_definitions').deleteMany({ grantCode })
-    await db.collection('config__form_definitions').insertOne({
-      grantCode,
-      id: `${grantCode}-1.0.0`,
-      title: `${grantCode} form`,
-      major: 1,
-      minor: 0,
-      patch: 0,
-      status: 'active',
-      allowMultipleApplications: true,
-      definition: { pages: [] },
-      updatedAt: new Date()
-    })
+    await seedDefinition({ grantCode, major: 1, minor: 0, patch: 0, allowMultipleApplications: true })
     const originalStart = '2026-01-15T09:30:00.000Z'
     const replacementState = { $$__referenceNumber: 'REF-NEW', previousReferenceNumber: 'REF-OLD' }
     const save = (state, createdAt) =>
@@ -540,19 +543,6 @@ describe('PATCH /state/{sbi}/{grantCode}', () => {
 })
 
 describe('POST /state/with-definition', () => {
-  const seedDefinition = ({ grantCode, major, minor, patch, status = 'active' }) =>
-    db.collection('config__form_definitions').insertOne({
-      grantCode,
-      id: `${grantCode}-${major}.${minor}.${patch}`,
-      title: `${grantCode} form`,
-      major,
-      minor,
-      patch,
-      status,
-      definition: { pages: [] },
-      updatedAt: new Date()
-    })
-
   const seedState = ({ sbi, grantCode, major, minor, patch }) =>
     db.collection('state__grant_application_state').insertOne({
       sbi,
@@ -846,18 +836,6 @@ describe('POST /state/with-definition', () => {
 
 describe('GET /definitions/{grantCode}', () => {
   const grantCode = 'def-grant'
-  const seedDefinition = ({ major, minor, patch, status = 'active' }) =>
-    db.collection('config__form_definitions').insertOne({
-      grantCode,
-      id: `${grantCode}-${major}.${minor}.${patch}`,
-      title: `${grantCode} form`,
-      major,
-      minor,
-      patch,
-      status,
-      definition: { pages: [] },
-      updatedAt: new Date()
-    })
   const getDefinition = (query = '') =>
     Wreck.get(`${apiUrl}/definitions/${grantCode}${query}`, {
       json: true,
@@ -874,10 +852,10 @@ describe('GET /definitions/{grantCode}', () => {
 
   beforeEach(async () => {
     await db.collection('config__form_definitions').deleteMany({})
-    await seedDefinition({ major: 1, minor: 2, patch: 0 })
-    await seedDefinition({ major: 1, minor: 4, patch: 1 })
-    await seedDefinition({ major: 1, minor: 5, patch: 0, status: 'draft' })
-    await seedDefinition({ major: 2, minor: 0, patch: 0 })
+    await seedDefinition({ grantCode, major: 1, minor: 2, patch: 0 })
+    await seedDefinition({ grantCode, major: 1, minor: 4, patch: 1 })
+    await seedDefinition({ grantCode, major: 1, minor: 5, patch: 0, status: 'draft' })
+    await seedDefinition({ grantCode, major: 2, minor: 0, patch: 0 })
   })
 
   it('returns the latest active definition overall', async () => {

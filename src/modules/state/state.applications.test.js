@@ -30,7 +30,13 @@ test('returns metadata for drafts, submitted and reopened applications without e
     },
     {
       applicationRef: 'REF-R',
+      allowMultipleApplications: true,
       state: { applicationStatus: 'REOPENED', submittedAt: '2026-02-01', previousReferenceNumber: 'REF-P' }
+    },
+    {
+      applicationRef: 'REF-NEW',
+      allowMultipleApplications: false,
+      state: { applicationStatus: 'REOPENED', previousReferenceNumber: 'REF-OLD' }
     }
   ])
   const applications = await listApplications(scope)
@@ -55,7 +61,9 @@ test('returns metadata for drafts, submitted and reopened applications without e
       applicationStatus: 'REOPENED',
       submittedAt: '2026-02-01',
       previousReferenceNumber: 'REF-P'
-    })
+    }),
+    // A single-application grant has one document per business: never a replacement, whatever its state says.
+    expect.objectContaining({ applicationRef: 'REF-NEW', previousReferenceNumber: null })
   ])
   expect(JSON.stringify(applications)).not.toContain('private')
 })

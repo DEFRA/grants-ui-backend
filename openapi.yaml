@@ -130,9 +130,9 @@ components:
           format: date-time
           description: >-
             Optional. Recorded as the document's creation date only when this
-            save creates the document; ignored on an update. Lets a reopened
-            application keep the start date of the one it replaces. Must not be
-            in the future.
+            save creates a document of a grant that allows multiple
+            applications; ignored otherwise. Lets a reopened application keep
+            the start date of the one it replaces. Must not be in the future.
       required: [sbi, grantCode, grantVersion, state]
     StateSaveResponse:
       type: object
@@ -378,8 +378,10 @@ paths:
         unchanged; an absent status is null. The submitted date comes from
         application state and is null when absent. Existing POST /state creates a new
         application when an enabled grant is saved with a fresh reference number.
-        A reopened application carries the reference it replaces as
-        previousReferenceNumber; it is null for every other application.
+        On a grant allowing multiple applications, a reopened application
+        carries the reference it replaces as previousReferenceNumber; it is
+        null for every other application, including every document of a
+        single-application grant.
         pinnedMajor is the grant major the application is served under, so a
         caller can tell which definition applies to it without opening it.
       security:

@@ -82,8 +82,8 @@ export function releaseAllApplicationLocksForOwner({ ownerId }) {
  * targeted: behaviour is unchanged from before these fields existed.
  *
  * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown>, createdAt?: Date }} params
- *   `createdAt` is recorded only when the save creates the document: the start date
- *   a reopened application inherits from the document it supersedes.
+ *   `createdAt` is recorded only when the save creates a multi-application document: the start date
+ *   a reopened application inherits from the one it supersedes. Dropped for any other save.
  * @returns {Promise<import('mongodb').UpdateResult>}
  * @throws {Boom} 400 when a multi-application grant is saved without a
  *   reference, which cannot be attributed to one of the SBI's applications
@@ -104,7 +104,7 @@ export async function saveApplicationState({ sbi, grantCode, grantVersion, state
     state,
     allowMultipleApplications,
     applicationRef,
-    createdAt
+    createdAt: allowMultipleApplications ? createdAt : undefined
   })
 }
 
@@ -471,6 +471,7 @@ export async function listApplications({ sbi, grantCode }) {
     updatedAt: document.updatedAt,
     applicationStatus: document.state?.applicationStatus ?? null,
     submittedAt: document.state?.submittedAt ?? null,
-    previousReferenceNumber: document.state?.previousReferenceNumber ?? null
+    // Only a multi-application document can be a replacement; a single-application grant has one per business.
+    previousReferenceNumber: (document.allowMultipleApplications && document.state?.previousReferenceNumber) || null
   }))
 }

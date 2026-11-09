@@ -14,13 +14,17 @@ import {
 } from './config.repository.js'
 
 /**
- * Returns the latest live FormDefinition for a grant.
+ * Returns the latest live FormDefinition for a grant: overall, or within `major` when given, which is the
+ * version an application pinned to that major is served under.
  *
  * @param {string} grantCode
+ * @param {{ major?: number }} [options]
  * @returns {Promise<FormDefinition|null>}
  */
-export function resolveLatestVersion(grantCode) {
-  return repoResolveLatestVersion(grantCode)
+export function resolveLatestVersion(grantCode, { major } = {}) {
+  return major === undefined
+    ? repoResolveLatestVersion(grantCode)
+    : repoResolveLatestVersionWithinMajor(grantCode, major)
 }
 
 /**
