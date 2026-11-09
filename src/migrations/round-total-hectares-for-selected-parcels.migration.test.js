@@ -23,7 +23,6 @@ describe('round-total-hectares-for-selected-parcels migration', () => {
 
   test('removes floating-point excess from a calculated total', async () => {
     const calculatedTotal = 1.1 + 2.2
-    expect(calculatedTotal).toBe(3.3000000000000003)
     await insert({ _id: 'float', state: { totalHectaresForSelectedParcels: calculatedTotal } })
 
     await up(context.db)
