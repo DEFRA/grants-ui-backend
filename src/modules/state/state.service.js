@@ -262,6 +262,15 @@ async function resolveDefinitionForNewState({ grantCode, sbi, ownerId }) {
 }
 
 /**
+ * The grant major a stored application is served under: the one it was pinned to on creation.
+ * @param {{ pinnedMajor?: number, major?: number }} document
+ * @returns {number | undefined}
+ */
+function servedMajor({ pinnedMajor, major }) {
+  return pinnedMajor ?? major
+}
+
+/**
  * Returns an application's form definition and its current state together.
  *
  * Orchestrates the state and config domains (config is reached only through its
@@ -326,7 +335,7 @@ export async function getStateWithFormDefinition({
   }
 
   // Existing state: resolve the latest definition within its pinned major.
-  const pinnedMajor = existing.pinnedMajor ?? existing.major
+  const pinnedMajor = servedMajor(existing)
   const definition = await resolveLatestVersionWithinMajor(grantCode, pinnedMajor)
   if (!definition) {
     return null
@@ -453,17 +462,15 @@ export async function clearTestData({ sbi, grantCode }) {
 export async function listApplications({ sbi, grantCode }) {
   const states = await repoListApplicationStates({ sbi, grantCode })
 
-  return states.map(({ applicationRef, grantVersion, pinnedMajor, major, createdAt, updatedAt, state }) => ({
-    applicationRef,
-    referenceNumber: applicationRef,
-    grantVersion,
-    // The major the application is served under (see getStateWithFormDefinition), so a caller can tell
-    // which definition applies to it without opening it.
-    pinnedMajor: pinnedMajor ?? major ?? null,
-    createdAt,
-    updatedAt,
-    applicationStatus: state?.applicationStatus ?? null,
-    submittedAt: state?.submittedAt ?? null,
-    previousReferenceNumber: state?.previousReferenceNumber ?? null
+  return states.map((document) => ({
+    applicationRef: document.applicationRef,
+    referenceNumber: document.applicationRef,
+    grantVersion: document.grantVersion,
+    pinnedMajor: servedMajor(document) ?? null,
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt,
+    applicationStatus: document.state?.applicationStatus ?? null,
+    submittedAt: document.state?.submittedAt ?? null,
+    previousReferenceNumber: document.state?.previousReferenceNumber ?? null
   }))
 }

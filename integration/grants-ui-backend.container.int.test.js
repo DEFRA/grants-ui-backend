@@ -163,8 +163,7 @@ describe('POST /state', () => {
   })
 
   it('records the start date a replacement application is given and keeps it on later saves', async () => {
-    // A grant allowing multiple applications stores one document per reference, so a reopened application
-    // is a new document carrying the start date of the one it replaces; later saves must not move it.
+    // A reopened application on a multi-application grant is a new document; it keeps the start date it is given.
     const grantCode = 'grant-multi'
     const sbi = 'biz-multi'
     await db.collection('config__form_definitions').deleteMany({ grantCode })

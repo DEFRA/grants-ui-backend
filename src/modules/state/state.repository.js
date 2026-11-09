@@ -251,10 +251,8 @@ export async function releaseAllApplicationLocksForOwner({ ownerId }) {
  * version changes over its lifetime, so keying on it would split the
  * application across versions.
  *
- * `createdAt` is recorded only when the save creates the document. A reopened
- * application on a multi-application grant is a new document under a new
- * reference, so the caller passes the start date of the document it supersedes;
- * this service cannot tell from the save alone which document that is.
+ * `createdAt` is recorded only when the save creates the document: a reopened application is a
+ * new document, so the caller passes the start date of the one it supersedes.
  *
  * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown>, allowMultipleApplications?: boolean, applicationRef?: string, createdAt?: Date }} params
  * @returns {Promise<import('mongodb').UpdateResult>}

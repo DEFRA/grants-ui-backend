@@ -3,9 +3,8 @@ import Joi from 'joi'
 import { resolveLatestVersion, resolveLatestVersionWithinMajor } from './config.service.js'
 
 /**
- * The latest active definition of a grant: the latest overall, or the latest within `major` when given.
- * An application is pinned to its major, so a caller that needs the definition an existing application
- * is served under, without opening it, asks for that major.
+ * `major` narrows the result to the latest active definition within that major: the one an existing
+ * application, pinned to its major, is served under.
  */
 export const latestDefinition = {
   method: 'GET',
