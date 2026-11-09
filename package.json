@@ -74,7 +74,7 @@
     "semver": "7.8.5",
     "swagger-ui-dist": "5.34.0",
     "testcontainers": "12.2.1",
-    "undici": "8.12.3"
+    "undici": "8.12.4"
   },
   "overrides": {
     "joi@>=17 <18": "17.13.9",
