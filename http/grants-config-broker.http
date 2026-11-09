@@ -1,8 +1,8 @@
 # grants-config-broker.http
 # HTTP client requests for the Grants Config Broker API.
 #
-# Before making requests, run `npm run generate:env` to populate
-# http-client.private.env.json with the required tokens for the local environment.
+# Local broker requests do not require authentication. For deployed environments,
+# set configBrokerAuthToken to a valid Web Identity token in http-client.private.env.json.
 
 ### --- Variables ---
 

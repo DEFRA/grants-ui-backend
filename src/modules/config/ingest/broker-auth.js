@@ -1,9 +1,9 @@
 import crypto from 'node:crypto'
 
 /**
- * Builds the Authorization header value expected by grants-config-broker.
+ * Builds a legacy Authorization header for Grants UI Backend HTTP tooling.
  *
- * The broker expects: `Bearer base64(iv:authTag:encryptedData)` where the
+ * The backend expects: `Bearer base64(iv:authTag:encryptedData)` where the
  * encrypted payload is the configured plain token, encrypted with AES-256-GCM
  * using `scryptSync(encryptionKey, 'salt', 32)` as the key.
  *
