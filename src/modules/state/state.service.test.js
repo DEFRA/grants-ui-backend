@@ -259,6 +259,46 @@ describe('state CRUD service pass-throughs', () => {
     expect(capturedUpdate.$setOnInsert).toMatchObject({ pinnedMajor: 1, major: 1, minor: 0, patch: 0 })
   })
 
+  test('saveApplicationState passes a given creation date to the repository for a multi-application insert', async () => {
+    getDefinition.mockResolvedValueOnce({ allowMultipleApplications: true })
+    let capturedUpdate
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (_filter, update) => {
+          capturedUpdate = update
+          return { upsertedCount: 1 }
+        },
+        countDocuments: () => 0
+      })
+    }
+    initStateRepository(fakeDb)
+    const createdAt = new Date('2026-01-02T00:00:00.000Z')
+
+    await saveApplicationState({ ...params, state: { $$__referenceNumber: 'REF-1' }, createdAt })
+
+    expect(capturedUpdate.$setOnInsert.createdAt).toBe(createdAt)
+  })
+
+  test('saveApplicationState drops a given creation date for a single-application save', async () => {
+    let capturedUpdate
+    const fakeDb = {
+      collection: () => ({
+        updateOne: (_filter, update) => {
+          capturedUpdate = update
+          return { upsertedCount: 1 }
+        },
+        countDocuments: () => 0
+      })
+    }
+    initStateRepository(fakeDb)
+    const createdAt = new Date('2026-01-02T00:00:00.000Z')
+
+    await saveApplicationState({ ...params, state: {}, createdAt })
+
+    expect(capturedUpdate.$setOnInsert.createdAt).toBeInstanceOf(Date)
+    expect(capturedUpdate.$setOnInsert.createdAt).not.toBe(createdAt)
+  })
+
   test('saveApplicationState treats allowMultipleApplications as false when no form definition is found', async () => {
     getDefinition.mockResolvedValueOnce(null)
     let capturedFilter

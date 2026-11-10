@@ -332,6 +332,22 @@ describe('State', () => {
       expect(logIfApproachingPayloadLimit).toHaveBeenCalled()
     })
 
+    test('passes the creation date through when the save may create the document', async () => {
+      const createdAt = new Date('2026-01-02T00:00:00.000Z')
+      mockRequest.payload = { ...defaultQuery, grantVersion: '2', state: { key: 'value' }, createdAt }
+      saveApplicationState.mockResolvedValue({ upsertedCount: 1 })
+
+      await stateSave.handler(mockRequest, mockH)
+
+      expect(saveApplicationState).toHaveBeenCalledWith({
+        sbi: defaultQuery.sbi,
+        grantCode: defaultQuery.grantCode,
+        grantVersion: '2',
+        state: { key: 'value' },
+        createdAt
+      })
+    })
+
     test('should update an existing state document and return 200', async () => {
       mockRequest.payload = {
         ...defaultQuery,

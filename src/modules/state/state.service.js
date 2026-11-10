@@ -81,12 +81,14 @@ export function releaseAllApplicationLocksForOwner({ ownerId }) {
  * (`allowMultipleApplications` false) neither affects how the save is
  * targeted: behaviour is unchanged from before these fields existed.
  *
- * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown> }} params
+ * @param {{ sbi: number|string, grantCode: string, grantVersion: string, state: Record<string, unknown>, createdAt?: Date }} params
+ *   `createdAt` is recorded only when the save creates a multi-application document: the start date
+ *   a reopened application inherits from the one it supersedes. Dropped for any other save.
  * @returns {Promise<import('mongodb').UpdateResult>}
  * @throws {Boom} 400 when a multi-application grant is saved without a
  *   reference, which cannot be attributed to one of the SBI's applications
  */
-export async function saveApplicationState({ sbi, grantCode, grantVersion, state }) {
+export async function saveApplicationState({ sbi, grantCode, grantVersion, state, createdAt }) {
   const allowMultipleApplications = await resolveAllowMultipleApplications({ sbi, grantCode, grantVersion })
   const applicationRef = state?.[APPLICATION_REF_FIELD]
 
@@ -95,7 +97,15 @@ export async function saveApplicationState({ sbi, grantCode, grantVersion, state
     throw Boom.badRequest(`Missing ${APPLICATION_REF_FIELD} in state for a multi-application grant`)
   }
 
-  return repoSaveApplicationState({ sbi, grantCode, grantVersion, state, allowMultipleApplications, applicationRef })
+  return repoSaveApplicationState({
+    sbi,
+    grantCode,
+    grantVersion,
+    state,
+    allowMultipleApplications,
+    applicationRef,
+    createdAt: allowMultipleApplications ? createdAt : undefined
+  })
 }
 
 /**
@@ -252,6 +262,15 @@ async function resolveDefinitionForNewState({ grantCode, sbi, ownerId }) {
 }
 
 /**
+ * The grant major a stored application is served under: the one it was pinned to on creation.
+ * @param {{ pinnedMajor?: number, major?: number }} document
+ * @returns {number | undefined}
+ */
+function servedMajor({ pinnedMajor, major }) {
+  return pinnedMajor ?? major
+}
+
+/**
  * Returns an application's form definition and its current state together.
  *
  * Orchestrates the state and config domains (config is reached only through its
@@ -316,7 +335,7 @@ export async function getStateWithFormDefinition({
   }
 
   // Existing state: resolve the latest definition within its pinned major.
-  const pinnedMajor = existing.pinnedMajor ?? existing.major
+  const pinnedMajor = servedMajor(existing)
   const definition = await resolveLatestVersionWithinMajor(grantCode, pinnedMajor)
   if (!definition) {
     return null
@@ -443,13 +462,16 @@ export async function clearTestData({ sbi, grantCode }) {
 export async function listApplications({ sbi, grantCode }) {
   const states = await repoListApplicationStates({ sbi, grantCode })
 
-  return states.map(({ applicationRef, grantVersion, createdAt, updatedAt, state }) => ({
-    applicationRef,
-    referenceNumber: applicationRef,
-    grantVersion,
-    createdAt,
-    updatedAt,
-    applicationStatus: state?.applicationStatus ?? null,
-    submittedAt: state?.submittedAt ?? null
+  return states.map((document) => ({
+    applicationRef: document.applicationRef,
+    referenceNumber: document.applicationRef,
+    grantVersion: document.grantVersion,
+    pinnedMajor: servedMajor(document) ?? null,
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt,
+    applicationStatus: document.state?.applicationStatus ?? null,
+    submittedAt: document.state?.submittedAt ?? null,
+    // Only a multi-application document can be a replacement; a single-application grant has one per business.
+    previousReferenceNumber: (document.allowMultipleApplications && document.state?.previousReferenceNumber) || null
   }))
 }

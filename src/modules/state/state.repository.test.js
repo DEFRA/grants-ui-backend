@@ -197,6 +197,36 @@ describe('state.repository CRUD error paths', () => {
     expect(updateDoc.$set.applicationRef).toBe('ref-1')
   })
 
+  test('saveApplicationState records a given creation date only when the save inserts the document', async () => {
+    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 1 })
+    initStateRepository({ collection: () => ({ updateOne }) })
+    const createdAt = new Date('2026-01-02T00:00:00.000Z')
+
+    await saveApplicationState({
+      ...params,
+      state: {},
+      allowMultipleApplications: true,
+      applicationRef: 'ref-2',
+      createdAt
+    })
+
+    const [, updateDoc] = updateOne.mock.calls[0]
+    expect(updateDoc.$setOnInsert.createdAt).toBe(createdAt)
+    expect(updateDoc.$set.createdAt).toBeUndefined()
+  })
+
+  test('saveApplicationState stamps the current time as the creation date when none is given', async () => {
+    const updateOne = jest.fn().mockResolvedValue({ upsertedCount: 1 })
+    initStateRepository({ collection: () => ({ updateOne }) })
+    const before = Date.now()
+
+    await saveApplicationState({ ...params, state: {} })
+
+    const [, updateDoc] = updateOne.mock.calls[0]
+    expect(updateDoc.$setOnInsert.createdAt).toBeInstanceOf(Date)
+    expect(updateDoc.$setOnInsert.createdAt.getTime()).toBeGreaterThanOrEqual(before)
+  })
+
   test('getApplicationState omits applicationRef from the filter when not supplied', async () => {
     const findOne = jest.fn().mockResolvedValue(null)
     initStateRepository({ collection: () => ({ findOne }) })
@@ -470,10 +500,14 @@ describe('listApplicationStates', () => {
           _id: 0,
           applicationRef: 1,
           grantVersion: 1,
+          pinnedMajor: 1,
+          major: 1,
+          allowMultipleApplications: 1,
           createdAt: 1,
           updatedAt: 1,
           'state.applicationStatus': 1,
-          'state.submittedAt': 1
+          'state.submittedAt': 1,
+          'state.previousReferenceNumber': 1
         }
       }
     )
