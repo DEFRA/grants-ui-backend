@@ -1,20 +1,7 @@
 const COLLECTION = 'state__grant_application_state'
-const LOG_PREFIX = 'report-unsubmitted-woodland-applications'
+const LOG_PREFIX = 'unsubmitted-woodland-applications'
 
-const filter = {
-  grantCode: 'woodland',
-  'state.applicationStatus': { $ne: 'SUBMITTED' }
-}
-
-const redactSbi = (sbi) => {
-  const value = typeof sbi === 'string' || typeof sbi === 'number' ? String(sbi) : null
-
-  if (typeof value !== 'string' || !/^\d+$/.test(value) || value.length <= 4) {
-    return null
-  }
-
-  return `${'*'.repeat(value.length - 4)}${value.slice(-4)}`
-}
+const redactSbi = (sbi) => (sbi == null ? null : `*****${String(sbi).slice(-4)}`)
 
 /**
  * Reports unsubmitted woodland applications without changing their stored state.
@@ -24,8 +11,12 @@ const redactSbi = (sbi) => {
  */
 export const up = async (db) => {
   const cursor = db.collection(COLLECTION).aggregate([
-    { $match: filter },
-    { $sort: { _id: 1 } },
+    {
+      $match: {
+        grantCode: 'woodland',
+        'state.applicationStatus': { $ne: 'SUBMITTED' }
+      }
+    },
     {
       $project: {
         _id: 0,
@@ -70,5 +61,5 @@ export const up = async (db) => {
  * @returns {Promise<void>}
  */
 export const down = async (db) => {
-  // Nothing to revert: this migration only reads and logs application state.
+  // Nothing to revert
 }

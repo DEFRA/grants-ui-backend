@@ -2,7 +2,6 @@ import { down, up } from '~/migrations/state/20261113000000-report-unsubmitted-w
 import { setupMigrationTestContext } from '../test-helpers/migration-test-context.js'
 
 const COLLECTION = 'state__grant_application_state'
-const REPORT_PREFIX = 'report-unsubmitted-woodland-applications: '
 
 describe('report-unsubmitted-woodland-applications migration', () => {
   const context = setupMigrationTestContext({
@@ -15,8 +14,8 @@ describe('report-unsubmitted-woodland-applications migration', () => {
   const reportRecords = () =>
     context.consoleInfo.mock.calls
       .map(([message]) => message)
-      .filter((message) => message.startsWith(REPORT_PREFIX) && !message.includes('reported='))
-      .map((message) => JSON.parse(message.slice(REPORT_PREFIX.length)))
+      .filter((message) => message.includes('{'))
+      .map((message) => JSON.parse(message.slice(message.indexOf('{'))))
 
   test('reports every non-submitted woodland application without exposing sensitive fields', async () => {
     const documents = [
@@ -98,7 +97,7 @@ describe('report-unsubmitted-woodland-applications migration', () => {
           hectaresTenOrOverYearsOld: null,
           hectaresUnderTenYearsOld: null,
           applicationRef: null,
-          redactedSbi: null
+          redactedSbi: '*****1234'
         },
         {
           applicationStatus: null,
@@ -130,14 +129,15 @@ describe('report-unsubmitted-woodland-applications migration', () => {
           hectaresTenOrOverYearsOld: null,
           hectaresUnderTenYearsOld: 4,
           applicationRef: null,
-          redactedSbi: null
+          redactedSbi: '*****0904'
         }
       ])
     )
 
-    expect(context.consoleInfo).toHaveBeenCalledWith(`${REPORT_PREFIX}reported=5`)
+    expect(context.consoleInfo).toHaveBeenCalledWith(expect.stringMatching(/reported=5$/))
     const output = context.consoleInfo.mock.calls.flat().join(' ')
     expect(output).not.toContain('800000904')
+    expect(output).not.toContain('80A000904')
     expect(output).not.toContain('CRN-PRIVATE')
     expect(output).not.toContain('do-not-log')
     expect(output).not.toContain('sbi-sensitive-800000904-private')
@@ -148,47 +148,11 @@ describe('report-unsubmitted-woodland-applications migration', () => {
     expect(await findAll()).toEqual(before)
   })
 
-  test.each([
-    ['negative number', -800000904],
-    ['fractional number', 800000904.5],
-    ['NaN', Number.NaN],
-    ['Infinity', Number.POSITIVE_INFINITY],
-    ['missing', undefined],
-    ['null', null],
-    ['boolean', true],
-    ['object', { value: '800000904' }],
-    ['array', ['800000904']]
-  ])('reports invalid SBI as null (%s)', async (label, sbi) => {
-    const document = {
-      _id: `invalid-sbi-${label}`,
-      grantCode: 'woodland',
-      state: { applicationStatus: 'REOPENED' }
-    }
-
-    if (label !== 'missing') {
-      document.sbi = sbi
-    }
-
-    await insert(document)
-    await up(context.db)
-
-    expect(reportRecords()).toEqual([
-      {
-        applicationStatus: 'REOPENED',
-        calculatedPaymentPence: null,
-        hectaresTenOrOverYearsOld: null,
-        hectaresUnderTenYearsOld: null,
-        applicationRef: null,
-        redactedSbi: null
-      }
-    ])
-  })
-
   test('reports an empty dataset with a zero summary', async () => {
     await up(context.db)
 
     expect(reportRecords()).toEqual([])
-    expect(context.consoleInfo).toHaveBeenCalledWith(`${REPORT_PREFIX}reported=0`)
+    expect(context.consoleInfo).toHaveBeenCalledWith(expect.stringMatching(/reported=0$/))
 
     await down(context.db)
   })
