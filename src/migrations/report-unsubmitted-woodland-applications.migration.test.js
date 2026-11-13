@@ -153,8 +153,29 @@ describe('report-unsubmitted-woodland-applications migration', () => {
     expect(await findAll()).toEqual(before)
   })
 
+  test('flags an application for review when older woodland exceeds 20% of younger woodland', async () => {
+    await insert({
+      _id: 'flagged-for-review',
+      applicationRef: 'APP-FLAGGED-FOR-REVIEW',
+      grantCode: 'woodland',
+      state: {
+        applicationStatus: 'REOPENED',
+        hectaresTenOrOverYearsOld: 2.1,
+        hectaresUnderTenYearsOld: 10
+      }
+    })
+
+    await up(context.db)
+
+    expect(reportRecords()).toEqual([
+      expect.objectContaining({
+        applicationRef: 'APP-FLAGGED-FOR-REVIEW',
+        flaggedForReview: true
+      })
+    ])
+  })
+
   test.each([
-    { hectaresTenOrOverYearsOld: 2.1, hectaresUnderTenYearsOld: 10, flaggedForReview: true },
     { hectaresTenOrOverYearsOld: 2, hectaresUnderTenYearsOld: 10, flaggedForReview: false },
     { hectaresTenOrOverYearsOld: 1.9, hectaresUnderTenYearsOld: 10, flaggedForReview: false },
     { hectaresTenOrOverYearsOld: 1, hectaresUnderTenYearsOld: 0, flaggedForReview: true },
