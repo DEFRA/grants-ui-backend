@@ -1,0 +1,74 @@
+const COLLECTION = 'state__grant_application_state'
+const LOG_PREFIX = 'report-unsubmitted-woodland-applications'
+
+const filter = {
+  grantCode: 'woodland',
+  'state.applicationStatus': { $ne: 'SUBMITTED' }
+}
+
+const redactSbi = (sbi) => {
+  const value = typeof sbi === 'string' || typeof sbi === 'number' ? String(sbi) : null
+
+  if (typeof value !== 'string' || !/^\d+$/.test(value) || value.length <= 4) {
+    return null
+  }
+
+  return `${'*'.repeat(value.length - 4)}${value.slice(-4)}`
+}
+
+/**
+ * Reports unsubmitted woodland applications without changing their stored state.
+ *
+ * @param db {import('mongodb').Db}
+ * @returns {Promise<void>}
+ */
+export const up = async (db) => {
+  const cursor = db.collection(COLLECTION).aggregate([
+    { $match: filter },
+    { $sort: { _id: 1 } },
+    {
+      $project: {
+        _id: 0,
+        sbi: 1,
+        applicationRef: 1,
+        applicationStatus: '$state.applicationStatus',
+        agreementTotalPence: '$state.payment.agreementTotalPence',
+        totalPence: '$state.totalPence',
+        hectaresTenOrOverYearsOld: '$state.hectaresTenOrOverYearsOld',
+        hectaresUnderTenYearsOld: '$state.hectaresUnderTenYearsOld',
+        referenceNumber: {
+          $getField: {
+            field: { $literal: '$$__referenceNumber' },
+            input: '$state'
+          }
+        }
+      }
+    }
+  ])
+
+  let reported = 0
+
+  for await (const record of cursor) {
+    const report = {
+      applicationStatus: record.applicationStatus ?? null,
+      calculatedPaymentPence: record.agreementTotalPence ?? record.totalPence ?? null,
+      hectaresTenOrOverYearsOld: record.hectaresTenOrOverYearsOld ?? null,
+      hectaresUnderTenYearsOld: record.hectaresUnderTenYearsOld ?? null,
+      applicationRef: record.applicationRef ?? record.referenceNumber ?? null,
+      redactedSbi: redactSbi(record.sbi)
+    }
+
+    console.info(`${LOG_PREFIX}: ${JSON.stringify(report)}`)
+    reported += 1
+  }
+
+  console.info(`${LOG_PREFIX}: reported=${reported}`)
+}
+
+/**
+ * @param db {import('mongodb').Db}
+ * @returns {Promise<void>}
+ */
+export const down = async (db) => {
+  // Nothing to revert: this migration only reads and logs application state.
+}
