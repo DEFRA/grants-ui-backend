@@ -97,6 +97,7 @@ describe('report-unsubmitted-woodland-applications migration', () => {
           hectaresTenOrOverYearsOld: null,
           hectaresUnderTenYearsOld: null,
           applicationRef: null,
+          flaggedForReview: false,
           redactedSbi: '*****1234'
         },
         {
@@ -104,6 +105,7 @@ describe('report-unsubmitted-woodland-applications migration', () => {
           calculatedPaymentPence: 321,
           hectaresTenOrOverYearsOld: 0,
           hectaresUnderTenYearsOld: 0,
+          flaggedForReview: false,
           applicationRef: 'APP-MISSING-STATUS',
           redactedSbi: '*****0904'
         },
@@ -112,6 +114,7 @@ describe('report-unsubmitted-woodland-applications migration', () => {
           calculatedPaymentPence: 0,
           hectaresTenOrOverYearsOld: null,
           hectaresUnderTenYearsOld: 2.5,
+          flaggedForReview: false,
           applicationRef: 'APP-STATE-REF',
           redactedSbi: '*****0005'
         },
@@ -120,6 +123,7 @@ describe('report-unsubmitted-woodland-applications migration', () => {
           calculatedPaymentPence: null,
           hectaresTenOrOverYearsOld: null,
           hectaresUnderTenYearsOld: null,
+          flaggedForReview: false,
           applicationRef: null,
           redactedSbi: null
         },
@@ -128,6 +132,7 @@ describe('report-unsubmitted-woodland-applications migration', () => {
           calculatedPaymentPence: 123,
           hectaresTenOrOverYearsOld: null,
           hectaresUnderTenYearsOld: 4,
+          flaggedForReview: false,
           applicationRef: null,
           redactedSbi: '*****0904'
         }
@@ -147,6 +152,40 @@ describe('report-unsubmitted-woodland-applications migration', () => {
 
     expect(await findAll()).toEqual(before)
   })
+
+  test.each([
+    { hectaresTenOrOverYearsOld: 2.1, hectaresUnderTenYearsOld: 10, flaggedForReview: true },
+    { hectaresTenOrOverYearsOld: 2, hectaresUnderTenYearsOld: 10, flaggedForReview: false },
+    { hectaresTenOrOverYearsOld: 1.9, hectaresUnderTenYearsOld: 10, flaggedForReview: false },
+    { hectaresTenOrOverYearsOld: 1, hectaresUnderTenYearsOld: 0, flaggedForReview: true },
+    { hectaresTenOrOverYearsOld: 0, hectaresUnderTenYearsOld: 10, flaggedForReview: false },
+    { hectaresTenOrOverYearsOld: 0, hectaresUnderTenYearsOld: 0, flaggedForReview: false }
+  ])(
+    'reports flaggedForReview=$flaggedForReview for older area $hectaresTenOrOverYearsOld and younger area $hectaresUnderTenYearsOld',
+    async ({ hectaresTenOrOverYearsOld, hectaresUnderTenYearsOld, flaggedForReview }) => {
+      await insert({
+        _id: 'review-threshold',
+        grantCode: 'woodland',
+        state: {
+          applicationStatus: 'REOPENED',
+          hectaresTenOrOverYearsOld,
+          hectaresUnderTenYearsOld
+        }
+      })
+      const before = await findAll()
+
+      await up(context.db)
+
+      expect(reportRecords()).toEqual([
+        expect.objectContaining({
+          hectaresTenOrOverYearsOld,
+          hectaresUnderTenYearsOld,
+          flaggedForReview
+        })
+      ])
+      expect(await findAll()).toEqual(before)
+    }
+  )
 
   test('reports an empty dataset with a zero summary', async () => {
     await up(context.db)
