@@ -161,7 +161,7 @@ describe('report-unsubmitted-woodland-applications migration', () => {
       state: {
         applicationStatus: 'REOPENED',
         hectaresTenOrOverYearsOld: 10,
-        hectaresUnderTenYearsOld: 2.1
+        hectaresUnderTenYearsOld: 3
       }
     })
 

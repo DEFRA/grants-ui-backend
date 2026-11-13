@@ -8,7 +8,7 @@ const redactSbi = (sbi) => (sbi == null ? null : `*****${String(sbi).slice(-4)}`
  * @param oldValue {number}
  */
 function checkNewAreaAboveTwentyPercent(newValue, oldValue) {
-  return newValue > oldValue * 0.2
+  return newValue > oldValue * 0.25
 }
 
 /**
