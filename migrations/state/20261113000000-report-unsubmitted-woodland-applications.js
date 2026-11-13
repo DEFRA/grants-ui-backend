@@ -13,6 +13,7 @@ function checkNewAreaAboveTwentyPercent(newValue, oldValue) {
 
 /**
  * Reports unsubmitted woodland applications without changing their stored state.
+ * Flags applications where younger woodland exceeds 20% of older woodland.
  *
  * @param db {import('mongodb').Db}
  * @returns {Promise<void>}
@@ -55,8 +56,8 @@ export const up = async (db) => {
       hectaresUnderTenYearsOld: record.hectaresUnderTenYearsOld ?? null,
       applicationRef: record.applicationRef ?? record.referenceNumber ?? null,
       flaggedForReview: checkNewAreaAboveTwentyPercent(
-        record.hectaresTenOrOverYearsOld,
-        record.hectaresUnderTenYearsOld
+        record.hectaresUnderTenYearsOld,
+        record.hectaresTenOrOverYearsOld
       ),
       redactedSbi: redactSbi(record.sbi)
     }

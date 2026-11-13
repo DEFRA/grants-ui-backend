@@ -114,7 +114,7 @@ describe('report-unsubmitted-woodland-applications migration', () => {
           calculatedPaymentPence: 0,
           hectaresTenOrOverYearsOld: null,
           hectaresUnderTenYearsOld: 2.5,
-          flaggedForReview: false,
+          flaggedForReview: true,
           applicationRef: 'APP-STATE-REF',
           redactedSbi: '*****0005'
         },
@@ -153,15 +153,15 @@ describe('report-unsubmitted-woodland-applications migration', () => {
     expect(await findAll()).toEqual(before)
   })
 
-  test('flags an application for review when older woodland exceeds 20% of younger woodland', async () => {
+  test('flags an application for review when younger woodland exceeds 20% of older woodland', async () => {
     await insert({
       _id: 'flagged-for-review',
       applicationRef: 'APP-FLAGGED-FOR-REVIEW',
       grantCode: 'woodland',
       state: {
         applicationStatus: 'REOPENED',
-        hectaresTenOrOverYearsOld: 2.1,
-        hectaresUnderTenYearsOld: 10
+        hectaresTenOrOverYearsOld: 10,
+        hectaresUnderTenYearsOld: 2.1
       }
     })
 
@@ -176,10 +176,10 @@ describe('report-unsubmitted-woodland-applications migration', () => {
   })
 
   test.each([
-    { hectaresTenOrOverYearsOld: 2, hectaresUnderTenYearsOld: 10, flaggedForReview: false },
-    { hectaresTenOrOverYearsOld: 1.9, hectaresUnderTenYearsOld: 10, flaggedForReview: false },
-    { hectaresTenOrOverYearsOld: 1, hectaresUnderTenYearsOld: 0, flaggedForReview: true },
-    { hectaresTenOrOverYearsOld: 0, hectaresUnderTenYearsOld: 10, flaggedForReview: false },
+    { hectaresTenOrOverYearsOld: 10, hectaresUnderTenYearsOld: 2, flaggedForReview: false },
+    { hectaresTenOrOverYearsOld: 10, hectaresUnderTenYearsOld: 1.9, flaggedForReview: false },
+    { hectaresTenOrOverYearsOld: 0, hectaresUnderTenYearsOld: 1, flaggedForReview: true },
+    { hectaresTenOrOverYearsOld: 10, hectaresUnderTenYearsOld: 0, flaggedForReview: false },
     { hectaresTenOrOverYearsOld: 0, hectaresUnderTenYearsOld: 0, flaggedForReview: false }
   ])(
     'reports flaggedForReview=$flaggedForReview for older area $hectaresTenOrOverYearsOld and younger area $hectaresUnderTenYearsOld',
