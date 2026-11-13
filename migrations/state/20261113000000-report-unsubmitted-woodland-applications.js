@@ -4,13 +4,21 @@ const LOG_PREFIX = 'unsubmitted-woodland-applications'
 const redactSbi = (sbi) => (sbi == null ? null : `*****${String(sbi).slice(-4)}`)
 
 /**
+ * @param newValue {number}
+ * @param oldValue {number}
+ */
+function checkNewAreaAboveTwentyPercent(newValue, oldValue) {
+  return newValue > oldValue * 0.2
+}
+
+/**
  * Reports unsubmitted woodland applications without changing their stored state.
  *
  * @param db {import('mongodb').Db}
  * @returns {Promise<void>}
  */
 export const up = async (db) => {
-  const cursor = db.collection(COLLECTION).aggregate([
+  const query = db.collection(COLLECTION).aggregate([
     {
       $match: {
         grantCode: 'woodland',
@@ -39,13 +47,14 @@ export const up = async (db) => {
 
   let reported = 0
 
-  for await (const record of cursor) {
+  for await (const record of query) {
     const report = {
       applicationStatus: record.applicationStatus ?? null,
       calculatedPaymentPence: record.agreementTotalPence ?? record.totalPence ?? null,
       hectaresTenOrOverYearsOld: record.hectaresTenOrOverYearsOld ?? null,
       hectaresUnderTenYearsOld: record.hectaresUnderTenYearsOld ?? null,
       applicationRef: record.applicationRef ?? record.referenceNumber ?? null,
+      flaggedForReview: checkNewAreaAboveTwentyPercent(record.hectaresTenOrOverYearsOld, record.hectaresUnderTenYearsOld),
       redactedSbi: redactSbi(record.sbi)
     }
 
