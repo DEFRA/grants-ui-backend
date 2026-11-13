@@ -54,7 +54,10 @@ export const up = async (db) => {
       hectaresTenOrOverYearsOld: record.hectaresTenOrOverYearsOld ?? null,
       hectaresUnderTenYearsOld: record.hectaresUnderTenYearsOld ?? null,
       applicationRef: record.applicationRef ?? record.referenceNumber ?? null,
-      flaggedForReview: checkNewAreaAboveTwentyPercent(record.hectaresTenOrOverYearsOld, record.hectaresUnderTenYearsOld),
+      flaggedForReview: checkNewAreaAboveTwentyPercent(
+        record.hectaresTenOrOverYearsOld,
+        record.hectaresUnderTenYearsOld
+      ),
       redactedSbi: redactSbi(record.sbi)
     }
 
