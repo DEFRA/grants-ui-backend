@@ -109,3 +109,33 @@ describe('stateWithDefinitionSchema', () => {
     expect(error).toBeDefined()
   })
 })
+
+describe('stateSaveSchema createdAt', () => {
+  test('accepts an ISO creation date and parses it', () => {
+    const { error, value } = stateSaveSchema.validate({ ...validSave, createdAt: '2026-01-02T00:00:00.000Z' })
+    expect(error).toBeUndefined()
+    expect(value.createdAt).toEqual(new Date('2026-01-02T00:00:00.000Z'))
+  })
+
+  test('leaves createdAt undefined when omitted', () => {
+    const { error, value } = stateSaveSchema.validate(validSave)
+    expect(error).toBeUndefined()
+    expect(value.createdAt).toBeUndefined()
+  })
+
+  test('rejects a creation date that is not a date', () => {
+    const { error } = stateSaveSchema.validate({ ...validSave, createdAt: 'yesterday' })
+    expect(error).toBeDefined()
+  })
+
+  test('rejects a creation date that is not ISO 8601', () => {
+    const { error } = stateSaveSchema.validate({ ...validSave, createdAt: '02/01/2026' })
+    expect(error?.message).toMatch(/"createdAt" must be in ISO 8601 date format/)
+  })
+
+  test('rejects a creation date in the future', () => {
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    const { error } = stateSaveSchema.validate({ ...validSave, createdAt: tomorrow })
+    expect(error?.message).toMatch(/"createdAt" must be less than or equal to "now"/)
+  })
+})

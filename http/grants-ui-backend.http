@@ -23,6 +23,8 @@ GET {{backendBaseUrl}}/health
 
 ### Save / update application state
 # @name saveState
+# Optional "createdAt" (ISO 8601, not in the future) is recorded only when this save
+# creates the document, so a reopened application can keep the start date of the one it replaces.
 POST {{backendBaseUrl}}/state
 Authorization: Bearer {{backendAuthToken}}
 x-application-lock-owner: {{applicationLockOwnerToken}}

@@ -7,10 +7,13 @@ export const latestDefinition = {
   path: '/definitions/{grantCode}',
   options: {
     auth: 'bearer',
-    validate: { params: Joi.object({ grantCode: Joi.string().required() }) }
+    validate: {
+      params: Joi.object({ grantCode: Joi.string().required() }),
+      query: Joi.object({ major: Joi.number().integer().min(0).optional() })
+    }
   },
   handler: async (request) => {
-    const definition = await resolveLatestVersion(request.params.grantCode)
+    const definition = await resolveLatestVersion(request.params.grantCode, { major: request.query.major })
     if (!definition) {
       throw Boom.notFound('Form definition not found')
     }

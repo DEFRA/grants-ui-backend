@@ -19,11 +19,29 @@ describe('latest grant definition route', () => {
     const response = await server.inject('/definitions/test-grant')
     expect(response.statusCode).toBe(200)
     expect(response.result).toEqual(definition)
-    expect(resolveLatestVersion).toHaveBeenCalledWith('test-grant')
+    expect(resolveLatestVersion).toHaveBeenCalledWith('test-grant', {})
     expect(latestDefinition.options.auth).toBe('bearer')
   })
   test('returns 404 if there is no active definition', async () => {
     resolveLatestVersion.mockResolvedValue(null)
     expect((await server.inject('/definitions/missing')).statusCode).toBe(404)
+  })
+  test('passes a given major to the resolver as a number', async () => {
+    const definition = { grantCode: 'test-grant', major: 1, minor: 9, patch: 0, definition: { pages: [] } }
+    resolveLatestVersion.mockResolvedValue(definition)
+    const response = await server.inject('/definitions/test-grant?major=1')
+    expect(response.statusCode).toBe(200)
+    expect(response.result).toEqual(definition)
+    expect(resolveLatestVersion).toHaveBeenCalledWith('test-grant', { major: 1 })
+  })
+  test('returns 404 if the major has no active definition', async () => {
+    resolveLatestVersion.mockResolvedValue(null)
+    expect((await server.inject('/definitions/test-grant?major=7')).statusCode).toBe(404)
+    expect(resolveLatestVersion).toHaveBeenCalledWith('test-grant', { major: 7 })
+  })
+  test('rejects a major that is not a whole number', async () => {
+    expect((await server.inject('/definitions/test-grant?major=1.5')).statusCode).toBe(400)
+    expect((await server.inject('/definitions/test-grant?major=one')).statusCode).toBe(400)
+    expect(resolveLatestVersion).not.toHaveBeenCalled()
   })
 })

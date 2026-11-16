@@ -62,10 +62,10 @@ export const stateSave = {
       max: PAYLOAD_SIZE_MAX
     })
 
-    const { sbi, grantCode, grantVersion, state } = request.payload
+    const { sbi, grantCode, grantVersion, state, createdAt } = request.payload
 
     try {
-      const result = await saveApplicationState({ sbi, grantCode, grantVersion, state })
+      const result = await saveApplicationState({ sbi, grantCode, grantVersion, state, createdAt })
 
       if (result.upsertedCount > 0) {
         return h.response({ success: true, created: true }).code(StatusCodes.CREATED)

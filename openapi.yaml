@@ -125,6 +125,14 @@ components:
           default: 1
         state:
           $ref: '#/components/schemas/StateObject'
+        createdAt:
+          type: string
+          format: date-time
+          description: >-
+            Optional. Recorded as the document's creation date only when this
+            save creates a document of a grant that allows multiple
+            applications; ignored otherwise. Lets a reopened application keep
+            the start date of the one it replaces. Must not be in the future.
       required: [sbi, grantCode, grantVersion, state]
     StateSaveResponse:
       type: object
@@ -328,7 +336,7 @@ security:
 paths:
   /definitions/{grantCode}:
     get:
-      summary: Get the latest active grant form definition
+      summary: Get the latest active grant form definition, overall or within a major
       operationId: getLatestDefinition
       tags: [Config]
       security:
@@ -339,9 +347,16 @@ paths:
           required: true
           schema:
             type: string
+        - in: query
+          name: major
+          required: false
+          description: Return the latest active definition within this major, the one an existing application pinned to it is served under, instead of the grant's latest overall
+          schema:
+            type: integer
+            minimum: 0
       responses:
         '200':
-          description: Latest active definition; no application state or editing lock involved
+          description: Latest active definition, within `major` when given; no application state or editing lock involved
           content:
             application/json:
               schema:
@@ -363,6 +378,12 @@ paths:
         unchanged; an absent status is null. The submitted date comes from
         application state and is null when absent. Existing POST /state creates a new
         application when an enabled grant is saved with a fresh reference number.
+        On a grant allowing multiple applications, a reopened application
+        carries the reference it replaces as previousReferenceNumber; it is
+        null for every other application, including every document of a
+        single-application grant.
+        pinnedMajor is the grant major the application is served under, so a
+        caller can tell which definition applies to it without opening it.
       security:
         - bearerAuth: []
           userContext: []
@@ -388,10 +409,18 @@ paths:
                         applicationRef: { type: string }
                         referenceNumber: { type: string }
                         grantVersion: { type: string }
+                        pinnedMajor:
+                          type: [integer, 'null']
+                          description: The grant major the application is pinned to and served under
                         createdAt: { type: string, format: date-time }
                         updatedAt: { type: string, format: date-time }
                         applicationStatus: { type: [string, 'null'] }
                         submittedAt: { type: [string, 'null'], format: date-time }
+                        previousReferenceNumber:
+                          type: [string, 'null']
+                          description: >-
+                            Reference of the submitted application this one replaces
+                            after being returned for amendments; null otherwise.
         '400':
           description: Invalid query
         '401':
