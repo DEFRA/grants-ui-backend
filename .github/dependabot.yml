@@ -20,8 +20,6 @@ updates:
     ignore:
       - dependency-name: 'eslint-*'
       - dependency-name: 'eslint'
-      - dependency-name: "@pact-foundation/pact"
-        versions: [">=16.0.0"]
       # Blocked until Jest supports Babel 8 (jest-snapshot, @jest/transform, istanbul-lib-instrument need @babel/core ^7)
       - dependency-name: "@babel/core"
         versions: [">=8.0.0"]

@@ -13,8 +13,5 @@ http-client.private.env.json
 
 # @shelf/jest-mongodb generated file
 globalConfig.json
-
-# Pact files are published/fetched via the Pact Broker in CI
-contracts/pacts
 /compose/config-broker-local/
 AGENTS.local.md

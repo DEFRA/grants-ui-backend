@@ -14,14 +14,16 @@ describe('#config', () => {
   })
 
   test('should use ecs format in production environment', async () => {
-    process.env = { ...originalEnv, NODE_ENV: 'production' }
+    const { LOG_FORMAT, ...envWithoutLogFormat } = originalEnv
+    process.env = { ...envWithoutLogFormat, NODE_ENV: 'production' }
     const { config } = await import('./config.js')
 
     expect(config.get('log.format')).toBe('ecs')
   })
 
   test('should use pino-pretty format in non-production environment', async () => {
-    process.env = { ...originalEnv, NODE_ENV: 'development' }
+    const { LOG_FORMAT, ...envWithoutLogFormat } = originalEnv
+    process.env = { ...envWithoutLogFormat, NODE_ENV: 'development' }
     const { config } = await import('./config.js')
 
     expect(config.get('log.format')).toBe('pino-pretty')
