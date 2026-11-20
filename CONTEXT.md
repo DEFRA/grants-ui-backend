@@ -39,7 +39,3 @@ _Avoid_: CRN, Business name, Holding number
 **Lock token**
 A token used to coordinate exclusive access to mutable application state.
 _Avoid_: Auth token, Session token, CSRF token
-
-**Pact**
-The contract-test artifact used to verify API expectations with consumers or providers.
-_Avoid_: Unit test, Schema, Mock response
